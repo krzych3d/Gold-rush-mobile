@@ -1,6 +1,7 @@
 extends Control
 
 const MAX_WAVES := 5
+const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
 const PREP_TIME := 30.0
 const ATTACK_TIME := 60.0
 const COSTS := [75, 140, 110]
@@ -9,6 +10,7 @@ const HP := [45.0, 180.0, 75.0]
 const SPEED := [0.21, 0.105, 0.15]
 const TRAP_COSTS := [55, 75, 155]
 
+var selected_race := 0
 var wave := 1
 var phase := "PREP"
 var remaining := PREP_TIME
@@ -26,6 +28,7 @@ var arena: Control
 var controls: Array[Button] = []
 var visual_time := 0.0
 var title_label: Label
+var race_button: Button
 
 func _ready() -> void:
 	rng.randomize()
@@ -60,6 +63,12 @@ func _ready() -> void:
 	info.custom_minimum_size.y = 72
 	root.add_child(info)
 	_style_label(info, 18, Color("f0e7cf"))
+	race_button = Button.new()
+	race_button.text = "CHOOSE YOUR RACE"
+	race_button.custom_minimum_size.y = 56
+	root.add_child(race_button)
+	_style_button(race_button, true)
+	race_button.pressed.connect(_change_race)
 	for labels in [["LANE 1", "LANE 2", "LANE 3"], ["RUNNER 75", "CARRIER 140", "SABOTEUR 110"], ["SPIKES 55", "SNARE 75", "TURRET 155"]]:
 		var row := HBoxContainer.new()
 		root.add_child(row)
@@ -91,6 +100,13 @@ func _ready() -> void:
 	clock.start()
 	_refresh()
 
+func _change_race() -> void:
+	if phase != "PREP" or wave != 1:
+		return
+	selected_race = (selected_race + 1) % RACE_NAMES.size()
+	message = "Playing as " + RACE_NAMES[selected_race]
+	_refresh()
+
 func _select_lane(index: int) -> void:
 	lane = index
 	message = "Selected lane %d" % (lane + 1)
@@ -103,7 +119,7 @@ func _buy_unit(kind: int) -> void:
 	for order in orders[0]:
 		if order["lane"] == lane:
 			lane_count += 1
-	if gold[0] <= COSTS[kind] or orders[0].size() >= 6 or lane_count >= 4:
+	if gold[0] < COSTS[kind] or orders[0].size() >= 6 or lane_count >= 4:
 		message = "Not enough gold or unit limit reached."
 		_refresh()
 		return
@@ -119,7 +135,7 @@ func _buy_trap(kind: int) -> void:
 	for trap in traps[0]:
 		if trap["lane"] == lane:
 			lane_count += 1
-	if gold[0] <= TRAP_COSTS[kind] or lane_count >= 5:
+	if gold[0] < TRAP_COSTS[kind] or lane_count >= 5:
 		message = "Not enough gold or trap limit reached."
 		_refresh()
 		return
@@ -243,6 +259,8 @@ func _end_wave() -> void:
 	message = "Interest paid. Prepare for next wave!"
 
 func _refresh() -> void:
+	race_button.text = "RACE: " + RACE_NAMES[selected_race]
+	race_button.disabled = phase != "PREP" or wave > 1
 	hud.text = "YOUR VAULT: %d     ENEMY: %d" % [gold[0], gold[1]]
 	timer_label.text = "WAVE %d/%d | %s | %02d s" % [wave, MAX_WAVES, phase, int(maxf(0.0, ceilf(remaining)))]
 	info.text = message + "\nLane: %d | Thieves: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
