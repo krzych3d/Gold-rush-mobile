@@ -84,9 +84,18 @@ jobs:
           ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
           echo "Installed Android build tools:"
           ls -1 "$ANDROID_HOME/build-tools"
+          echo "Android export template files:"
+          test -s "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/android_debug.apk"
+          test -s "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/android_release.apk"
+          echo "Keystore:"
+          test -s "$RUNNER_TEMP/debug.keystore"
+          echo "Export preset signing values:"
+          grep -E "^(name|platform|keystore/debug|keystore/debug_user)=" export_presets.cfg
           mkdir -p build
           ./godot --headless --verbose --path . --export-debug Android build/gold-rush-debug.apk 2>&1 | tee export.log
           test -s build/gold-rush-debug.apk
+          echo "APK size:"
+          ls -lh build/gold-rush-debug.apk
       - name: Upload diagnostic logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
