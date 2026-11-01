@@ -13,7 +13,7 @@ on:
       - '.github/workflows/android-debug.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-debug
@@ -113,3 +113,20 @@ jobs:
           path: build/gold-rush-debug.apk
           retention-days: 3
           if-no-files-found: error
+      - name: Publish direct APK in rolling GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -s build/gold-rush-debug.apk
+          git fetch --no-tags origin main
+          SHA="$(git rev-parse HEAD)"
+          if gh release view debug-latest >/dev/null 2>&1; then
+            gh release delete debug-latest --yes --cleanup-tag
+          fi
+          gh release create debug-latest build/gold-rush-debug.apk#gold-rush-debug.apk \
+            --target "$SHA" \
+            --title "Gold Rush: Vault Wars — latest Android debug APK" \
+            --notes "Automatic debug build from commit $SHA. For testing only; not a production release." \
+            --prerelease
+          gh release view debug-latest --json url,assets
