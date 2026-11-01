@@ -132,43 +132,103 @@ func _ready() -> void:
 
 func _show_race_selection() -> void:
 	selection_layer = ColorRect.new()
-	selection_layer.color = Color("101729", 0.98)
+	selection_layer.color = Color("0b1221")
 	selection_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(selection_layer)
+	var background := TextureRect.new()
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	background.modulate = Color(0.4, 0.45, 0.6, 0.5)
+	selection_layer.add_child(background)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_top", 28)
+	margin.add_theme_constant_override("margin_bottom", 25)
+	selection_layer.add_child(margin)
 	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	column.add_theme_constant_override("separation", 12)
-	selection_layer.add_child(column)
-	var heading := Label.new()
-	heading.text = "CHOOSE YOUR FACTION"
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(heading, 30, Color("ffe1a0"))
-	column.add_child(heading)
-	var intro := Label.new()
-	intro.text = "One faction for the entire battle"
-	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(intro, 18, Color("c9d8ed"))
-	column.add_child(intro)
+	margin.add_child(column)
+	var title := Label.new()
+	title.text = "GOLD RUSH"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(title, 43, Color("ffd579"))
+	column.add_child(title)
+	var subtitle := Label.new()
+	subtitle.text = "VAULT WARS  •  CHOOSE YOUR RACE"
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(subtitle, 20, Color("e8d3a8"))
+	column.add_child(subtitle)
 	var cards := VBoxContainer.new()
 	cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cards.alignment = BoxContainer.ALIGNMENT_CENTER
-	cards.add_theme_constant_override("separation", 18)
+	cards.add_theme_constant_override("separation", 12)
 	column.add_child(cards)
 	for i in 4:
-		var card := Button.new()
-		card.custom_minimum_size.y = 122
-		card.text = RACE_NAMES[i] + "\n" + RACE_DESCRIPTIONS[i]
-		card.add_theme_font_size_override("font_size", 19)
-		card.add_theme_color_override("font_color", RACE_COLORS[i])
-		_style_button(card, true)
-		card.add_theme_color_override("font_color", RACE_COLORS[i])
+		var card := PanelContainer.new()
+		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		var frame := StyleBoxFlat.new()
+		frame.bg_color = Color("182333")
+		frame.border_color = RACE_COLORS[i]
+		frame.set_border_width_all(3)
+		frame.set_corner_radius_all(15)
+		frame.set_content_margin_all(8)
+		card.add_theme_stylebox_override("panel", frame)
 		cards.add_child(card)
-		card.pressed.connect(_choose_faction.bind(i))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 14)
+		card.add_child(row)
+		var portrait := TextureRect.new()
+		portrait.custom_minimum_size = Vector2(150, 155)
+		portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		portrait.size_flags_stretch_ratio = 0.6
+		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		portrait.texture = load("res://assets/factions/" + RACE_NAMES[i].to_lower() + ".svg")
+		row.add_child(portrait)
+		var details := VBoxContainer.new()
+		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		details.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_child(details)
+		var name_label := Label.new()
+		name_label.text = RACE_NAMES[i]
+		_style_label(name_label, 24, RACE_COLORS[i])
+		details.add_child(name_label)
+		var description := Label.new()
+		description.text = RACE_DESCRIPTIONS[i]
+		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_style_label(description, 15, Color("d9e1ec"))
+		details.add_child(description)
+		var choose := Button.new()
+		choose.text = "SELECT FACTION"
+		choose.custom_minimum_size.y = 48
+		_style_button(choose, true)
+		details.add_child(choose)
+		choose.pressed.connect(_preview_faction.bind(i))
 	var footer := Label.new()
-	footer.text = "Select a faction to begin your first raid"
+	footer.text = "Select a faction, then confirm your choice"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(footer, 17, Color("d7c7ad"))
+	_style_label(footer, 16, Color("d8c49a"))
 	column.add_child(footer)
+	var confirm := Button.new()
+	confirm.name = "ConfirmFaction"
+	confirm.text = "PLAY BATTLE"
+	confirm.custom_minimum_size.y = 75
+	_style_button(confirm, false)
+	column.add_child(confirm)
+	confirm.pressed.connect(_confirm_faction)
+	_preview_faction(0)
+
+func _preview_faction(index: int) -> void:
+	selected_race = index
+	var confirm := selection_layer.find_child("ConfirmFaction", true, false) as Button
+	if confirm != null:
+		confirm.text = "PLAY AS " + RACE_NAMES[index]
+		confirm.add_theme_color_override("font_color", RACE_COLORS[index])
+
+func _confirm_faction() -> void:
+	_choose_faction(selected_race)
 
 func _choose_faction(index: int) -> void:
 	selected_race = index
