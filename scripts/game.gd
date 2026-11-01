@@ -24,6 +24,8 @@ var timer_label: Label
 var info: Label
 var arena: Control
 var controls: Array[Button] = []
+var visual_time := 0.0
+var title_label: Label
 
 func _ready() -> void:
 	rng.randomize()
@@ -31,26 +33,33 @@ func _ready() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
 	var title := Label.new()
+	title_label = title
 	title.text = "GOLD RUSH: VAULT WARS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 28)
 	root.add_child(title)
+	_style_label(title, 31, Color("ffe2a0"))
 	hud = Label.new()
 	hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(hud)
+	_style_label(hud, 22, Color("f8d37c"))
 	timer_label = Label.new()
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(timer_label)
+	_style_label(timer_label, 19, Color("d5e8fa"))
 	arena = Control.new()
 	arena.custom_minimum_size = Vector2(0, 570)
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena.draw.connect(_draw_arena)
 	root.add_child(arena)
+	arena.mouse_filter = Control.MOUSE_FILTER_STOP
+	arena.gui_input.connect(_arena_input)
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.custom_minimum_size.y = 72
 	root.add_child(info)
+	_style_label(info, 18, Color("f0e7cf"))
 	for labels in [["LANE 1", "LANE 2", "LANE 3"], ["RUNNER 75", "CARRIER 140", "SABOTEUR 110"], ["SPIKES 55", "SNARE 75", "TURRET 155"]]:
 		var row := HBoxContainer.new()
 		root.add_child(row)
@@ -60,6 +69,7 @@ func _ready() -> void:
 			button.custom_minimum_size.y = 62
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(button)
+			_style_button(button, controls.size() < 3)
 			controls.append(button)
 			if controls.size() <= 3:
 				button.pressed.connect(_select_lane.bind(index))
@@ -71,6 +81,7 @@ func _ready() -> void:
 	start.text = "START ATTACK"
 	start.custom_minimum_size.y = 70
 	root.add_child(start)
+	_style_button(start, false)
 	controls.append(start)
 	start.pressed.connect(_start_pressed)
 	var clock := Timer.new()
@@ -154,6 +165,8 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": 60.0 if kind == -1 else HP[kind], "speed": 0.145 if kind == -1 else SPEED[kind], "capacity": 25 if kind == -1 else LOOTS[kind], "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
 
 func _tick() -> void:
+	visual_time += 0.1
+	arena.queue_redraw()
 	if phase == "END":
 		return
 	remaining -= 0.1
@@ -236,7 +249,9 @@ func _refresh() -> void:
 	for i in range(3, 9):
 		controls[i].disabled = phase != "PREP"
 	controls[9].disabled = phase == "ATTACK"
-	controls[9].text = "RESTART" if phase == "END" else "START ATTACK" if phase == "PREP" else "ATTACK IN PROGRESS"
+	controls[9].text = "PLAY AGAIN" if phase == "END" else "UNLEASH THE RAID" if phase == "PREP" else "BATTLE IN PROGRESS"
+	for i in 3:
+		controls[i].modulate = Color("ffe29a") if i == lane else Color.WHITE
 	arena.queue_redraw()
 
 func _point(path: int, progress: float, side: int) -> Vector2:
@@ -245,24 +260,104 @@ func _point(path: int, progress: float, side: int) -> Vector2:
 	var right := Vector2(arena.size.x * 0.34, -arena.size.y * 0.12 + path * 57.0)
 	return center + (left.lerp(right, progress) if side == 0 else right.lerp(left, progress))
 
+func _style_label(label: Label, font_size: int, color: Color) -> void:
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_shadow_color", Color("101827"))
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 3)
+
+func _style_button(button: Button, is_lane: bool) -> void:
+	button.add_theme_font_size_override("font_size", 17)
+	button.add_theme_color_override("font_color", Color("fff2d4"))
+	button.add_theme_color_override("font_disabled_color", Color("b1a48c"))
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("314a60") if is_lane else Color("584235")
+		if state == "pressed":
+			style.bg_color = Color("987041")
+		if state == "disabled":
+			style.bg_color = Color("383b43")
+		style.border_color = Color("e8bb70")
+		style.set_border_width_all(2)
+		style.set_corner_radius_all(12)
+		style.content_margin_left = 3
+		style.content_margin_right = 3
+		button.add_theme_stylebox_override(state, style)
+
+func _arena_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and event.pressed:
+		var y: float = event.position.y - arena.size.y * 0.5
+		var selected := clampi(int(round((y + arena.size.y * 0.12) / 57.0)), 0, 2)
+		_select_lane(selected)
+
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = minf(arena.size.x * 0.47, 315.0)
 	var h: float = minf(arena.size.y * 0.39, 230.0)
-	arena.draw_colored_polygon(PackedVector2Array([center + Vector2(0, -h), center + Vector2(w, 0), center + Vector2(0, h), center + Vector2(-w, 0)]), Color("426d4d"))
+	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("141e32"))
+	# Animated sky, distant mountain silhouettes and drifting stars.
+	for i in 22:
+		var sx := fposmod(float(i * 137) + sin(visual_time * 0.23 + float(i)) * 9.0, arena.size.x)
+		var sy := fposmod(float(i * 79), arena.size.y * 0.62)
+		arena.draw_circle(Vector2(sx, sy), 1.5 + sin(visual_time * 1.8 + float(i)) * 0.7, Color("b8d8ff", 0.48))
+	for i in 7:
+		var mx := float(i) * arena.size.x / 6.0
+		arena.draw_colored_polygon(PackedVector2Array([Vector2(mx - 160, center.y + 45), Vector2(mx, center.y - 170 - float(i % 3) * 22), Vector2(mx + 180, center.y + 45)]), Color("243a50"))
+	arena.draw_colored_polygon(PackedVector2Array([center + Vector2(0, -h), center + Vector2(w, 0), center + Vector2(0, h), center + Vector2(-w, 0)]), Color("365c50"))
+	arena.draw_colored_polygon(PackedVector2Array([center + Vector2(0, -h + 19), center + Vector2(w - 20, 0), center + Vector2(0, h - 19), center + Vector2(-w + 20, 0)]), Color("46785d"))
+	for i in 14:
+		var seed := float(i)
+		var x := center.x + sin(seed * 8.31) * w * 0.74
+		var y := center.y + cos(seed * 3.47) * h * 0.67
+		arena.draw_circle(Vector2(x, y), 3.0, Color("8fba79"))
 	for path in 3:
-		arena.draw_line(_point(path, 0, 0), _point(path, 1, 0), Color("957d57"), 24.0, true)
-		arena.draw_line(_point(path, 0, 0), _point(path, 1, 0), Color("d9c297") if path == lane else Color("bca681"), 16.0, true)
+		var a := _point(path, 0, 0)
+		var b := _point(path, 1, 0)
+		arena.draw_line(a + Vector2(0, 7), b + Vector2(0, 7), Color("1c332e"), 33.0, true)
+		arena.draw_line(a, b, Color("8a674c"), 29.0, true)
+		arena.draw_line(a, b, Color("edc88c") if path == lane else Color("b99b72"), 22.0, true)
+		for j in 12:
+			var p := a.lerp(b, float(j) / 11.0)
+			arena.draw_line(p + Vector2(-3, -8), p + Vector2(3, 8), Color("81664e", 0.5), 2.0)
 	for side in 2:
 		var fort := _point(1, 0, side)
-		arena.draw_rect(Rect2(fort - Vector2(23, 31), Vector2(46, 55)), Color("638fc1") if side == 0 else Color("c46b60"))
-		arena.draw_colored_polygon(PackedVector2Array([fort + Vector2(-28, -31), fort + Vector2(0, -56), fort + Vector2(28, -31)]), Color("315c91") if side == 0 else Color("873d39"))
+		var base_color := Color("4f86bf") if side == 0 else Color("ad5265")
+		_draw_fort(fort, base_color, side)
 		for trap in traps[side]:
 			var p := _point(trap["lane"], 0.67, 1 - side)
 			p.y += float(traps[side].find(trap) % 3 - 1) * 13.0
-			arena.draw_circle(p, 10.0, [Color("bdb7a9"), Color("d7a04d"), Color("5e5f66")][trap["kind"]])
+			arena.draw_circle(p + Vector2(0, 5), 12, Color("142c35", 0.6))
+			arena.draw_circle(p, 10, [Color("bdb7a9"), Color("e5ac4e"), Color("a8a0cf")][trap["kind"]])
+			arena.draw_circle(p + Vector2(-3, -3), 3, Color("fff2cb"))
 	for unit in units:
 		var p := _point(unit["lane"], clampf(unit["position"], 0.0, 1.0), unit["side"])
-		arena.draw_circle(p, 11.0 if unit["kind"] == 1 else 7.0, Color("72c6ff") if unit["side"] == 0 else Color("ff887e"))
-		if unit["carried"] > 0:
-			arena.draw_circle(p + Vector2(8, -8), 4.0, Color("ffdf56"))
+		var bob := sin(visual_time * 10.0 + float(unit["position"]) * 12.0) * 2.0
+		var color := Color("69c9ff") if unit["side"] == 0 else Color("ff8c96")
+		_draw_character(p + Vector2(0, bob), color, unit)
+	for i in 9:
+		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
+		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
+		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))
+
+func _draw_fort(p: Vector2, color: Color, side: int) -> void:
+	arena.draw_circle(p + Vector2(0, 24), 30, Color("101d2a", 0.5))
+	arena.draw_rect(Rect2(p + Vector2(-24, -38), Vector2(48, 62)), color)
+	arena.draw_rect(Rect2(p + Vector2(-18, -32), Vector2(36, 50)), color.lightened(0.24))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-31, -38), p + Vector2(0, -70), p + Vector2(31, -38)]), color.darkened(0.38))
+	arena.draw_rect(Rect2(p + Vector2(-8, -9), Vector2(16, 32)), Color("182538"))
+	arena.draw_circle(p + Vector2(0, -20), 7, Color("ffdf81", 0.85))
+	for x in [-18, 18]:
+		arena.draw_rect(Rect2(p + Vector2(x - 5, -47), Vector2(10, 12)), color.lightened(0.4))
+
+func _draw_character(p: Vector2, color: Color, unit: Dictionary) -> void:
+	var radius := 13.0 if unit["kind"] == 1 else 10.0
+	arena.draw_circle(p + Vector2(0, 10), radius, Color("101c27", 0.55))
+	arena.draw_circle(p + Vector2(0, 1), radius, color.darkened(0.22))
+	arena.draw_circle(p + Vector2(0, -8), radius * 0.8, Color("f0c4a2"))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-radius, -9), p + Vector2(0, -radius - 15), p + Vector2(radius, -9)]), color.darkened(0.48))
+	arena.draw_circle(p + Vector2(-3, -8), 1.5, Color("1d2534"))
+	arena.draw_circle(p + Vector2(3, -8), 1.5, Color("1d2534"))
+	if unit["carried"] > 0:
+		arena.draw_circle(p + Vector2(12, -13), 7, Color("eebc48"))
+		arena.draw_circle(p + Vector2(10, -16), 2, Color("fff2a4"))
