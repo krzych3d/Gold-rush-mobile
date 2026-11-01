@@ -178,7 +178,22 @@ func _begin_attack() -> void:
 	_refresh()
 
 func _spawn(side: int, path: int, kind: int, offset: float) -> void:
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": 60.0 if kind == -1 else HP[kind], "speed": 0.145 if kind == -1 else SPEED[kind], "capacity": 25 if kind == -1 else LOOTS[kind], "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
+	var unit_health: float = 60.0 if kind == -1 else HP[kind]
+	var unit_speed: float = 0.145 if kind == -1 else SPEED[kind]
+	var unit_capacity: int = 25 if kind == -1 else LOOTS[kind]
+	if side == 0:
+		match selected_race:
+			0:
+				unit_health *= 1.25
+			1:
+				unit_speed *= 1.2
+			2:
+				unit_health *= 1.1
+				unit_capacity += 10
+			3:
+				unit_speed *= 1.1
+				unit_capacity += 15
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
 
 func _tick() -> void:
 	visual_time += 0.1
