@@ -83,6 +83,12 @@ jobs:
             echo "::error::Godot script or scene failed to load; refusing to publish a broken APK."
             exit 1
           fi
+          echo "Smoke-testing startup scene..."
+          ./godot --headless --path . --quit-after 15 2>&1 | tee smoke.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Cannot load script|Invalid call|Invalid access" smoke.log; then
+            echo "::error::Startup smoke test failed."
+            exit 1
+          fi
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           echo "Export templates:"
           ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
@@ -111,6 +117,7 @@ jobs:
           name: android-build-diagnostics
           path: |
             import.log
+            smoke.log
             configure.log
             export.log
           retention-days: 3
