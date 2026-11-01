@@ -64,6 +64,15 @@ jobs:
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$RUNNER_TEMP/debug.keystore" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          preset = Path("export_presets.cfg")
+          data = preset.read_text()
+          key = Path(os.environ["RUNNER_TEMP"]) / "debug.keystore"
+          data += '\nkeystore/debug="%s"\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"\n' % key
+          preset.write_text(data)
+          PY
       - name: Import and export debug APK
         run: |
           set -euo pipefail
@@ -71,7 +80,7 @@ jobs:
           ./godot --headless --path . --editor --import --quit 2>&1 | tee import.log
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           mkdir -p build
-          ./godot --headless --path . --export-debug Android build/gold-rush-debug.apk 2>&1 | tee export.log
+          ./godot --headless --verbose --path . --export-debug Android build/gold-rush-debug.apk 2>&1 | tee export.log
           test -s build/gold-rush-debug.apk
       - name: Upload diagnostic logs on failure
         if: failure()
