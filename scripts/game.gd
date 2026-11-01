@@ -2,6 +2,8 @@ extends Control
 
 const MAX_WAVES := 5
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
+const RACE_DESCRIPTIONS := ["Ironbeards - armored warriors and fortified vaults", "Green Shadows - swift thieves and daring escapes", "Moon Guardians - resilient magic and extra loot", "Astral Assassins - swift strikes and rich hauls"]
+const RACE_COLORS := [Color("d7a85c"), Color("78c978"), Color("a6dfff"), Color("ba8aff")]
 const PREP_TIME := 30.0
 const ATTACK_TIME := 60.0
 const COSTS := [75, 140, 110]
@@ -12,7 +14,7 @@ const TRAP_COSTS := [55, 75, 155]
 
 var selected_race := 0
 var wave := 1
-var phase := "PREP"
+var phase := "SELECT"
 var remaining := PREP_TIME
 var gold := [1000, 1000]
 var lane := 1
@@ -29,6 +31,7 @@ var controls: Array[Button] = []
 var visual_time := 0.0
 var title_label: Label
 var race_button: Button
+var selection_layer: ColorRect
 
 func _ready() -> void:
 	rng.randomize()
@@ -98,6 +101,55 @@ func _ready() -> void:
 	clock.timeout.connect(_tick)
 	add_child(clock)
 	clock.start()
+	_refresh()
+	_show_race_selection()
+
+func _show_race_selection() -> void:
+	selection_layer = ColorRect.new()
+	selection_layer.color = Color("101729", 0.98)
+	selection_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(selection_layer)
+	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	column.add_theme_constant_override("separation", 12)
+	selection_layer.add_child(column)
+	var heading := Label.new()
+	heading.text = "CHOOSE YOUR FACTION"
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(heading, 30, Color("ffe1a0"))
+	column.add_child(heading)
+	var intro := Label.new()
+	intro.text = "One faction for the entire battle"
+	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(intro, 18, Color("c9d8ed"))
+	column.add_child(intro)
+	var cards := VBoxContainer.new()
+	cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cards.alignment = BoxContainer.ALIGNMENT_CENTER
+	cards.add_theme_constant_override("separation", 18)
+	column.add_child(cards)
+	for i in 4:
+		var card := Button.new()
+		card.custom_minimum_size.y = 122
+		card.text = RACE_NAMES[i] + "\n" + RACE_DESCRIPTIONS[i]
+		card.add_theme_font_size_override("font_size", 19)
+		card.add_theme_color_override("font_color", RACE_COLORS[i])
+		_style_button(card, true)
+		card.add_theme_color_override("font_color", RACE_COLORS[i])
+		cards.add_child(card)
+		card.pressed.connect(_choose_faction.bind(i))
+	var footer := Label.new()
+	footer.text = "Select a faction to begin your first raid"
+	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(footer, 17, Color("d7c7ad"))
+	column.add_child(footer)
+
+func _choose_faction(index: int) -> void:
+	selected_race = index
+	phase = "PREP"
+	remaining = PREP_TIME
+	message = RACE_DESCRIPTIONS[index]
+	selection_layer.queue_free()
 	_refresh()
 
 func _change_race() -> void:
@@ -196,6 +248,8 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
 
 func _tick() -> void:
+	if phase == "SELECT":
+		return
 	visual_time += 0.1
 	arena.queue_redraw()
 	if phase == "END":
@@ -366,7 +420,7 @@ func _draw_arena() -> void:
 	for unit in units:
 		var p := _point(unit["lane"], clampf(unit["position"], 0.0, 1.0), unit["side"])
 		var bob := sin(visual_time * 10.0 + float(unit["position"]) * 12.0) * 2.0
-		var color := Color("69c9ff") if unit["side"] == 0 else Color("ff8c96")
+		var color := RACE_COLORS[selected_race] if unit["side"] == 0 else Color("ff8c96")
 		_draw_character(p + Vector2(0, bob), color, unit)
 	for i in 9:
 		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
@@ -387,10 +441,26 @@ func _draw_character(p: Vector2, color: Color, unit: Dictionary) -> void:
 	var radius := 13.0 if unit["kind"] == 1 else 10.0
 	arena.draw_circle(p + Vector2(0, 10), radius, Color("101c27", 0.55))
 	arena.draw_circle(p + Vector2(0, 1), radius, color.darkened(0.22))
-	arena.draw_circle(p + Vector2(0, -8), radius * 0.8, Color("f0c4a2"))
+	arena.draw_circle(p + Vector2(0, -8), radius * 0.8, Color("f0c4a2") if unit["side"] == 1 or selected_race != 3 else Color("26203c"))
 	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-radius, -9), p + Vector2(0, -radius - 15), p + Vector2(radius, -9)]), color.darkened(0.48))
 	arena.draw_circle(p + Vector2(-3, -8), 1.5, Color("1d2534"))
 	arena.draw_circle(p + Vector2(3, -8), 1.5, Color("1d2534"))
+	if unit["side"] == 0:
+		match selected_race:
+			0:
+				arena.draw_rect(Rect2(p + Vector2(-radius - 3, -4), Vector2(radius * 2.0 + 6.0, 5)), Color("f5c66f"))
+				arena.draw_line(p + Vector2(-5, -2), p + Vector2(0, 8), Color("ad673e"), 4.0)
+			1:
+				arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-radius, -9), p + Vector2(-radius - 10, -17), p + Vector2(-radius + 3, -2)]), Color("83c56c"))
+				arena.draw_colored_polygon(PackedVector2Array([p + Vector2(radius, -9), p + Vector2(radius + 10, -17), p + Vector2(radius - 3, -2)]), Color("83c56c"))
+			2:
+				arena.draw_line(p + Vector2(-radius, -17), p + Vector2(-radius - 7, -23), Color("d4eafa"), 3.0)
+				arena.draw_line(p + Vector2(radius, -17), p + Vector2(radius + 7, -23), Color("d4eafa"), 3.0)
+			3:
+				arena.draw_circle(p + Vector2(-3, -8), 2.0, Color("c994ff"))
+				arena.draw_circle(p + Vector2(3, -8), 2.0, Color("c994ff"))
+				arena.draw_line(p + Vector2(-radius - 5, 4), p + Vector2(-radius - 11, -12), Color("e6b3ff"), 3.0)
+				arena.draw_line(p + Vector2(radius + 5, 4), p + Vector2(radius + 11, -12), Color("e6b3ff"), 3.0)
 	if unit["carried"] > 0:
 		arena.draw_circle(p + Vector2(12, -13), 7, Color("eebc48"))
 		arena.draw_circle(p + Vector2(10, -16), 2, Color("fff2a4"))
