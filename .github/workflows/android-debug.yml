@@ -45,9 +45,10 @@ jobs:
           fi
           test -x "$SDKMANAGER"
           printf 'y\\n' | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses > /dev/null || true
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "build-tools;34.0.0" "platforms;android-33" "build-tools;33.0.2"
           test -d "$ANDROID_HOME/platforms/android-34"
           test -d "$ANDROID_HOME/build-tools/34.0.0"
+          test -d "$ANDROID_HOME/build-tools/33.0.2"
       - name: Install Godot and export templates
         run: |
           curl -fL --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
@@ -79,6 +80,10 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME JAVA_HOME=$JAVA_HOME"
           ./godot --headless --path . --editor --import --quit 2>&1 | tee import.log
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
+          echo "Export templates:"
+          ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
+          echo "Installed Android build tools:"
+          ls -1 "$ANDROID_HOME/build-tools"
           mkdir -p build
           ./godot --headless --verbose --path . --export-debug Android build/gold-rush-debug.apk 2>&1 | tee export.log
           test -s build/gold-rush-debug.apk
