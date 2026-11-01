@@ -79,6 +79,10 @@ jobs:
           set -euo pipefail
           echo "ANDROID_HOME=$ANDROID_HOME JAVA_HOME=$JAVA_HOME"
           ./godot --headless --path . --editor --import --quit 2>&1 | tee import.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Cannot load script" import.log; then
+            echo "::error::Godot script or scene failed to load; refusing to publish a broken APK."
+            exit 1
+          fi
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           echo "Export templates:"
           ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
@@ -93,6 +97,10 @@ jobs:
           grep -E "^(name|platform|keystore/debug|keystore/debug_user)=" export_presets.cfg
           mkdir -p build
           ./godot --headless --verbose --path . --export-debug Android build/gold-rush-debug.apk 2>&1 | tee export.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Cannot load script" export.log; then
+            echo "::error::Godot reported a script error during export."
+            exit 1
+          fi
           test -s build/gold-rush-debug.apk
           echo "APK size:"
           ls -lh build/gold-rush-debug.apk
