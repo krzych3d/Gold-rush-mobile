@@ -1,6 +1,8 @@
 extends Control
 
 const MAX_WAVES := 5
+const RACES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
+const RACE_HINTS := ["Fortified vaults, earthquake shockwave", "Fast thieves and smoke escape", "Moon roots slow intruders", "Astral assassins blink past defenses"]
 const PREP_TIME := 30.0
 const ATTACK_TIME := 60.0
 const COSTS := [75, 140, 110]
@@ -9,6 +11,8 @@ const HP := [45.0, 180.0, 75.0]
 const SPEED := [0.21, 0.105, 0.15]
 const TRAP_COSTS := [55, 75, 155]
 
+var race := 0
+var power_ready := true
 var wave := 1
 var phase := "PREP"
 var remaining := PREP_TIME
@@ -26,6 +30,8 @@ var arena: Control
 var controls: Array[Button] = []
 var visual_time := 0.0
 var title_label: Label
+var race_button: Button
+var power_button: Button
 
 func _ready() -> void:
 	rng.randomize()
@@ -60,6 +66,21 @@ func _ready() -> void:
 	info.custom_minimum_size.y = 72
 	root.add_child(info)
 	_style_label(info, 18, Color("f0e7cf"))
+	var race_row := HBoxContainer.new()
+	root.add_child(race_row)
+	race_button = Button.new()
+	race_button.text = "RACE: DWARVES"
+	race_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	race_button.custom_minimum_size.y = 58
+	_style_button(race_button, true)
+	race_row.add_child(race_button)
+	race_button.pressed.connect(_cycle_race)
+	power_button = Button.new()
+	power_button.text = "SPECIAL POWER"
+	power_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_button(power_button, false)
+	race_row.add_child(power_button)
+	power_button.pressed.connect(_special_power)
 	for labels in [["LANE 1", "LANE 2", "LANE 3"], ["RUNNER 75", "CARRIER 140", "SABOTEUR 110"], ["SPIKES 55", "SNARE 75", "TURRET 155"]]:
 		var row := HBoxContainer.new()
 		root.add_child(row)
@@ -89,6 +110,43 @@ func _ready() -> void:
 	clock.timeout.connect(_tick)
 	add_child(clock)
 	clock.start()
+	_refresh()
+
+func _cycle_race() -> void:
+	if phase != "PREP" or wave != 1:
+		return
+	race = (race + 1) % RACES.size()
+	message = RACE_HINTS[race]
+	_refresh()
+
+func _special_power() -> void:
+	if phase != "ATTACK" or not power_ready:
+		return
+	power_ready = false
+	var affected := 0
+	for unit in units:
+		if unit["side"] != 1:
+			continue
+		match race:
+			0:
+				unit["health"] -= 65.0
+				unit["stunned"] = 2.0
+			1:
+				unit["stunned"] = 3.5
+			2:
+				unit["stunned"] = 5.0
+			3:
+				unit["health"] -= 95.0
+			affected += 1
+	if race == 1:
+		for unit in units:
+			if unit["side"] == 0:
+				unit["speed"] *= 1.7
+	if race == 3:
+		for unit in units:
+			if unit["side"] == 0 and not unit["returning"]:
+				unit["position"] = minf(0.85, unit["position"] + 0.3)
+	message = ["GOLDEN EARTHQUAKE!", "SMOKE ESCAPE!", "MOON ROOTS!", "VOID RIFT!"][race] + " Hit %d enemies." % affected
 	_refresh()
 
 func _select_lane(index: int) -> void:
@@ -150,6 +208,7 @@ func _start_pressed() -> void:
 func _begin_attack() -> void:
 	_bot_prepare()
 	phase = "ATTACK"
+	power_ready = true
 	remaining = ATTACK_TIME
 	units.clear()
 	for side in 2:
@@ -162,7 +221,15 @@ func _begin_attack() -> void:
 	_refresh()
 
 func _spawn(side: int, path: int, kind: int, offset: float) -> void:
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": 60.0 if kind == -1 else HP[kind], "speed": 0.145 if kind == -1 else SPEED[kind], "capacity": 25 if kind == -1 else LOOTS[kind], "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
+	var base_speed: float = 0.145 if kind == -1 else SPEED[kind]
+	var base_health: float = 60.0 if kind == -1 else HP[kind]
+	if side == 0 and race == 1:
+		base_speed *= 1.25
+	if side == 0 and race == 3:
+		base_speed *= 1.12
+	if side == 0 and race == 0:
+		base_health *= 1.4
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": base_health, "speed": base_speed, "capacity": 25 if kind == -1 else LOOTS[kind], "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
 
 func _tick() -> void:
 	visual_time += 0.1
@@ -185,6 +252,10 @@ func _simulate(dt: float) -> void:
 			unit["stunned"] -= dt
 			continue
 		var defender: int = 1 - unit["side"]
+		if defender == 0 and race == 2 and unit["position"] >= 0.45 and unit["position"] <= 0.7:
+			unit["stunned"] = maxf(float(unit["stunned"]), 0.12)
+		if defender == 0 and race == 0 and unit["position"] >= 0.85 and not unit["returning"]:
+			unit["health"] -= 8.0 * dt
 		if not unit["returning"] and unit["position"] >= 0.35 and unit["position"] < 0.85:
 			for trap in traps[defender].duplicate():
 				if trap["lane"] != unit["lane"] or trap["charges"] <= 0:
@@ -238,12 +309,17 @@ func _end_wave() -> void:
 	for side in 2:
 		gold[side] += mini(100, int(gold[side] * 0.08))
 	wave += 1
+	power_ready = true
 	phase = "PREP"
 	remaining = PREP_TIME
 	message = "Interest paid. Prepare for next wave!"
 
 func _refresh() -> void:
 	hud.text = "YOUR VAULT: %d     ENEMY: %d" % [gold[0], gold[1]]
+	race_button.text = "RACE: " + RACES[race]
+	race_button.disabled = phase != "PREP" or wave > 1
+	power_button.disabled = phase != "ATTACK" or not power_ready
+	power_button.text = "SPECIAL READY!" if power_ready else "SPECIAL USED"
 	timer_label.text = "WAVE %d/%d | %s | %02d s" % [wave, MAX_WAVES, phase, int(maxf(0.0, ceilf(remaining)))]
 	info.text = message + "\nLane: %d | Thieves: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
 	for i in range(3, 9):
