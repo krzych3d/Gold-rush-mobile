@@ -32,6 +32,11 @@ var visual_time := 0.0
 var title_label: Label
 var race_button: Button
 var selection_layer: ColorRect
+var camera_offset := Vector2.ZERO
+var camera_zoom := 1.0
+var dragging_map := false
+var drag_distance := 0.0
+var camera_hint: Label
 
 func _ready() -> void:
 	rng.randomize()
@@ -55,11 +60,32 @@ func _ready() -> void:
 	_style_label(timer_label, 19, Color("d5e8fa"))
 	arena = Control.new()
 	arena.custom_minimum_size = Vector2(0, 570)
+	arena.clip_contents = true
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena.draw.connect(_draw_arena)
 	root.add_child(arena)
 	arena.mouse_filter = Control.MOUSE_FILTER_STOP
 	arena.gui_input.connect(_arena_input)
+	camera_hint = Label.new()
+	camera_hint.text = "DRAG TO EXPLORE  |  +/- TO ZOOM"
+	camera_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(camera_hint, 15, Color("a9c7d8"))
+	root.add_child(camera_hint)
+	var camera_controls := HBoxContainer.new()
+	root.add_child(camera_controls)
+	for label in ["−", "CENTER", "+"]:
+		var control := Button.new()
+		control.text = label
+		control.custom_minimum_size.y = 42
+		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_style_button(control, true)
+		camera_controls.add_child(control)
+		if label == "−":
+			control.pressed.connect(_change_zoom.bind(-0.15))
+		elif label == "+":
+			control.pressed.connect(_change_zoom.bind(0.15))
+		else:
+			control.pressed.connect(_center_camera)
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -342,9 +368,9 @@ func _refresh() -> void:
 	arena.queue_redraw()
 
 func _point(path: int, progress: float, side: int) -> Vector2:
-	var center := arena.size * 0.5
-	var left := Vector2(-arena.size.x * 0.34, -arena.size.y * 0.12 + path * 57.0)
-	var right := Vector2(arena.size.x * 0.34, -arena.size.y * 0.12 + path * 57.0)
+	var center := Vector2.ZERO
+	var left := Vector2(-arena.size.x * 0.68, -arena.size.y * 0.12 + path * 110.0)
+	var right := Vector2(arena.size.x * 0.68, -arena.size.y * 0.12 + path * 110.0)
 	return center + (left.lerp(right, progress) if side == 0 else right.lerp(left, progress))
 
 func _style_label(label: Label, font_size: int, color: Color) -> void:
@@ -372,17 +398,40 @@ func _style_button(button: Button, is_lane: bool) -> void:
 		style.content_margin_right = 3
 		button.add_theme_stylebox_override(state, style)
 
+func _center_camera() -> void:
+	camera_offset = Vector2.ZERO
+	camera_zoom = 1.0
+	arena.queue_redraw()
+
+func _change_zoom(delta: float) -> void:
+	camera_zoom = clampf(camera_zoom + delta, 0.7, 1.65)
+	arena.queue_redraw()
+
 func _arena_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed:
-		var y: float = event.position.y - arena.size.y * 0.5
-		var selected := clampi(int(round((y + arena.size.y * 0.12) / 57.0)), 0, 2)
-		_select_lane(selected)
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			dragging_map = true
+			drag_distance = 0.0
+		else:
+			if drag_distance < 12.0:
+				var world_y: float = (event.position.y - arena.size.y * 0.5 - camera_offset.y) / camera_zoom
+				var selected := clampi(int(round((world_y + arena.size.y * 0.12) / 110.0)), 0, 2)
+				_select_lane(selected)
+			dragging_map = false
+	elif event is InputEventScreenDrag and dragging_map:
+		camera_offset += event.relative
+		camera_offset.x = clampf(camera_offset.x, -arena.size.x * 0.9, arena.size.x * 0.9)
+		camera_offset.y = clampf(camera_offset.y, -arena.size.y * 0.9, arena.size.y * 0.9)
+		drag_distance += event.relative.length()
+		arena.queue_redraw()
 
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
-	var w: float = minf(arena.size.x * 0.47, 315.0)
-	var h: float = minf(arena.size.y * 0.39, 230.0)
+	var w: float = arena.size.x * 0.85
+	var h: float = arena.size.y * 0.68
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("141e32"))
+	arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
+	center = Vector2.ZERO
 	# Animated sky, distant mountain silhouettes and drifting stars.
 	for i in 22:
 		var sx := fposmod(float(i * 137) + sin(visual_time * 0.23 + float(i)) * 9.0, arena.size.x)
@@ -426,6 +475,7 @@ func _draw_arena() -> void:
 		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
 		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
 		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))
+	arena.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_fort(p: Vector2, color: Color, side: int) -> void:
 	var glow := Color("f9d786") if side == 0 else Color("e88af1")
