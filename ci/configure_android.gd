@@ -11,7 +11,6 @@ func _initialize() -> void:
 		return
 	settings.set_setting("export/android/android_sdk_path", sdk)
 	settings.set_setting("export/android/java_sdk_path", java)
-	settings.save()
 	print("Configured Godot Android SDK: ", sdk)
 	print("Configured Godot Java SDK: ", java)
 	quit()
