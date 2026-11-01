@@ -45,10 +45,24 @@ jobs:
           echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> "$GITHUB_ENV"
       - name: Import and export debug APK
         run: |
-          ./godot --headless --path . --editor --import --quit
+          set -euo pipefail
+          echo "ANDROID_HOME=$ANDROID_HOME JAVA_HOME=$JAVA_HOME"
+          ./godot --headless --path . --editor --import --quit 2>&1 | tee import.log
+          ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           mkdir -p build
-          ./godot --headless --path . --export-debug Android build/gold-rush-debug.apk
+          ./godot --headless --path . --export-debug Android build/gold-rush-debug.apk 2>&1 | tee export.log
           test -s build/gold-rush-debug.apk
+      - name: Upload diagnostic logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-diagnostics
+          path: |
+            import.log
+            configure.log
+            export.log
+          retention-days: 3
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: gold-rush-debug-apk
