@@ -71,7 +71,7 @@ func _ready() -> void:
 	race_button.custom_minimum_size.y = 56
 	root.add_child(race_button)
 	_style_button(race_button, true)
-	race_button.pressed.connect(_change_race)
+	race_button.disabled = true
 	for labels in [["LANE 1", "LANE 2", "LANE 3"], ["RUNNER 75", "CARRIER 140", "SABOTEUR 110"], ["SPIKES 55", "SNARE 75", "TURRET 155"]]:
 		var row := HBoxContainer.new()
 		root.add_child(row)
@@ -329,7 +329,7 @@ func _end_wave() -> void:
 
 func _refresh() -> void:
 	race_button.text = "RACE: " + RACE_NAMES[selected_race]
-	race_button.disabled = phase != "PREP" or wave > 1
+	race_button.disabled = true
 	hud.text = "YOUR VAULT: %d     ENEMY: %d" % [gold[0], gold[1]]
 	timer_label.text = "WAVE %d/%d | %s | %02d s" % [wave, MAX_WAVES, phase, int(maxf(0.0, ceilf(remaining)))]
 	info.text = message + "\nLane: %d | Thieves: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
