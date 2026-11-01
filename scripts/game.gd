@@ -428,39 +428,75 @@ func _draw_arena() -> void:
 		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))
 
 func _draw_fort(p: Vector2, color: Color, side: int) -> void:
-	arena.draw_circle(p + Vector2(0, 24), 30, Color("101d2a", 0.5))
-	arena.draw_rect(Rect2(p + Vector2(-24, -38), Vector2(48, 62)), color)
-	arena.draw_rect(Rect2(p + Vector2(-18, -32), Vector2(36, 50)), color.lightened(0.24))
-	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-31, -38), p + Vector2(0, -70), p + Vector2(31, -38)]), color.darkened(0.38))
-	arena.draw_rect(Rect2(p + Vector2(-8, -9), Vector2(16, 32)), Color("182538"))
-	arena.draw_circle(p + Vector2(0, -20), 7, Color("ffdf81", 0.85))
-	for x in [-18, 18]:
-		arena.draw_rect(Rect2(p + Vector2(x - 5, -47), Vector2(10, 12)), color.lightened(0.4))
+	var glow := Color("f9d786") if side == 0 else Color("e88af1")
+	_draw_fort_body(p, color, glow)
+
+func _draw_fort_body(p: Vector2, color: Color, glow: Color) -> void:
+	arena.draw_circle(p + Vector2(0, 22), 36, Color("071322", 0.5))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-33, 15), p + Vector2(0, 32), p + Vector2(33, 15), p + Vector2(0, 0)]), color.darkened(0.55))
+	arena.draw_rect(Rect2(p + Vector2(-26, -41), Vector2(52, 61)), color.darkened(0.2))
+	arena.draw_rect(Rect2(p + Vector2(-20, -35), Vector2(40, 52)), color.lightened(0.15))
+	for x in [-23, -8, 8, 23]:
+		arena.draw_rect(Rect2(p + Vector2(x - 5, -48), Vector2(10, 14)), color.lightened(0.36))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-33, -43), p + Vector2(0, -81), p + Vector2(33, -43)]), color.darkened(0.52))
+	arena.draw_line(p + Vector2(-29, -42), p + Vector2(0, -76), glow, 3.0)
+	arena.draw_line(p + Vector2(0, -76), p + Vector2(29, -42), glow, 3.0)
+	arena.draw_rect(Rect2(p + Vector2(-10, -12), Vector2(20, 32)), Color("10172a"))
+	arena.draw_arc(p + Vector2(0, -12), 10, PI, TAU, 12, Color("10172a"), 8.0)
+	arena.draw_circle(p + Vector2(0, -29), 8, glow)
+	arena.draw_circle(p + Vector2(0, -29), 3, Color.WHITE)
+	for x in [-22, 22]:
+		arena.draw_line(p + Vector2(x, 3), p + Vector2(x, 17), Color("141d32"), 3.0)
 
 func _draw_character(p: Vector2, color: Color, unit: Dictionary) -> void:
-	var radius := 13.0 if unit["kind"] == 1 else 10.0
-	arena.draw_circle(p + Vector2(0, 10), radius, Color("101c27", 0.55))
-	arena.draw_circle(p + Vector2(0, 1), radius, color.darkened(0.22))
-	arena.draw_circle(p + Vector2(0, -8), radius * 0.8, Color("f0c4a2") if unit["side"] == 1 or selected_race != 3 else Color("26203c"))
-	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-radius, -9), p + Vector2(0, -radius - 15), p + Vector2(radius, -9)]), color.darkened(0.48))
-	arena.draw_circle(p + Vector2(-3, -8), 1.5, Color("1d2534"))
-	arena.draw_circle(p + Vector2(3, -8), 1.5, Color("1d2534"))
-	if unit["side"] == 0:
-		match selected_race:
-			0:
-				arena.draw_rect(Rect2(p + Vector2(-radius - 3, -4), Vector2(radius * 2.0 + 6.0, 5)), Color("f5c66f"))
-				arena.draw_line(p + Vector2(-5, -2), p + Vector2(0, 8), Color("ad673e"), 4.0)
-			1:
-				arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-radius, -9), p + Vector2(-radius - 10, -17), p + Vector2(-radius + 3, -2)]), Color("83c56c"))
-				arena.draw_colored_polygon(PackedVector2Array([p + Vector2(radius, -9), p + Vector2(radius + 10, -17), p + Vector2(radius - 3, -2)]), Color("83c56c"))
-			2:
-				arena.draw_line(p + Vector2(-radius, -17), p + Vector2(-radius - 7, -23), Color("d4eafa"), 3.0)
-				arena.draw_line(p + Vector2(radius, -17), p + Vector2(radius + 7, -23), Color("d4eafa"), 3.0)
-			3:
-				arena.draw_circle(p + Vector2(-3, -8), 2.0, Color("c994ff"))
-				arena.draw_circle(p + Vector2(3, -8), 2.0, Color("c994ff"))
-				arena.draw_line(p + Vector2(-radius - 5, 4), p + Vector2(-radius - 11, -12), Color("e6b3ff"), 3.0)
-				arena.draw_line(p + Vector2(radius + 5, 4), p + Vector2(radius + 11, -12), Color("e6b3ff"), 3.0)
+	var friendly: bool = unit["side"] == 0
+	var faction: int = selected_race if friendly else 1
+	var radius: float = 15.0 if unit["kind"] == 1 else 12.0
+	var moving: float = sin(visual_time * 10.0 + float(unit["position"]) * 13.0)
+	var cloak := color.darkened(0.48)
+	arena.draw_circle(p + Vector2(0, 14), radius + 5.0, Color("0a1421", 0.5))
+	# Two walking feet and a trailing cloak, distinct from circular placeholder units.
+	arena.draw_line(p + Vector2(-5, 5), p + Vector2(-7 + moving * 3.0, 15), Color("292637"), 5.0)
+	arena.draw_line(p + Vector2(5, 5), p + Vector2(7 - moving * 3.0, 15), Color("292637"), 5.0)
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-radius, -7), p + Vector2(radius, -7), p + Vector2(radius + 4, 11), p + Vector2(-radius - 4, 11)]), cloak)
+	arena.draw_rect(Rect2(p + Vector2(-radius + 3, -5), Vector2(radius * 2.0 - 6, 14)), color)
+	arena.draw_line(p + Vector2(-radius + 3, 2), p + Vector2(radius - 3, 2), Color("e7bd73"), 3.0)
+	arena.draw_circle(p + Vector2(0, -12), radius * 0.83, Color("f1c7a5") if faction != 3 else Color("2c2545"))
+	match faction:
+		0:
+			# Dwarf: steel helm, heavy golden beard and hammer.
+			arena.draw_rect(Rect2(p + Vector2(-radius, -21), Vector2(radius * 2.0, 7)), Color("aebdcc"))
+			arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-8, -8), p + Vector2(0, 5), p + Vector2(8, -8)]), Color("dc9749"))
+			arena.draw_line(p + Vector2(radius + 4, -3), p + Vector2(radius + 8, -24), Color("b9a78b"), 3.0)
+			arena.draw_rect(Rect2(p + Vector2(radius + 1, -27), Vector2(15, 8)), Color("c7d3df"))
+		1:
+			# Goblin: green face, long pointed ears, curved dagger.
+			arena.draw_circle(p + Vector2(0, -12), radius * 0.8, Color("88bc69"))
+			arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-8, -15), p + Vector2(-radius - 10, -23), p + Vector2(-radius + 3, -7)]), Color("80b56b"))
+			arena.draw_colored_polygon(PackedVector2Array([p + Vector2(8, -15), p + Vector2(radius + 10, -23), p + Vector2(radius - 3, -7)]), Color("80b56b"))
+			arena.draw_line(p + Vector2(radius + 2, 3), p + Vector2(radius + 13, -13), Color("c8dce1"), 3.0)
+		2:
+			# Elf: silver circlet, pointed ears, glowing moon staff.
+			arena.draw_line(p + Vector2(-radius + 3, -14), p + Vector2(-radius - 9, -23), Color("ccecff"), 4.0)
+			arena.draw_line(p + Vector2(radius - 3, -14), p + Vector2(radius + 9, -23), Color("ccecff"), 4.0)
+			arena.draw_arc(p + Vector2(0, -16), radius * 0.8, PI, TAU, 12, Color("e8f5ff"), 3.0)
+			arena.draw_line(p + Vector2(radius + 7, -23), p + Vector2(radius + 7, 10), Color("e0f0ff"), 3.0)
+			arena.draw_circle(p + Vector2(radius + 7, -25), 5.0 + sin(visual_time * 4.0) * 1.0, Color("93eaff"))
+		3:
+			# Voidborn: faceless hood, violet eyes and twin astral blades.
+			arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-radius, -13), p + Vector2(0, -radius - 23), p + Vector2(radius, -13)]), Color("302446"))
+			arena.draw_line(p + Vector2(-5, -12), p + Vector2(-2, -12), Color("d69aff"), 2.0)
+			arena.draw_line(p + Vector2(2, -12), p + Vector2(5, -12), Color("d69aff"), 2.0)
+			arena.draw_line(p + Vector2(-radius, 4), p + Vector2(-radius - 12, -15), Color("b887ff"), 4.0)
+			arena.draw_line(p + Vector2(radius, 4), p + Vector2(radius + 12, -15), Color("b887ff"), 4.0)
+			arena.draw_arc(p, radius + 7.0, visual_time, visual_time + PI * 0.8, 12, Color("b66aff", 0.65), 2.0)
+	if faction != 3:
+		arena.draw_circle(p + Vector2(-4, -12), 1.8, Color("182234"))
+		arena.draw_circle(p + Vector2(4, -12), 1.8, Color("182234"))
 	if unit["carried"] > 0:
-		arena.draw_circle(p + Vector2(12, -13), 7, Color("eebc48"))
-		arena.draw_circle(p + Vector2(10, -16), 2, Color("fff2a4"))
+		arena.draw_circle(p + Vector2(13, -22), 8, Color("f6b83f"))
+		arena.draw_circle(p + Vector2(11, -25), 3, Color("fff3b1"))
+	if unit["stunned"] > 0.0:
+		for i in 3:
+			var a := visual_time * 4.0 + float(i) * TAU / 3.0
+			arena.draw_circle(p + Vector2(cos(a) * 18.0, -24 + sin(a) * 7.0), 3, Color("fff09a"))
