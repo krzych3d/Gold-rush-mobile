@@ -420,7 +420,7 @@ func _draw_arena() -> void:
 	for unit in units:
 		var p := _point(unit["lane"], clampf(unit["position"], 0.0, 1.0), unit["side"])
 		var bob := sin(visual_time * 10.0 + float(unit["position"]) * 12.0) * 2.0
-		var color := RACE_COLORS[selected_race] if unit["side"] == 0 else Color("ff8c96")
+		var color: Color = RACE_COLORS[selected_race] if unit["side"] == 0 else Color("ff8c96")
 		_draw_character(p + Vector2(0, bob), color, unit)
 	for i in 9:
 		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
