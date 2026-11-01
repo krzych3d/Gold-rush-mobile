@@ -2,6 +2,15 @@ name: Android debug APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - '**/*.gd'
+      - '**/*.tscn'
+      - '**/*.tres'
+      - '.github/workflows/android-debug.yml'
 
 permissions:
   contents: read
