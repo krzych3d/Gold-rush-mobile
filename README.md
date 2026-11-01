@@ -21,7 +21,7 @@ Experimental Godot 4.2 mobile-first strategy prototype (portrait mode).
 `.github/workflows/godot-ci.yml` validates project import and launches a short headless smoke test. It triggers on code changes and manually, not on a schedule. Check the Actions tab for actual run results.
 
 ## Android
-An APK is **not yet built**. Godot Android export templates, Android SDK, export preset, and signing configuration are required. Never commit release signing keys to this repository. Debug APK generation is a future CI milestone.
+An on-demand debug APK workflow is configured at `.github/workflows/android-debug.yml`. Open Actions → Android debug APK → Run workflow; download `gold-rush-debug-apk` from the successful run's Artifacts section. The build has not yet been verified successful. Debug keystores are ephemeral; never use them for production signing.
 
 ## Known limitations
 - Simplified trap targeting and movement, no physical pathfinding or multiplayer.
