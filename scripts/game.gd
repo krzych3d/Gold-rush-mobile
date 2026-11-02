@@ -179,7 +179,8 @@ func _show_race_selection() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	background.modulate = Color(0.4, 0.45, 0.6, 0.5)
+	background.texture = load("res://assets/factions/enchanted_menu.svg")
+	background.modulate = Color(0.78, 0.83, 0.94, 0.9)
 	selection_layer.add_child(background)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
