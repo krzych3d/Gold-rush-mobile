@@ -858,15 +858,34 @@ func _draw_arena() -> void:
 				3: art = sprite_arcane_mage if kind == 2 else sprite_shadow_wolf
 		else:
 			art = sprite_shadow_wolf if kind == 1 else sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
-		var walk_phase: float = visual_time * (3.0 if actor["guard"] else 11.0) + float(data["position"]) * 17.0
-		var bob: float = sin(walk_phase) * (0.7 if actor["guard"] else 3.5)
-		var scale_factor: float = 1.18 if actor["guard"] else 1.0
-		var breathing: float = 1.0 + sin(walk_phase) * 0.035
-		arena.draw_circle(p + Vector2(2, 11), 24.0 * scale_factor, Color("071924", 0.42))
+		# Movement-aware animation: idle breathing, two-step gait and hit recoil.
+		var moving: bool = not bool(actor["guard"]) and phase == "ATTACK" and float(data.get("stunned", 0.0)) <= 0.0
+		var pace: float = 12.5 if kind == 0 else 7.5 if kind == 1 else 10.0
+		var walk_phase: float = visual_time * (pace if moving else 2.4) + float(data["position"]) * 21.0
+		var stride: float = sin(walk_phase)
+		var lift: float = absf(stride) * (5.0 if moving else 0.7)
+		var squash: float = 1.0 + (0.045 if moving else 0.012) * cos(walk_phase * 2.0)
+		var bob: float = -lift
+		var scale_factor: float = 1.16 if actor["guard"] else 1.0
+		var tilt: float = stride * (0.07 if moving else 0.018)
+		var facing: float = 1.0 if friendly else -1.0
+		if not actor["guard"] and bool(data.get("returning", false)):
+			facing = -facing
+		var staggered: bool = not actor["guard"] and float(data.get("stunned", 0.0)) > 0.0
+		if staggered:
+			tilt = 0.16 * sin(visual_time * 17.0)
+			bob = 1.5
+		var shadow_scale: float = 1.0 - lift * 0.024
+		arena.draw_circle(p + Vector2(0, 9), 23.0 * scale_factor * shadow_scale, Color("071924", 0.36))
+		if moving and stride > 0.82:
+			var dust: float = (stride - 0.82) / 0.18
+			arena.draw_circle(p + Vector2(-facing * 15.0, 5.0), 3.0 + dust * 4.0, Color(0.85, 0.77, 0.58, dust * 0.28))
 		var art_size := Vector2(105, 112) * scale_factor
-		var tilt: float = sin(walk_phase) * (0.025 if actor["guard"] else 0.055)
-		arena.draw_set_transform_matrix(_sprite_transform(p, tilt))
-		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), Vector2(art_size.x * breathing, art_size.y / breathing)), false)
+		var sprite_scale := Vector2(facing * squash, 1.0 / squash)
+		var animation_transform := Transform2D(tilt, sprite_scale * camera_zoom)
+		animation_transform.origin = arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom
+		arena.draw_set_transform_matrix(animation_transform)
+		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), false)
 		arena.draw_set_transform_matrix(_iso_transform())
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
