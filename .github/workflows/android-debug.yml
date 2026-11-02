@@ -75,6 +75,8 @@ jobs:
           data += '\nkeystore/debug="%s"\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"\n' % key
           preset.write_text(data)
           PY
+      - name: Render original fantasy soundtrack (offline, no game CPU cost)
+        run: python3 ci/render_menu_music.py
       - name: Import and export debug APK
         run: |
           set -euo pipefail
