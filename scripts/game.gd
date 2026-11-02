@@ -115,7 +115,7 @@ func _ready() -> void:
 	root.add_child(timer_label)
 	_style_label(timer_label, 19, Color("d5e8fa"))
 	arena = Control.new()
-	arena.custom_minimum_size = Vector2(0, 450)
+	arena.custom_minimum_size = Vector2(0, 300)
 	arena.clip_contents = true
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena.draw.connect(_draw_arena)
@@ -124,13 +124,15 @@ func _ready() -> void:
 	arena.gui_input.connect(_arena_input)
 	arena.resized.connect(_on_arena_resized)
 	camera_hint = Label.new()
-	camera_hint.text = "FULL BATTLEFIELD: FIT MAP  •  EXPAND  •  PINCH TO ZOOM"
+	camera_hint.text = "THREE LANES • TAP A ROAD TO SELECT"
 	camera_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(camera_hint, 15, Color("a9c7d8"))
 	root.add_child(camera_hint)
+	camera_hint.visible = false
 	var camera_controls := HBoxContainer.new()
 	camera_controls_row = camera_controls
 	root.add_child(camera_controls)
+	camera_controls.visible = false
 	for label in ["−", "FIT MAP", "+", "EXPAND"]:
 		var control := Button.new()
 		control.text = label
@@ -152,7 +154,7 @@ func _ready() -> void:
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.custom_minimum_size.y = 48
+	info.custom_minimum_size.y = 32
 	gameplay_panel.add_child(info)
 	_style_label(info, 18, Color("f0e7cf"))
 	race_button = Button.new()
@@ -168,7 +170,7 @@ func _ready() -> void:
 		for index in 3:
 			var button := Button.new()
 			button.text = labels[index]
-			button.custom_minimum_size.y = 51
+			button.custom_minimum_size.y = 40
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(button)
 			_style_button(button, controls.size() < 3)
@@ -181,7 +183,7 @@ func _ready() -> void:
 				button.pressed.connect(_buy_trap.bind(index))
 	guard_button = Button.new()
 	guard_button.text = "HIRE DEFENDER 130"
-	guard_button.custom_minimum_size.y = 48
+	guard_button.custom_minimum_size.y = 40
 	guard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gameplay_panel.add_child(guard_button)
 	_style_button(guard_button, true)
@@ -191,20 +193,20 @@ func _ready() -> void:
 	invest_button = Button.new()
 	invest_button.text = "UPGRADE BANK"
 	invest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	invest_button.custom_minimum_size.y = 48
+	invest_button.custom_minimum_size.y = 40
 	_style_button(invest_button, true)
 	economy_row.add_child(invest_button)
 	invest_button.pressed.connect(_upgrade_bank)
 	raid_button = Button.new()
 	raid_button.text = "RAID BOOST"
 	raid_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	raid_button.custom_minimum_size.y = 48
+	raid_button.custom_minimum_size.y = 40
 	_style_button(raid_button, true)
 	economy_row.add_child(raid_button)
 	raid_button.pressed.connect(_buy_raid_boost)
 	var start := Button.new()
 	start.text = "START ATTACK"
-	start.custom_minimum_size.y = 60
+	start.custom_minimum_size.y = 46
 	gameplay_panel.add_child(start)
 	_style_button(start, false)
 	controls.append(start)
@@ -423,10 +425,10 @@ func _record_fallen(data: Dictionary) -> void:
 
 func _draw_health_bar(p: Vector2, health: float, max_health: float, friendly: bool, width: float = 34.0) -> void:
 	var ratio: float = clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
-	var top_left := p + Vector2(-width * 0.5, -54)
-	arena.draw_rect(Rect2(top_left - Vector2(2, 2), Vector2(width + 4, 10)), Color("08111c"))
-	arena.draw_rect(Rect2(top_left, Vector2(width, 6)), Color("542f37"))
-	arena.draw_rect(Rect2(top_left, Vector2(width * ratio, 6)), Color("55e98b") if friendly else Color("ff6976"))
+	var top_left := p + Vector2(-width * 0.5, -82)
+	arena.draw_rect(Rect2(top_left - Vector2(2, 2), Vector2(width + 4, 12)), Color("08111c"))
+	arena.draw_rect(Rect2(top_left, Vector2(width, 8)), Color("542f37"))
+	arena.draw_rect(Rect2(top_left, Vector2(width * ratio, 8)), Color("55e98b") if friendly else Color("ff6976"))
 
 func _buy_unit(kind: int) -> void:
 	if phase != "PREP":
@@ -651,7 +653,7 @@ func _refresh() -> void:
 	race_button.disabled = true
 	hud.text = "YOUR GOLD %d  •  ENEMY %d" % [gold[0], gold[1]]
 	timer_label.text = "WAVE %d  |  %s  |  %02d s  |  INTEREST %d%%" % [wave, phase, int(maxf(0.0, ceilf(remaining))), (28 if selected_race == 0 else 18) + bank_level * 4]
-	info.text = message + "\nLane: %d | Units: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
+	info.text = "LANE %d  •  %s  •  UNITS %d  •  TRAPS %d" % [lane + 1, message, orders[0].size(), traps[0].size()]
 	for i in range(3, 9):
 		controls[i].disabled = phase != "PREP"
 	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST
@@ -721,11 +723,8 @@ func _on_arena_resized() -> void:
 		call_deferred("_fit_map")
 
 func _fit_map() -> void:
-	# The projected map spans x +/- 1290 and y +/- 645 world pixels.
-	# Reserve extra room for castle silhouettes and world decorations.
-	var width_factor: float = arena.size.x / 2500.0
-	var height_factor: float = arena.size.y / 1100.0
-	camera_zoom = clampf(minf(width_factor, height_factor), 0.12, 2.25)
+	# Fixed camera: fit the complete painted map, including both castles.
+	camera_zoom = maxf(0.01, minf(arena.size.x / 2400.0, arena.size.y / 1060.0))
 	camera_offset = Vector2.ZERO
 	overview_mode = true
 	arena.queue_redraw()
@@ -745,41 +744,11 @@ func _change_zoom(delta: float) -> void:
 	arena.queue_redraw()
 
 func _arena_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			touch_points[event.index] = event.position
-			dragging_map = true
-			drag_distance = 0.0
-		else:
-			if touch_points.size() == 1 and drag_distance < 12.0:
-				_select_lane(_nearest_lane(event.position))
-			touch_points.erase(event.index)
-			last_pinch_distance = 0.0
-			dragging_map = not touch_points.is_empty()
-	elif event is InputEventScreenDrag:
-		if not touch_points.has(event.index):
-			return
-		touch_points[event.index] = event.position
-		if touch_points.size() >= 2:
-			var points: Array = touch_points.values()
-			var distance: float = (points[0] as Vector2).distance_to(points[1] as Vector2)
-			if last_pinch_distance > 0.0:
-				camera_zoom = clampf(camera_zoom * distance / maxf(last_pinch_distance, 1.0), 0.12, 2.25)
-				overview_mode = false
-			last_pinch_distance = distance
-			drag_distance = 100.0
-		else:
-			overview_mode = false
-			camera_offset += event.relative
-			camera_offset.x = clampf(camera_offset.x, -arena.size.x * 1.4, arena.size.x * 1.4)
-			camera_offset.y = clampf(camera_offset.y, -arena.size.y * 1.4, arena.size.y * 1.4)
-			drag_distance += event.relative.length()
-		arena.queue_redraw()
-	elif event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			_change_zoom(0.12)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			_change_zoom(-0.12)
+	# Single static overview; tapping a road selects a lane.
+	if event is InputEventScreenTouch and not event.pressed:
+		_select_lane(_nearest_lane(event.position))
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		_select_lane(_nearest_lane(event.position))
 
 func _nearest_lane(screen_position: Vector2) -> int:
 	var world: Vector2 = _iso_unproject((screen_position - arena.size * 0.5 - camera_offset) / camera_zoom)
@@ -980,7 +949,7 @@ func _draw_arena() -> void:
 		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
 		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))
 	arena.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	_draw_minimap()
+	# No minimap: the entire battlefield is always visible.
 
 func _draw_minimap() -> void:
 	# Fixed screen-space overview, independent from the scrolling battlefield.
