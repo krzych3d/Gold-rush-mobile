@@ -46,8 +46,8 @@ var faction_cards: Array[PanelContainer] = []
 var camera_offset := Vector2.ZERO
 var camera_zoom := 1.0
 # True 2:1 diamond projection: world X/Y become screen diagonal axes.
-const ISO_X := Vector2(0.8660254, 0.5)
-const ISO_Y := Vector2(-0.8660254, 0.5)
+const ISO_X := Vector2(1.0, 0.5)
+const ISO_Y := Vector2(-1.0, 0.5)
 const WORLD_HALF_LENGTH := 1050.0
 var dragging_map := false
 var drag_distance := 0.0
@@ -68,6 +68,9 @@ var void_texture: Texture2D = preload("res://assets/world/void_assassin.svg")
 var waterfall_texture: Texture2D = preload("res://assets/world/waterfall.svg")
 var ground_texture: Texture2D = preload("res://assets/world/enchanted_ground.svg")
 var cliff_texture: Texture2D = preload("res://assets/world/mossy_cliff.svg")
+var grove_texture: Texture2D = preload("res://assets/world/moonlit_grove.svg")
+var shrine_texture: Texture2D = preload("res://assets/world/ancient_shrine.svg")
+var banner_texture: Texture2D = preload("res://assets/world/war_banner.svg")
 
 func _ready() -> void:
 	rng.randomize()
@@ -632,7 +635,7 @@ func _iso_project(world: Vector2) -> Vector2:
 	return ISO_X * world.x + ISO_Y * world.y
 
 func _iso_unproject(screen: Vector2) -> Vector2:
-	return Vector2(screen.x / (2.0 * ISO_X.x) + screen.y, screen.y - screen.x / (2.0 * ISO_X.x))
+	return Vector2(screen.x * 0.5 + screen.y, screen.y - screen.x * 0.5)
 
 func _iso_transform() -> Transform2D:
 	return Transform2D(ISO_X * camera_zoom, ISO_Y * camera_zoom, arena.size * 0.5 + camera_offset)
@@ -740,7 +743,8 @@ func _generate_terrain_details() -> void:
 				closest = minf(closest, p.distance_to(_point(path, float(step) / 20.0, 0)))
 		if closest < 85.0:
 			continue
-		terrain_details.append({"p": p, "seed": float(i), "type": i % 17})
+		terrain_details.append({"p": p, "seed": float(i), "type": i % 23})
+	terrain_details.sort_custom(func(a, b): return _iso_project(a["p"]).y < _iso_project(b["p"]).y)
 
 func _in_camera(p: Vector2, margin: float = 100.0) -> bool:
 	var projected: Vector2 = _iso_project(p) * camera_zoom + camera_offset
@@ -827,17 +831,24 @@ func _draw_arena() -> void:
 	for path in 3:
 		var crossing: Vector2 = _point(path, 0.5, 0)
 		_draw_iso_sprite(bridge_texture, crossing + Vector2(0, 54), Vector2(220, 120))
-	# Forest, flowers, stones and arcane formations: render only visible props.
+	# Multi-layer world props with painted silhouettes and varied sizes.
 	for item in terrain_details:
 		var p: Vector2 = item["p"]
-		if not _in_camera(p, 110.0):
+		if not _in_camera(p, 190.0):
 			continue
 		var seed: float = item["seed"]
-		if int(item["type"]) == 0:
+		var kind: int = int(item["type"])
+		if kind == 0 or kind == 21:
 			_draw_crystal(p, seed)
-		elif int(item["type"]) < 12:
+		elif kind == 1 or kind == 2:
+			_draw_iso_sprite(grove_texture, p, Vector2(150, 155))
+		elif kind == 3:
+			_draw_iso_sprite(shrine_texture, p, Vector2(120, 130))
+		elif kind == 4:
+			_draw_iso_sprite(banner_texture, p, Vector2(45, 80))
+		elif kind < 17:
 			_draw_tree(p, seed)
-		elif int(item["type"]) < 15:
+		elif kind < 20:
 			_draw_rock(p, seed)
 		else:
 			_draw_flowers(p, seed)
@@ -845,9 +856,8 @@ func _draw_arena() -> void:
 	for path in 3:
 		for j in 5:
 			var lamp := _point(path, float(j + 1) / 6.0, 0) + Vector2(0, -48)
-			arena.draw_line(lamp, lamp + Vector2(0, -27), Color("44382e"), 4.0)
-			arena.draw_circle(lamp + Vector2(0, -30), 9.0 + sin(visual_time * 2.0 + float(j)) * 1.5, Color("f6d47b", 0.3))
-			arena.draw_circle(lamp + Vector2(0, -30), 4.0, Color("ffe2a1"))
+			_draw_iso_sprite(banner_texture, lamp + Vector2(0, 40), Vector2(43, 75))
+			arena.draw_circle(lamp, 9.0 + sin(visual_time * 2.0 + float(j)) * 1.5, Color("f6d47b", 0.25))
 	for side in 2:
 		var fort := _point(1, 0, side)
 		var base_color := Color("4f86bf") if side == 0 else Color("ad5265")
