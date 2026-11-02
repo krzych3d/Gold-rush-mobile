@@ -62,6 +62,8 @@ var road_texture: Texture2D = preload("res://assets/world/stone_path.svg")
 var elf_texture: Texture2D = preload("res://assets/world/elf_ranger.svg")
 var void_texture: Texture2D = preload("res://assets/world/void_assassin.svg")
 var waterfall_texture: Texture2D = preload("res://assets/world/waterfall.svg")
+var ground_texture: Texture2D = preload("res://assets/world/enchanted_ground.svg")
+var cliff_texture: Texture2D = preload("res://assets/world/mossy_cliff.svg")
 
 func _ready() -> void:
 	rng.randomize()
@@ -731,25 +733,27 @@ func _draw_arena() -> void:
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("141e32"))
 	arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
 	center = Vector2.ZERO
-	# Layered terrain: broad painted patches instead of a visible checkerboard.
-	arena.draw_rect(Rect2(Vector2(-2300, -1700), Vector2(4600, 3400)), Color("253f39"))
-	for i in 90:
-		var sx: float = sin(float(i) * 71.37) * 1600.0
-		var sy: float = cos(float(i) * 38.19) * 1200.0
-		var radius: float = 95.0 + fposmod(float(i) * 23.7, 125.0)
-		arena.draw_circle(Vector2(sx, sy), radius, Color("345b49", 0.38) if i % 3 == 0 else Color("43674e", 0.28))
-	# Elevated rocky escarpments with lit top surfaces and dark vertical faces.
+	# Layered illustrated ground tiles, camera culled for mobile performance.
+	var tile_size := 512.0
+	var view_center: Vector2 = -camera_offset / camera_zoom
+	var half_view: Vector2 = arena.size * 0.5 / camera_zoom
+	var min_x: int = maxi(-5, int(floor((view_center.x - half_view.x - 64.0) / tile_size)))
+	var max_x: int = mini(4, int(ceil((view_center.x + half_view.x + 64.0) / tile_size)))
+	var min_y: int = maxi(-4, int(floor((view_center.y - half_view.y - 64.0) / tile_size)))
+	var max_y: int = mini(3, int(ceil((view_center.y + half_view.y + 64.0) / tile_size)))
+	for ty in range(min_y, max_y + 1):
+		for tx in range(min_x, max_x + 1):
+			var tile_pos := Vector2(float(tx) * tile_size, float(ty) * tile_size)
+			arena.draw_texture_rect(ground_texture, Rect2(tile_pos, Vector2.ONE * tile_size), false)
+	# Painted mossy escarpments and raised terrain formations.
 	for i in 24:
 		var bx: float = sin(float(i) * 31.2) * 1300.0
 		var by: float = cos(float(i) * 22.6) * 950.0
 		var base := Vector2(bx, by)
-		var width: float = 50.0 + fposmod(float(i) * 19.0, 65.0)
-		var height: float = 22.0 + fposmod(float(i) * 11.0, 24.0)
-		var top := PackedVector2Array([base + Vector2(0, -height), base + Vector2(width, 0), base + Vector2(0, height), base + Vector2(-width, 0)])
-		var bottom := PackedVector2Array([base + Vector2(-width, 0), base + Vector2(0, height), base + Vector2(0, height + 22), base + Vector2(-width, 22)])
-		arena.draw_colored_polygon(bottom, Color("192c2c"))
-		arena.draw_colored_polygon(top, Color("4c6457") if i % 2 == 0 else Color("596e59"))
-		arena.draw_line(base + Vector2(-width, 0), base + Vector2(0, -height), Color("8a9473", 0.5), 2.0)
+		if _in_camera(base, 170.0):
+			var scale_factor: float = 0.65 + fposmod(float(i) * 0.19, 0.5)
+			var rock_size := Vector2(210, 145) * scale_factor
+			arena.draw_texture_rect(cliff_texture, Rect2(base - rock_size * 0.5, rock_size), false)
 	# A river cuts diagonally through the battlefield; lanes cross it on stone bridges.
 	var river := PackedVector2Array()
 	for step in 41:
@@ -854,11 +858,14 @@ func _draw_arena() -> void:
 				1: art = goblin_texture
 				2: art = elf_texture
 				3: art = void_texture
-		var bob: float = 0.0 if actor["guard"] else sin(visual_time * 11.0 + float(data["position"]) * 17.0) * 2.0
+		var bob: float = sin(visual_time * (3.0 if actor["guard"] else 11.0) + float(data["position"]) * 17.0) * (0.7 if actor["guard"] else 2.5)
 		var scale_factor: float = 1.16 if actor["guard"] else 1.0
 		arena.draw_circle(p + Vector2(2, 11), 17.0 * scale_factor, Color("071924", 0.42))
 		var art_size := Vector2(52, 66) * scale_factor
-		arena.draw_texture_rect(art, Rect2(p + Vector2(-art_size.x * 0.5, -art_size.y + 13 + bob), art_size), false)
+		var tilt: float = sin(visual_time * 8.0 + float(data["position"]) * 14.0) * (0.035 if actor["guard"] else 0.075)
+		arena.draw_set_transform(arena.size * 0.5 + camera_offset + (p + Vector2(0, 12 + bob)) * camera_zoom, tilt, Vector2.ONE * camera_zoom)
+		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y), art_size), false)
+		arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, 42.0 if actor["guard"] else 34.0)
