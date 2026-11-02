@@ -771,15 +771,15 @@ func _generate_terrain_details() -> void:
 	terrain_details.clear()
 	var seeded := RandomNumberGenerator.new()
 	seeded.seed = 24681357
-	for i in 460:
-		var p := Vector2(seeded.randf_range(-1800.0, 1800.0), seeded.randf_range(-1300.0, 1300.0))
+	for i in 115:
+		var p := Vector2(seeded.randf_range(-1200.0, 1200.0), seeded.randf_range(-820.0, 820.0))
 		var closest: float = INF
 		for path in 3:
 			for step in 21:
 				closest = minf(closest, p.distance_to(_point(path, float(step) / 20.0, 0)))
-		if closest < 85.0:
+		if closest < 205.0:
 			continue
-		terrain_details.append({"p": p, "seed": float(i), "type": i % 23})
+		terrain_details.append({"p": p, "seed": float(i), "type": i % 23, "scale": seeded.randf_range(0.38, 0.76)})
 	terrain_details.sort_custom(func(a, b): return _iso_project(a["p"]).y < _iso_project(b["p"]).y)
 
 func _in_camera(p: Vector2, margin: float = 100.0) -> bool:
@@ -797,12 +797,12 @@ func _draw_arena() -> void:
 	# All roads, bridges, castles and units remain independent gameplay objects.
 	arena.draw_texture_rect(valley_texture, Rect2(Vector2(-1300, -900), Vector2(2600, 1800)), false)
 	# Painted mossy escarpments and raised terrain formations.
-	for i in 24:
+	for i in 9:
 		var bx: float = sin(float(i) * 31.2) * 1300.0
 		var by: float = cos(float(i) * 22.6) * 950.0
 		var base := Vector2(bx, by)
 		if _in_camera(base, 170.0):
-			var scale_factor: float = 0.65 + fposmod(float(i) * 0.19, 0.5)
+			var scale_factor: float = 0.42 + fposmod(float(i) * 0.11, 0.25)
 			var rock_size := Vector2(210, 145) * scale_factor
 			_draw_iso_sprite(cliff_texture, base + Vector2(0, rock_size.y * 0.5), rock_size)
 	# A river cuts diagonally through the battlefield; lanes cross it on stone bridges.
@@ -865,23 +865,24 @@ func _draw_arena() -> void:
 			continue
 		var seed: float = item["seed"]
 		var kind: int = int(item["type"])
+		var prop_scale: float = float(item["scale"])
 		if kind == 0 or kind == 21:
-			_draw_crystal(p, seed)
+			_draw_iso_sprite(crystal_texture, p, Vector2(42, 60) * prop_scale)
 		elif kind == 1 or kind == 2:
-			_draw_iso_sprite(grove_texture, p, Vector2(150, 155))
+			_draw_iso_sprite(grove_texture, p, Vector2(150, 155) * prop_scale)
 		elif kind == 3:
-			_draw_iso_sprite(shrine_texture, p, Vector2(120, 130))
+			_draw_iso_sprite(shrine_texture, p, Vector2(120, 130) * prop_scale)
 		elif kind == 4:
-			_draw_iso_sprite(banner_texture, p, Vector2(45, 80))
+			_draw_iso_sprite(banner_texture, p, Vector2(45, 80) * prop_scale)
 		elif kind < 17:
-			_draw_tree(p, seed)
+			_draw_iso_sprite(pine_texture, p, Vector2(72, 105) * prop_scale)
 		elif kind < 20:
-			_draw_rock(p, seed)
+			_draw_iso_sprite(cliff_texture, p, Vector2(90, 65) * prop_scale)
 		else:
 			_draw_flowers(p, seed)
 	# Animated lanterns at strategic points along each road.
 	for path in 3:
-		for j in 5:
+		for j in 2:
 			var lamp := _point(path, float(j + 1) / 6.0, 0) + Vector2(0, -48)
 			_draw_iso_sprite(banner_texture, lamp + Vector2(0, 40), Vector2(43, 75))
 			arena.draw_circle(lamp, 9.0 + sin(visual_time * 2.0 + float(j)) * 1.5, Color("f6d47b", 0.25))
