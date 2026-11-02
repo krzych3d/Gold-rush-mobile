@@ -70,7 +70,7 @@ def main():
                     data = stream.read(15 * 1024 * 1024 + 1)
                 if len(data) > 15 * 1024 * 1024:
                     raise SystemExit("Image exceeds size limit")
-                suffix = ".png" if data.startswith(b"\\x89PNG") else ".webp" if data.startswith(b"RIFF") else ".jpg" if data.startswith(b"\\xff\\xd8") else None
+                suffix = ".png" if data.startswith(b"\x89PNG") else ".webp" if data.startswith(b"RIFF") else ".jpg" if data.startswith(b"\xff\xd8") else None
                 if not suffix:
                     raise SystemExit("Unsupported image encoding")
                 (out / (args.action + "-" + str(index) + suffix)).write_bytes(data)
