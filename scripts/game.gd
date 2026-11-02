@@ -848,20 +848,25 @@ func _draw_arena() -> void:
 			continue
 		var data: Dictionary = actor["data"]
 		var friendly: bool = int(actor["side"]) == 0
-		var art: Texture2D = goblin_texture
+		var kind: int = 0 if actor["guard"] else int(data["kind"])
+		var art: Texture2D = sprite_goblin_raider
 		if friendly:
 			match selected_race:
-				0: art = dwarf_texture
-				1: art = goblin_texture
-				2: art = elf_texture
-				3: art = void_texture
-		var bob: float = sin(visual_time * (3.0 if actor["guard"] else 11.0) + float(data["position"]) * 17.0) * (0.7 if actor["guard"] else 2.5)
-		var scale_factor: float = 1.16 if actor["guard"] else 1.0
-		arena.draw_circle(p + Vector2(2, 11), 17.0 * scale_factor, Color("071924", 0.42))
-		var art_size := Vector2(52, 66) * scale_factor
-		var tilt: float = sin(visual_time * 8.0 + float(data["position"]) * 14.0) * (0.035 if actor["guard"] else 0.075)
+				0: art = sprite_dwarf_carrier if kind == 1 else sprite_arcane_mage if kind == 2 else sprite_dwarf_defender
+				1: art = sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
+				2: art = sprite_arcane_mage if kind == 2 else sprite_elf_ranger
+				3: art = sprite_arcane_mage if kind == 2 else sprite_shadow_wolf
+		else:
+			art = sprite_shadow_wolf if kind == 1 else sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
+		var walk_phase: float = visual_time * (3.0 if actor["guard"] else 11.0) + float(data["position"]) * 17.0
+		var bob: float = sin(walk_phase) * (0.7 if actor["guard"] else 3.5)
+		var scale_factor: float = 1.18 if actor["guard"] else 1.0
+		var breathing: float = 1.0 + sin(walk_phase) * 0.035
+		arena.draw_circle(p + Vector2(2, 11), 24.0 * scale_factor, Color("071924", 0.42))
+		var art_size := Vector2(105, 112) * scale_factor
+		var tilt: float = sin(walk_phase) * (0.025 if actor["guard"] else 0.055)
 		arena.draw_set_transform_matrix(_sprite_transform(p, tilt))
-		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), false)
+		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), Vector2(art_size.x * breathing, art_size.y / breathing)), false)
 		arena.draw_set_transform_matrix(_iso_transform())
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
