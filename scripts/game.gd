@@ -891,7 +891,7 @@ func _draw_arena() -> void:
 		else:
 			art = sprite_shadow_wolf if kind == 1 else sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
 		# Atlas rows: 0 idle, 1 walk, 2 attack, 3 hit, 4 defeat.
-		# Seamless 128px frames, 8 frames per action; mobile palette optimized.
+		# 128px frames, 8 per action; independently warped torso, limbs and weapon.
 		var atlas: Texture2D = atlas_goblin_raider
 		if art == sprite_dwarf_defender:
 			atlas = atlas_dwarf_defender
