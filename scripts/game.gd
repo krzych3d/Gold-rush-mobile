@@ -50,9 +50,11 @@ var drag_distance := 0.0
 var camera_hint: Label
 var touch_points: Dictionary = {}
 var last_pinch_distance := 0.0
+var terrain_details: Array = []
 
 func _ready() -> void:
 	rng.randomize()
+	_generate_terrain_details()
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
@@ -685,6 +687,26 @@ func _nearest_lane(screen_position: Vector2) -> int:
 				best_lane = path
 	return best_lane
 
+func _generate_terrain_details() -> void:
+	# Deterministic decoration generated once, not on every animation frame.
+	terrain_details.clear()
+	var seeded := RandomNumberGenerator.new()
+	seeded.seed = 24681357
+	for i in 460:
+		var p := Vector2(seeded.randf_range(-1800.0, 1800.0), seeded.randf_range(-1300.0, 1300.0))
+		var closest: float = INF
+		for path in 3:
+			for step in 21:
+				closest = minf(closest, p.distance_to(_point(path, float(step) / 20.0, 0)))
+		if closest < 85.0:
+			continue
+		terrain_details.append({"p": p, "seed": float(i), "type": i % 17})
+
+func _in_camera(p: Vector2, margin: float = 100.0) -> bool:
+	var half: Vector2 = arena.size * 0.5 / camera_zoom
+	var center: Vector2 = -camera_offset / camera_zoom
+	return absf(p.x - center.x) < half.x + margin and absf(p.y - center.y) < half.y + margin
+
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
@@ -753,22 +775,20 @@ func _draw_arena() -> void:
 			arena.draw_line(Vector2(sx, crossing.y - 38), Vector2(sx - 5.0, crossing.y + 23), Color("686c69", 0.55), 2.0)
 		arena.draw_line(crossing + Vector2(-81, -37), crossing + Vector2(81, -37), Color("d9c5a0"), 6.0)
 		arena.draw_line(crossing + Vector2(-81, 26), crossing + Vector2(81, 26), Color("60594f"), 6.0)
-	# Dense forests and magical crystals occupy the space between lanes.
-	for i in 240:
-		var fx := sin(float(i) * 127.1) * arena.size.x * 1.7
-		var fy := cos(float(i) * 53.7) * arena.size.y * 1.35
-		var pos := Vector2(fx, fy)
-		var near_lane := false
-		for path in 3:
-			var t := clampf((fx + arena.size.x * 0.68) / (arena.size.x * 1.36), 0.0, 1.0)
-			if pos.distance_to(_point(path, t, 0)) < 74.0:
-				near_lane = true
-		if near_lane:
+	# Forest, flowers, stones and arcane formations: render only visible props.
+	for item in terrain_details:
+		var p: Vector2 = item["p"]
+		if not _in_camera(p, 110.0):
 			continue
-		if i % 11 == 0:
-			_draw_crystal(pos, float(i))
+		var seed: float = item["seed"]
+		if int(item["type"]) == 0:
+			_draw_crystal(p, seed)
+		elif int(item["type"]) < 12:
+			_draw_tree(p, seed)
+		elif int(item["type"]) < 15:
+			_draw_rock(p, seed)
 		else:
-			_draw_tree(pos, float(i))
+			_draw_flowers(p, seed)
 	# Animated lanterns at strategic points along each road.
 	for path in 3:
 		for j in 5:
@@ -828,6 +848,18 @@ func _draw_minimap() -> void:
 	camera_marker.y = clampf(camera_marker.y, origin.y + 5.0, origin.y + 97.0)
 	arena.draw_rect(Rect2(camera_marker - Vector2(6, 6), Vector2(12, 12)), Color("f9f5dc"), false, 2.0)
 
+func _draw_rock(p: Vector2, seed: float) -> void:
+	var size: float = 9.0 + fposmod(seed * 7.1, 13.0)
+	arena.draw_circle(p + Vector2(5, 8), size, Color("0b2627", 0.3))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-size, 5), p + Vector2(-size * 0.6, -size * 0.65), p + Vector2(size * 0.35, -size), p + Vector2(size, 0), p + Vector2(size * 0.5, size * 0.55)]), Color("536b66"))
+	arena.draw_line(p + Vector2(-size * 0.6, -size * 0.65), p + Vector2(size * 0.35, -size), Color("a1b3a1", 0.65), 2.0)
+
+func _draw_flowers(p: Vector2, seed: float) -> void:
+	for k in 5:
+		var offset := Vector2(sin(seed + float(k) * 4.3) * 15.0, cos(seed + float(k) * 2.1) * 10.0)
+		arena.draw_line(p + offset, p + offset + Vector2(0, -7), Color("548d59"), 2.0)
+		arena.draw_circle(p + offset + Vector2(0, -8), 3.0, Color("f5d28b") if k % 2 == 0 else Color("b7a0e6"))
+
 func _draw_ruin(p: Vector2, seed: int) -> void:
 	var stone := Color("68716d") if seed % 2 == 0 else Color("77776b")
 	arena.draw_circle(p + Vector2(12, 18), 61, Color("0c2325", 0.3))
@@ -873,21 +905,26 @@ func _draw_fort(p: Vector2, color: Color, side: int) -> void:
 	_draw_fort_body(p, color, glow)
 
 func _draw_fort_body(p: Vector2, color: Color, glow: Color) -> void:
-	arena.draw_circle(p + Vector2(0, 22), 36, Color("071322", 0.5))
-	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-33, 15), p + Vector2(0, 32), p + Vector2(33, 15), p + Vector2(0, 0)]), color.darkened(0.55))
-	arena.draw_rect(Rect2(p + Vector2(-26, -41), Vector2(52, 61)), color.darkened(0.2))
-	arena.draw_rect(Rect2(p + Vector2(-20, -35), Vector2(40, 52)), color.lightened(0.15))
-	for x in [-23, -8, 8, 23]:
-		arena.draw_rect(Rect2(p + Vector2(x - 5, -48), Vector2(10, 14)), color.lightened(0.36))
-	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-33, -43), p + Vector2(0, -81), p + Vector2(33, -43)]), color.darkened(0.52))
-	arena.draw_line(p + Vector2(-29, -42), p + Vector2(0, -76), glow, 3.0)
-	arena.draw_line(p + Vector2(0, -76), p + Vector2(29, -42), glow, 3.0)
-	arena.draw_rect(Rect2(p + Vector2(-10, -12), Vector2(20, 32)), Color("10172a"))
-	arena.draw_arc(p + Vector2(0, -12), 10, PI, TAU, 12, Color("10172a"), 8.0)
-	arena.draw_circle(p + Vector2(0, -29), 8, glow)
-	arena.draw_circle(p + Vector2(0, -29), 3, Color.WHITE)
-	for x in [-22, 22]:
-		arena.draw_line(p + Vector2(x, 3), p + Vector2(x, 17), Color("141d32"), 3.0)
+	# Tall isometric keep with shaded side walls, roof planes and battlements.
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-77, 18), p + Vector2(0, 55), p + Vector2(77, 18), p + Vector2(0, -20)]), Color("102b30", 0.65))
+	var foundation := PackedVector2Array([p + Vector2(0, -8), p + Vector2(62, 20), p + Vector2(0, 48), p + Vector2(-62, 20)])
+	arena.draw_colored_polygon(foundation, color.darkened(0.48))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-52, -13), p + Vector2(0, 9), p + Vector2(0, 40), p + Vector2(-52, 17)]), color.darkened(0.34))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(0, 9), p + Vector2(52, -13), p + Vector2(52, 17), p + Vector2(0, 40)]), color.darkened(0.57))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -94), p + Vector2(42, -74), p + Vector2(42, -9), p + Vector2(0, 12)]), color.darkened(0.42))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-42, -74), p + Vector2(0, -94), p + Vector2(0, 12), p + Vector2(-42, -9)]), color.lightened(0.12))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -124), p + Vector2(48, -93), p + Vector2(0, -69), p + Vector2(-48, -93)]), color.darkened(0.55))
+	arena.draw_line(p + Vector2(0, -124), p + Vector2(-48, -93), glow, 3.0)
+	arena.draw_line(p + Vector2(0, -124), p + Vector2(48, -93), glow.darkened(0.3), 3.0)
+	for side in [-1, 1]:
+		var x: float = float(side) * 33.0
+		arena.draw_colored_polygon(PackedVector2Array([p + Vector2(x - 10, -81), p + Vector2(x + 10, -81), p + Vector2(x + 10, -100), p + Vector2(x - 10, -100)]), color.lightened(0.25))
+		arena.draw_rect(Rect2(p + Vector2(x - 5, -65), Vector2(10, 20)), Color("162735"))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-12, -4), p + Vector2(0, -11), p + Vector2(12, -4), p + Vector2(12, 19), p + Vector2(0, 26), p + Vector2(-12, 19)]), Color("0c1a2b"))
+	arena.draw_circle(p + Vector2(0, -79), 16.0 + sin(visual_time * 2.0) * 2.0, Color(glow.r, glow.g, glow.b, 0.25))
+	arena.draw_circle(p + Vector2(0, -79), 7, glow)
+	arena.draw_circle(p + Vector2(0, -79), 2, Color.WHITE)
+	arena.draw_line(p + Vector2(-47, -13), p + Vector2(-47, 15), glow.darkened(0.35), 2.0)
 
 func _draw_character(p: Vector2, color: Color, unit: Dictionary) -> void:
 	var friendly: bool = unit["side"] == 0
