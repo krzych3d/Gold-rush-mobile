@@ -1052,7 +1052,13 @@ func _draw_arena() -> void:
 			dtf.x.x *= -1.0
 		arena.draw_set_transform_matrix(dtf)
 		var deposit_frame: int = mini(7, int(float(deposit["age"]) * 11.0))
-		arena.draw_texture_rect_region(da, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)))
+		if da == atlas_goblin_raider and goblin_action_strips.has("deposit"):
+			var deposit_strip: Texture2D = goblin_action_strips["deposit"]
+			var deposit_count: int = deposit_strip.get_width() / 192
+			var df: int = mini(deposit_count - 1, int(float(deposit["age"]) / 0.75 * deposit_count))
+			arena.draw_texture_rect_region(deposit_strip, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(df * 192), 0), Vector2(192, 192)))
+		else:
+			arena.draw_texture_rect_region(da, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
 	# Play the defeat row once before removing fallen units from the screen.
 	for fallen in fallen_actors:
@@ -1073,7 +1079,13 @@ func _draw_arena() -> void:
 		if (int(fallen["side"]) == 1) != bool(fallen.get("returning", false)):
 			fallen_transform.x.x *= -1.0
 		arena.draw_set_transform_matrix(fallen_transform)
-		arena.draw_texture_rect_region(death_atlas, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)))
+		if death_atlas == atlas_goblin_raider and goblin_action_strips.has("death"):
+			var death_strip: Texture2D = goblin_action_strips["death"]
+			var death_count: int = death_strip.get_width() / 192
+			var f: int = mini(death_count - 1, int(float(fallen["age"]) / 0.8 * death_count))
+			arena.draw_texture_rect_region(death_strip, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(f * 192), 0), Vector2(192, 192)))
+		else:
+			arena.draw_texture_rect_region(death_atlas, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
 	for spark in hit_sparks:
 		var p: Vector2 = spark["p"]
