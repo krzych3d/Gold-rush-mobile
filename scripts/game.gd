@@ -51,8 +51,8 @@ var gameplay_panel: VBoxContainer
 var map_toggle_button: Button
 var camera_controls_row: HBoxContainer
 # True 2:1 diamond projection: world X/Y become screen diagonal axes.
-const ISO_X := Vector2(1.0, 0.5)
-const ISO_Y := Vector2(-1.0, 0.5)
+const ISO_X := Vector2(1.0, 0.0)
+const ISO_Y := Vector2(0.0, 1.0)
 const WORLD_HALF_LENGTH := 1050.0
 var dragging_map := false
 var drag_distance := 0.0
@@ -640,15 +640,15 @@ func _refresh() -> void:
 func _point(path: int, progress: float, side: int) -> Vector2:
 	var t: float = progress if side == 0 else 1.0 - progress
 	var x: float = lerpf(-WORLD_HALF_LENGTH, WORLD_HALF_LENGTH, t)
-	var lane_y: float = (float(path) - 1.0) * 240.0
-	var bend: float = sin(t * TAU + float(path) * 1.35) * 55.0 * sin(t * PI)
+	var lane_y: float = (float(path) - 1.0) * 310.0
+	var bend: float = sin(t * TAU + float(path) * 1.35) * 38.0 * sin(t * PI)
 	return Vector2(x, lane_y + bend)
 
 func _iso_project(world: Vector2) -> Vector2:
 	return ISO_X * world.x + ISO_Y * world.y
 
 func _iso_unproject(screen: Vector2) -> Vector2:
-	return Vector2(screen.x * 0.5 + screen.y, screen.y - screen.x * 0.5)
+	return screen
 
 func _iso_transform() -> Transform2D:
 	return Transform2D(ISO_X * camera_zoom, ISO_Y * camera_zoom, arena.size * 0.5 + camera_offset)
@@ -696,8 +696,8 @@ func _on_arena_resized() -> void:
 func _fit_map() -> void:
 	# The projected map spans x +/- 1290 and y +/- 645 world pixels.
 	# Reserve extra room for castle silhouettes and world decorations.
-	var width_factor: float = arena.size.x / 3100.0
-	var height_factor: float = arena.size.y / 1750.0
+	var width_factor: float = arena.size.x / 2500.0
+	var height_factor: float = arena.size.y / 1100.0
 	camera_zoom = clampf(minf(width_factor, height_factor), 0.12, 2.25)
 	camera_offset = Vector2.ZERO
 	overview_mode = true
@@ -771,13 +771,13 @@ func _generate_terrain_details() -> void:
 	terrain_details.clear()
 	var seeded := RandomNumberGenerator.new()
 	seeded.seed = 24681357
-	for i in 115:
+	for i in 60:
 		var p := Vector2(seeded.randf_range(-1200.0, 1200.0), seeded.randf_range(-820.0, 820.0))
 		var closest: float = INF
 		for path in 3:
 			for step in 21:
 				closest = minf(closest, p.distance_to(_point(path, float(step) / 20.0, 0)))
-		if closest < 205.0:
+		if closest < 260.0:
 			continue
 		terrain_details.append({"p": p, "seed": float(i), "type": i % 23, "scale": seeded.randf_range(0.38, 0.76)})
 	terrain_details.sort_custom(func(a, b): return _iso_project(a["p"]).y < _iso_project(b["p"]).y)
@@ -795,9 +795,9 @@ func _draw_arena() -> void:
 	center = Vector2.ZERO
 	# One cohesive enchanted-valley backdrop instead of repeating flat grass tiles.
 	# All roads, bridges, castles and units remain independent gameplay objects.
-	arena.draw_texture_rect(valley_texture, Rect2(Vector2(-1300, -900), Vector2(2600, 1800)), false)
+	arena.draw_texture_rect(valley_texture, Rect2(Vector2(-1300, -750), Vector2(2600, 1500)), false)
 	# Painted mossy escarpments and raised terrain formations.
-	for i in 9:
+	for i in 5:
 		var bx: float = sin(float(i) * 31.2) * 1300.0
 		var by: float = cos(float(i) * 22.6) * 950.0
 		var base := Vector2(bx, by)
@@ -882,7 +882,7 @@ func _draw_arena() -> void:
 			_draw_flowers(p, seed)
 	# Animated lanterns at strategic points along each road.
 	for path in 3:
-		for j in 2:
+		for j in 1:
 			var lamp := _point(path, float(j + 1) / 6.0, 0) + Vector2(0, -48)
 			_draw_iso_sprite(banner_texture, lamp + Vector2(0, 40), Vector2(43, 75))
 			arena.draw_circle(lamp, 9.0 + sin(visual_time * 2.0 + float(j)) * 1.5, Color("f6d47b", 0.25))
