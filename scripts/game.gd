@@ -38,6 +38,8 @@ var camera_zoom := 1.0
 var dragging_map := false
 var drag_distance := 0.0
 var camera_hint: Label
+var touch_points: Dictionary = {}
+var last_pinch_distance := 0.0
 
 func _ready() -> void:
 	rng.randomize()
@@ -46,11 +48,11 @@ func _ready() -> void:
 	add_child(root)
 	var title := Label.new()
 	title_label = title
-	title.text = "GOLD RUSH: VAULT WARS"
+	title.text = "VAULT WARS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 28)
 	root.add_child(title)
-	_style_label(title, 31, Color("ffe2a0"))
+	_style_label(title, 26, Color("ffe2a0"))
 	hud = Label.new()
 	hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(hud)
@@ -60,7 +62,7 @@ func _ready() -> void:
 	root.add_child(timer_label)
 	_style_label(timer_label, 19, Color("d5e8fa"))
 	arena = Control.new()
-	arena.custom_minimum_size = Vector2(0, 570)
+	arena.custom_minimum_size = Vector2(0, 450)
 	arena.clip_contents = true
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena.draw.connect(_draw_arena)
@@ -68,7 +70,7 @@ func _ready() -> void:
 	arena.mouse_filter = Control.MOUSE_FILTER_STOP
 	arena.gui_input.connect(_arena_input)
 	camera_hint = Label.new()
-	camera_hint.text = "DRAG TO EXPLORE  |  +/- TO ZOOM"
+	camera_hint.text = "DRAG TO PAN  •  PINCH TO ZOOM"
 	camera_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(camera_hint, 15, Color("a9c7d8"))
 	root.add_child(camera_hint)
@@ -77,7 +79,7 @@ func _ready() -> void:
 	for label in ["−", "CENTER", "+"]:
 		var control := Button.new()
 		control.text = label
-		control.custom_minimum_size.y = 42
+		control.custom_minimum_size.y = 34
 		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_style_button(control, true)
 		camera_controls.add_child(control)
@@ -90,12 +92,13 @@ func _ready() -> void:
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.custom_minimum_size.y = 72
+	info.custom_minimum_size.y = 48
 	root.add_child(info)
 	_style_label(info, 18, Color("f0e7cf"))
 	race_button = Button.new()
 	race_button.text = "CHOOSE YOUR RACE"
-	race_button.custom_minimum_size.y = 56
+	race_button.custom_minimum_size.y = 0
+	race_button.visible = false
 	root.add_child(race_button)
 	_style_button(race_button, true)
 	race_button.disabled = true
@@ -105,7 +108,7 @@ func _ready() -> void:
 		for index in 3:
 			var button := Button.new()
 			button.text = labels[index]
-			button.custom_minimum_size.y = 62
+			button.custom_minimum_size.y = 51
 			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(button)
 			_style_button(button, controls.size() < 3)
@@ -118,7 +121,7 @@ func _ready() -> void:
 				button.pressed.connect(_buy_trap.bind(index))
 	var start := Button.new()
 	start.text = "START ATTACK"
-	start.custom_minimum_size.y = 70
+	start.custom_minimum_size.y = 60
 	root.add_child(start)
 	_style_button(start, false)
 	controls.append(start)
@@ -410,7 +413,7 @@ func _end_wave() -> void:
 	units.clear()
 	orders[0].clear()
 	orders[1].clear()
-	if gold[0] <= 0 or gold[1] <= 0 or wave >= MAX_WAVES:
+	if wave >= MAX_WAVES:
 		phase = "END"
 		message = "YOU WIN!" if gold[0] > gold[1] else "BOT WINS!" if gold[1] > gold[0] else "DRAW!"
 		return
@@ -474,26 +477,55 @@ func _center_camera() -> void:
 	arena.queue_redraw()
 
 func _change_zoom(delta: float) -> void:
-	camera_zoom = clampf(camera_zoom + delta, 0.7, 1.65)
+	camera_zoom = clampf(camera_zoom + delta, 0.65, 2.25)
 	arena.queue_redraw()
 
 func _arena_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
+			touch_points[event.index] = event.position
 			dragging_map = true
 			drag_distance = 0.0
 		else:
-			if drag_distance < 12.0:
-				var world_y: float = (event.position.y - arena.size.y * 0.5 - camera_offset.y) / camera_zoom
-				var selected := clampi(int(round((world_y + arena.size.y * 0.12) / 110.0)), 0, 2)
-				_select_lane(selected)
-			dragging_map = false
-	elif event is InputEventScreenDrag and dragging_map:
-		camera_offset += event.relative
-		camera_offset.x = clampf(camera_offset.x, -arena.size.x * 0.9, arena.size.x * 0.9)
-		camera_offset.y = clampf(camera_offset.y, -arena.size.y * 0.9, arena.size.y * 0.9)
-		drag_distance += event.relative.length()
+			if touch_points.size() == 1 and drag_distance < 12.0:
+				_select_lane(_nearest_lane(event.position))
+			touch_points.erase(event.index)
+			last_pinch_distance = 0.0
+			dragging_map = not touch_points.is_empty()
+	elif event is InputEventScreenDrag:
+		if not touch_points.has(event.index):
+			return
+		touch_points[event.index] = event.position
+		if touch_points.size() >= 2:
+			var points: Array = touch_points.values()
+			var distance: float = (points[0] as Vector2).distance_to(points[1] as Vector2)
+			if last_pinch_distance > 0.0:
+				camera_zoom = clampf(camera_zoom * distance / maxf(last_pinch_distance, 1.0), 0.65, 2.25)
+			last_pinch_distance = distance
+			drag_distance = 100.0
+		else:
+			camera_offset += event.relative
+			camera_offset.x = clampf(camera_offset.x, -arena.size.x * 1.4, arena.size.x * 1.4)
+			camera_offset.y = clampf(camera_offset.y, -arena.size.y * 1.4, arena.size.y * 1.4)
+			drag_distance += event.relative.length()
 		arena.queue_redraw()
+	elif event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
+			_change_zoom(0.12)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+			_change_zoom(-0.12)
+
+func _nearest_lane(screen_position: Vector2) -> int:
+	var world: Vector2 = (screen_position - arena.size * 0.5 - camera_offset) / camera_zoom
+	var best_lane := 0
+	var best_distance := INF
+	for path in 3:
+		for step in 41:
+			var d: float = world.distance_squared_to(_point(path, float(step) / 40.0, 0))
+			if d < best_distance:
+				best_distance = d
+				best_lane = path
+	return best_lane
 
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
@@ -526,9 +558,9 @@ func _draw_arena() -> void:
 		var points := PackedVector2Array()
 		for step in 41:
 			points.append(_point(path, float(step) / 40.0, 0))
-		arena.draw_polyline(points, Color("142b2b"), 76.0, true)
-		arena.draw_polyline(points, Color("72634f"), 67.0, true)
-		arena.draw_polyline(points, Color("a89571"), 56.0, true)
+		arena.draw_polyline(points, Color("142b2b"), 88.0, true)
+		arena.draw_polyline(points, Color("72634f"), 80.0, true)
+		arena.draw_polyline(points, Color("a89571"), 70.0, true)
 		arena.draw_polyline(points, Color("c4aa7b") if path == lane else Color("a78f69"), 46.0, true)
 		for j in 32:
 			var stone := _point(path, float(j) / 31.0, 0)
