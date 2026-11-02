@@ -882,20 +882,13 @@ func _draw_arena() -> void:
 	# The battlefield is now one high-detail painting. Never draw the old
 	# geometric river, bridges, trees, roads or duplicate castles over it.
 	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2(-1200, -530), Vector2(2400, 1060)), false)
-	# Subtle animated magic and river glints. These do not obscure the lanes.
-	for i in 18:
-		var phase_shift: float = float(i) * 1.618
-		var water_y: float = -440.0 + fposmod(float(i) * 67.0 + visual_time * 21.0, 880.0)
-		var water_x: float = sin(water_y * 0.008) * 36.0
-		var water_pos := Vector2(water_x, water_y)
-		var shimmer: float = 0.20 + 0.15 * sin(visual_time * 3.0 + phase_shift)
-		arena.draw_line(water_pos - Vector2(12, 0), water_pos + Vector2(12, 0), Color(0.64, 0.96, 1.0, shimmer), 2.0)
-	for i in 24:
-		var seed: float = float(i) * 2.399
-		var px: float = -1130.0 + fposmod(float(i) * 167.0, 2260.0)
-		var py: float = -450.0 + fposmod(float(i) * 103.0 + sin(visual_time * 0.8 + seed) * 18.0, 900.0)
-		var glow: float = 0.35 + 0.3 * sin(visual_time * 1.9 + seed)
-		arena.draw_circle(Vector2(px, py), 2.4 + glow, Color(1.0, 0.79, 0.38, glow))
+	# Mobile: use a few inexpensive ambient highlights instead of dozens of
+	# per-frame animated primitives across the entire battlefield.
+	for i in 6:
+		var water_y: float = -380.0 + float(i) * 150.0
+		var water_pos := Vector2(sin(water_y * 0.008) * 36.0, water_y)
+		var shimmer: float = 0.14 + 0.10 * sin(visual_time * 1.5 + float(i))
+		arena.draw_line(water_pos - Vector2(9, 0), water_pos + Vector2(9, 0), Color(0.64, 0.96, 1.0, shimmer), 2.0)
 	for side in 2:
 		var fort := _point(1, 0, side)
 		var base_color := Color("4f86bf") if side == 0 else Color("ad5265")
@@ -965,6 +958,9 @@ func _draw_arena() -> void:
 		var fps: float = 5.0 if animation_row == 0 else 10.0 if animation_row == 1 else 11.0 if animation_row == 2 else 10.0
 		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
 		var animation_frame: int = int(floor(float(data.get("action_time", visual_time)) * fps + frame_offset)) % 8
+		# Combat poses play from start to finish rather than randomly cycling.
+		if animation_row == 2:
+			animation_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * 18.0), 0, 7)
 		# Advance the atlas frames; individual poses are supplied by the artwork.
 		if animation_row == 3 and float(data.get("hit_time", 0.0)) > 0.0:
 			animation_frame = mini(7, int((0.28 - float(data["hit_time"])) * 28.0))
