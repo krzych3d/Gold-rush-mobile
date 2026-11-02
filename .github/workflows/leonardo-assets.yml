@@ -1,0 +1,55 @@
+name: Leonardo AI asset preview
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Goblin animation action
+        required: true
+        type: choice
+        options:
+          - idle
+          - walk
+          - attack
+          - hit
+          - carry
+          - deposit
+          - death
+      model_id:
+        description: Leonardo model ID from Get API Code (required for paid generation)
+        required: false
+        type: string
+      submit_paid_generation:
+        description: "Explicitly approve a paid Leonardo API generation"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare preview or explicitly requested paid generation
+        env:
+          LEONARDO_API_KEY: ${{ secrets.LEONARDO_API_KEY }}
+          ACTION_NAME: ${{ inputs.action }}
+          MODEL_ID: ${{ inputs.model_id }}
+          SUBMIT_PAID: ${{ inputs.submit_paid_generation }}
+        run: |
+          if [ "$SUBMIT_PAID" = "true" ]; then
+            python3 ci/leonardo_generate.py --action "$ACTION_NAME" --model-id "$MODEL_ID" --submit
+          else
+            python3 ci/leonardo_generate.py --action "$ACTION_NAME" --model-id "$MODEL_ID"
+          fi
+      - name: Save preview images for review (never auto-merge into game)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: leonardo-${{ inputs.action }}-review
+          path: artifacts/leonardo/
+          retention-days: 7
+          if-no-files-found: warn
