@@ -43,6 +43,8 @@ var arena: Control
 var controls: Array[Button] = []
 var visual_time := 0.0
 var menu_music: AudioStreamPlayer
+var performance_label: Label
+var performance_elapsed := 0.0
 var title_label: Label
 var race_button: Button
 var selection_layer: ColorRect
@@ -122,6 +124,12 @@ func _ready() -> void:
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(timer_label)
 	_style_label(timer_label, 19, Color("d5e8fa"))
+	performance_label = Label.new()
+	performance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	performance_label.add_theme_font_size_override("font_size", 12)
+	performance_label.modulate = Color("b7d9d0", 0.75)
+	performance_label.text = "PERFORMANCE: measuring..."
+	root.add_child(performance_label)
 	arena = Control.new()
 	arena.custom_minimum_size = Vector2(0, 300)
 	arena.size_flags_stretch_ratio = 2.0
@@ -573,6 +581,10 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
+	performance_elapsed += 0.05
+	if performance_elapsed >= 1.0:
+		performance_elapsed = 0.0
+		performance_label.text = "FPS %d  |  DRAW %.1f ms  |  UNITS %d" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, units.size() + guards.size()]
 	if phase == "SELECT":
 		return
 	visual_time += 0.05
