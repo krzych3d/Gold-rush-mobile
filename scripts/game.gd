@@ -561,7 +561,7 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	if side == 0:
 		unit_health *= 1.0 + float(raid_boost) * 0.12
 		unit_speed *= 1.0 + float(raid_boost) * 0.08
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": side == 0 and ability_used and selected_race == 3, "triggered": []})
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": []})
 
 func _tick() -> void:
 	if phase == "SELECT":
@@ -605,6 +605,10 @@ func _simulate(dt: float) -> void:
 			for trap in traps[defender].duplicate():
 				if trap["lane"] != unit["lane"] or trap["charges"] <= 0:
 					continue
+				if bool(unit.get("shadow_evasion", false)):
+					unit["shadow_evasion"] = false
+					unit["triggered"].append(trap)
+					break
 				if trap["kind"] == 2:
 					unit["health"] -= 18.0 * dt
 				elif not unit["triggered"].has(trap):
@@ -678,6 +682,7 @@ func _end_wave() -> void:
 		interest_last[side] = payout
 		gold[side] += payout
 	wave += 1
+	ability_used = false
 	phase = "PREP"
 	remaining = PREP_TIME
 	message = "INTEREST +%d GOLD! Protect savings or invest in your army." % interest_last[0]
@@ -969,7 +974,10 @@ func _draw_arena() -> void:
 		else:
 			death_atlas = atlas_shadow_wolf if int(fallen["kind"]) == 1 else atlas_goblin_saboteur if int(fallen["kind"]) == 2 else atlas_goblin_raider
 		var death_frame: int = mini(7, int(float(fallen["age"]) * 10.0))
-		arena.draw_set_transform_matrix(_sprite_transform(death_p))
+		var fallen_transform := _sprite_transform(death_p)
+		if int(fallen["side"]) == 1:
+			fallen_transform.x.x *= -1.0
+		arena.draw_set_transform_matrix(fallen_transform)
 		arena.draw_texture_rect_region(death_atlas, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
 	for spark in hit_sparks:
