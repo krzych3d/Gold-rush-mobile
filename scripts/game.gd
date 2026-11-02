@@ -43,6 +43,10 @@ var arena: Control
 var controls: Array[Button] = []
 var visual_time := 0.0
 var goblin_walk_prototype: Texture2D
+# Optional separate, foot-aligned 192px PNG strips: idle/walk/attack/hit/carry/deposit/death.
+var goblin_action_strips: Dictionary = {}
+const GOBLIN_ACTIONS := ["idle", "walk", "attack", "hit", "death", "deposit", "carry"]
+const GOBLIN_ACTION_FPS := [5.0, 11.0, 12.0, 12.0, 12.0, 12.0, 11.0]
 var menu_music: AudioStreamPlayer
 var performance_label: Label
 var performance_elapsed := 0.0
@@ -107,6 +111,12 @@ func _ready() -> void:
 	# Optional test atlas: keep the shipping animation when the file is absent.
 	if ResourceLoader.exists("res://assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png"):
 		goblin_walk_prototype = load("res://assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png") as Texture2D
+	for action in GOBLIN_ACTIONS:
+		var path: String = "res://assets/epic/animations/goblin_raider_%s.png" % action
+		if ResourceLoader.exists(path):
+			var strip := load(path) as Texture2D
+			if strip != null and strip.get_height() == 192 and strip.get_width() >= 192 and strip.get_width() % 192 == 0:
+				goblin_action_strips[action] = strip
 	menu_music = AudioStreamPlayer.new()
 	menu_music.name = "EnchantedMenuScore"
 	menu_music.volume_db = -9.0
@@ -994,7 +1004,19 @@ func _draw_arena() -> void:
 		var animation_transform := Transform2D(tilt, sprite_scale * camera_zoom)
 		animation_transform.origin = arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom
 		arena.draw_set_transform_matrix(animation_transform)
-		if goblin_walk_prototype != null and atlas == atlas_goblin_raider and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
+		var goblin_action: String = GOBLIN_ACTIONS[animation_row]
+		if atlas == atlas_goblin_raider and animation_row == 1 and bool(data.get("returning", false)) and int(data.get("carried", 0)) > 0:
+			goblin_action = "carry"
+		if atlas == atlas_goblin_raider and goblin_action_strips.has(goblin_action):
+			var strip: Texture2D = goblin_action_strips[goblin_action]
+			var count: int = strip.get_width() / 192
+			var strip_frame: int = int(floor(float(data.get("action_time", visual_time)) * GOBLIN_ACTION_FPS[animation_row] + frame_offset)) % count
+			if animation_row == 2:
+				strip_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * float(count) / 0.45), 0, count - 1)
+			elif animation_row == 3:
+				strip_frame = clampi(int((0.28 - float(data.get("hit_time", 0.0))) * float(count) / 0.28), 0, count - 1)
+			arena.draw_texture_rect_region(strip, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(strip_frame * 192), 0.0), Vector2(192, 192)))
+		elif goblin_walk_prototype != null and atlas == atlas_goblin_raider and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
 			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12 if animation_row == 1 else 0
 			arena.draw_texture_rect_region(goblin_walk_prototype, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)))
 		else:
