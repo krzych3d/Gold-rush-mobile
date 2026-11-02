@@ -785,7 +785,7 @@ func _on_arena_resized() -> void:
 
 func _fit_map() -> void:
 	# Fixed camera: fit the complete painted map, including both castles.
-	camera_zoom = maxf(0.01, minf(arena.size.x / 2440.0, arena.size.y / 1100.0))
+	camera_zoom = maxf(0.01, minf(arena.size.x / 2400.0, arena.size.y / 1060.0))
 	camera_offset = Vector2.ZERO
 	overview_mode = true
 	arena.queue_redraw()
@@ -909,7 +909,7 @@ func _draw_arena() -> void:
 		else:
 			art = sprite_shadow_wolf if kind == 1 else sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
 		# Atlas rows: 0 idle, 1 walk, 2 attack, 3 hit, 4 defeat, 5 deposit/loot.
-		# 128px frames, 8 per action; independently warped torso, limbs and weapon.
+		# 128px frames, 8 per action; animation quality depends on atlas artwork.
 		var atlas: Texture2D = atlas_goblin_raider
 		if art == sprite_dwarf_defender:
 			atlas = atlas_dwarf_defender
@@ -943,7 +943,7 @@ func _draw_arena() -> void:
 		var fps: float = 5.0 if animation_row == 0 else 12.0 if animation_row == 1 else 11.0 if animation_row == 2 else 10.0
 		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
 		var animation_frame: int = int(floor(float(data.get("action_time", visual_time)) * fps + frame_offset)) % 8
-		# Each atlas frame has its own limb and weapon pose.
+		# Advance the atlas frames; individual poses are supplied by the artwork.
 		if animation_row == 3 and float(data.get("hit_time", 0.0)) > 0.0:
 			animation_frame = mini(7, int((0.28 - float(data["hit_time"])) * 28.0))
 		if animation_row == 5:
