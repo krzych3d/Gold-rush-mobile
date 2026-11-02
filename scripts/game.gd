@@ -230,11 +230,11 @@ func _show_race_selection() -> void:
 		var card := PanelContainer.new()
 		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		var frame := StyleBoxFlat.new()
-		frame.bg_color = Color("131c30")
+		frame.bg_color = Color("0b1426", 0.94)
 		frame.border_color = RACE_COLORS[i]
 		frame.set_border_width_all(2)
-		frame.set_corner_radius_all(15)
-		frame.set_content_margin_all(4)
+		frame.set_corner_radius_all(8)
+		frame.set_content_margin_all(2)
 		card.add_theme_stylebox_override("panel", frame)
 		cards.add_child(card)
 		faction_cards.append(card)
@@ -242,12 +242,12 @@ func _show_race_selection() -> void:
 		row.add_theme_constant_override("separation", 9)
 		card.add_child(row)
 		var portrait := TextureRect.new()
-		portrait.custom_minimum_size = Vector2(175, 150)
+		portrait.custom_minimum_size = Vector2(195, 150)
 		portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		portrait.size_flags_stretch_ratio = 1.0
 		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		portrait.texture = load("res://assets/factions/" + RACE_NAMES[i].to_lower() + ".svg")
+		portrait.texture = load("res://assets/factions/" + RACE_NAMES[i].to_lower() + "_epic.svg")
 		row.add_child(portrait)
 		var details := VBoxContainer.new()
 		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -719,7 +719,7 @@ func _arena_input(event: InputEvent) -> void:
 			_change_zoom(-0.12)
 
 func _nearest_lane(screen_position: Vector2) -> int:
-	var world: Vector2 = (screen_position - arena.size * 0.5 - camera_offset) / camera_zoom
+	var world: Vector2 = _iso_unproject((screen_position - arena.size * 0.5 - camera_offset) / camera_zoom)
 	var best_lane := 0
 	var best_distance := INF
 	for path in 3:
@@ -754,7 +754,7 @@ func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
 	var h: float = arena.size.y * 0.68
-	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("141e32"))
+	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("0c1d2b"))
 	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
 	# Layered illustrated ground tiles, camera culled for mobile performance.
@@ -874,7 +874,7 @@ func _draw_arena() -> void:
 		actors.append({"p": _point(int(guard["lane"]), float(guard["position"]), int(guard["side"])), "data": guard, "guard": true, "side": int(guard["side"])})
 	for unit in units:
 		actors.append({"p": _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"])), "data": unit, "guard": false, "side": int(unit["side"])})
-	actors.sort_custom(func(a, b): return a["p"].y < b["p"].y)
+	actors.sort_custom(func(a, b): return _iso_project(a["p"]).y < _iso_project(b["p"]).y)
 	for actor in actors:
 		var p: Vector2 = actor["p"]
 		if not _in_camera(p, 100.0):
