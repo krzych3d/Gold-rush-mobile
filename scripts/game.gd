@@ -930,9 +930,9 @@ func _draw_arena() -> void:
 			animation_row = 5
 		if float(data.get("hit_time", 0.0)) > 0.0 or float(data.get("stunned", 0.0)) > 0.0:
 			animation_row = 3
-		if float(data.get("attack_time", 0.0)) > 0.0:
+		if float(data.get("attack_time", 0.0)) > 0.0 and animation_row != 3 and animation_row != 5:
 			animation_row = 2
-		elif animation_row != 5 and phase == "ATTACK":
+		elif animation_row == 1 and phase == "ATTACK":
 			for opponent in units:
 				if int(opponent["side"]) == int(actor["side"]) or int(opponent["lane"]) != int(data["lane"]):
 					continue
