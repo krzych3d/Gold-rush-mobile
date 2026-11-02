@@ -955,6 +955,9 @@ func _draw_arena() -> void:
 			animation_row = 1
 		if float(data.get("steal_timer", 0.0)) > 0.0:
 			animation_row = 5
+		elif not actor["guard"] and bool(data.get("returning", false)) and int(data.get("carried", 0)) > 0:
+			# Carry is a moving state, not a repeated deposit animation.
+			animation_row = 1
 		if float(data.get("hit_time", 0.0)) > 0.0 or float(data.get("stunned", 0.0)) > 0.0:
 			animation_row = 3
 		if float(data.get("attack_time", 0.0)) > 0.0 and animation_row != 3 and animation_row != 5:
@@ -972,11 +975,11 @@ func _draw_arena() -> void:
 		var pace: float = 12.5 if kind == 0 else 7.5 if kind == 1 else 10.0
 		var walk_phase: float = visual_time * (pace if moving else 2.4) + float(data["position"]) * 21.0
 		var stride: float = sin(walk_phase)
-		var lift: float = absf(stride) * (0.35 if moving else 0.08)
-		var squash: float = 1.0 + (0.008 if moving else 0.003) * cos(walk_phase * 2.0)
+		var lift: float = 0.0
+		var squash: float = 1.0
 		var bob: float = -lift
-		var scale_factor: float = 1.16 if actor["guard"] else 1.0
-		var tilt: float = stride * (0.002 if moving else 0.0)
+		var scale_factor: float = 1.0
+		var tilt: float = 0.0
 		var facing: float = 1.0 if friendly else -1.0
 		# Face the actual travel direction, including the return trip with gold.
 		if not actor["guard"] and bool(data.get("returning", false)):
@@ -987,7 +990,7 @@ func _draw_arena() -> void:
 			bob = 1.5
 		var shadow_scale: float = 1.0 - lift * 0.024
 		arena.draw_circle(p + Vector2(0, 9), 23.0 * scale_factor * shadow_scale, Color("071924", 0.36))
-		if moving and stride > 0.82:
+		if moving and stride > 0.82 and goblin_walk_prototype == null:
 			var dust: float = (stride - 0.82) / 0.18
 			arena.draw_circle(p + Vector2(-facing * 15.0, 5.0), 3.0 + dust * 4.0, Color(0.85, 0.77, 0.58, dust * 0.28))
 		var art_size := Vector2(105, 112) * scale_factor
