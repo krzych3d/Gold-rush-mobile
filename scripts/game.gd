@@ -54,7 +54,6 @@ var terrain_details: Array = []
 
 func _ready() -> void:
 	rng.randomize()
-	_generate_terrain_details()
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
@@ -166,6 +165,7 @@ func _ready() -> void:
 	clock.timeout.connect(_tick)
 	add_child(clock)
 	clock.start()
+	_generate_terrain_details()
 	_refresh()
 	_show_race_selection()
 
