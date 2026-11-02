@@ -55,6 +55,9 @@ var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
 var crystal_texture: Texture2D = preload("res://assets/world/arcane_crystal.svg")
 var dwarf_texture: Texture2D = preload("res://assets/world/dwarf_guard.svg")
 var goblin_texture: Texture2D = preload("res://assets/world/goblin_raider.svg")
+var vault_texture: Texture2D = preload("res://assets/world/royal_vault.svg")
+var bridge_texture: Texture2D = preload("res://assets/world/ancient_bridge.svg")
+var road_texture: Texture2D = preload("res://assets/world/stone_path.svg")
 
 func _ready() -> void:
 	rng.randomize()
@@ -766,20 +769,24 @@ func _draw_arena() -> void:
 		arena.draw_polyline(points, Color("72634f"), 80.0, true)
 		arena.draw_polyline(points, Color("a89571"), 70.0, true)
 		arena.draw_polyline(points, Color("c4aa7b") if path == lane else Color("a78f69"), 46.0, true)
+		# Illustrated cobblestone texture overlays the road while preserving the path.
+		for segment in 20:
+			var start_p: Vector2 = _point(path, float(segment) / 20.0, 0)
+			var end_p: Vector2 = _point(path, float(segment + 1) / 20.0, 0)
+			var delta: Vector2 = end_p - start_p
+			var mid: Vector2 = (start_p + end_p) * 0.5
+			if _in_camera(mid, 180.0):
+				arena.draw_set_transform(arena.size * 0.5 + camera_offset + mid * camera_zoom, delta.angle(), Vector2.ONE * camera_zoom)
+				arena.draw_texture_rect(road_texture, Rect2(Vector2(-delta.length() * 0.5, -32), Vector2(delta.length() + 3, 64)), false, Color(1, 1, 1, 0.78))
+				arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
 		for j in 32:
 			var stone := _point(path, float(j) / 31.0, 0)
 			arena.draw_line(stone + Vector2(-7, -18), stone + Vector2(6, -12), Color("665d4a", 0.5), 2.0)
 			arena.draw_line(stone + Vector2(7, 9), stone + Vector2(-5, 18), Color("e1cba2", 0.32), 2.0)
-	# Elevated bridges reconnect the three routes across the river.
+	# Hand-painted stone bridge sprites at the three river crossings.
 	for path in 3:
-		var crossing := _point(path, 0.5, 0)
-		arena.draw_rect(Rect2(crossing + Vector2(-83, -35), Vector2(166, 70)), Color("30343a"))
-		arena.draw_rect(Rect2(crossing + Vector2(-76, -41), Vector2(152, 65)), Color("9d9689"))
-		for k in 7:
-			var sx: float = crossing.x - 65.0 + float(k) * 21.0
-			arena.draw_line(Vector2(sx, crossing.y - 38), Vector2(sx - 5.0, crossing.y + 23), Color("686c69", 0.55), 2.0)
-		arena.draw_line(crossing + Vector2(-81, -37), crossing + Vector2(81, -37), Color("d9c5a0"), 6.0)
-		arena.draw_line(crossing + Vector2(-81, 26), crossing + Vector2(81, 26), Color("60594f"), 6.0)
+		var crossing: Vector2 = _point(path, 0.5, 0)
+		arena.draw_texture_rect(bridge_texture, Rect2(crossing + Vector2(-100, -54), Vector2(200, 108)), false)
 	# Forest, flowers, stones and arcane formations: render only visible props.
 	for item in terrain_details:
 		var p: Vector2 = item["p"]
@@ -902,7 +909,9 @@ func _draw_crystal(p: Vector2, seed: float) -> void:
 
 func _draw_fort(p: Vector2, color: Color, side: int) -> void:
 	var glow := Color("f9d786") if side == 0 else Color("e88af1")
-	_draw_fort_body(p, color, glow)
+	# Render detailed fantasy vault artwork in the battlefield world.
+	arena.draw_circle(p + Vector2(0, -70), 83, Color(glow.r, glow.g, glow.b, 0.10))
+	arena.draw_texture_rect(vault_texture, Rect2(p + Vector2(-112, -175), Vector2(224, 224)), false, Color("ffffff") if side == 0 else Color("ffc0bd"))
 
 func _draw_fort_body(p: Vector2, color: Color, glow: Color) -> void:
 	# Tall isometric keep with shaded side walls, roof planes and battlements.
