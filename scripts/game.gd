@@ -58,6 +58,9 @@ var goblin_texture: Texture2D = preload("res://assets/world/goblin_raider.svg")
 var vault_texture: Texture2D = preload("res://assets/world/royal_vault.svg")
 var bridge_texture: Texture2D = preload("res://assets/world/ancient_bridge.svg")
 var road_texture: Texture2D = preload("res://assets/world/stone_path.svg")
+var elf_texture: Texture2D = preload("res://assets/world/elf_ranger.svg")
+var void_texture: Texture2D = preload("res://assets/world/void_assassin.svg")
+var waterfall_texture: Texture2D = preload("res://assets/world/waterfall.svg")
 
 func _ready() -> void:
 	rng.randomize()
@@ -755,6 +758,13 @@ func _draw_arena() -> void:
 		var rx: float = sin(ry / 230.0) * 100.0 + ry * 0.14
 		var ripple := Vector2(rx + sin(visual_time * 0.6 + float(i)) * 19.0, ry)
 		arena.draw_arc(ripple, 13.0 + float(i % 3) * 6.0, 0.2, PI - 0.2, 12, Color("a5e7e4", 0.35), 2.0)
+	# Glowing waterfall scenery at the ends of the river gorge.
+	for falls_index in 2:
+		var fy: float = -1020.0 if falls_index == 0 else 950.0
+		var fx: float = sin(fy / 230.0) * 100.0 + fy * 0.14
+		var fall_pos := Vector2(fx, fy)
+		if _in_camera(fall_pos, 260.0):
+			arena.draw_texture_rect(waterfall_texture, Rect2(fall_pos + Vector2(-82, -105), Vector2(164, 210)), false, Color(1, 1, 1, 0.94))
 	# Ancient stone foundations and glowing sigils make the terrain navigable.
 	for i in 9:
 		var angle: float = float(i) * TAU / 9.0
@@ -821,13 +831,27 @@ func _draw_arena() -> void:
 	for guard in guards:
 		var gp: Vector2 = _point(int(guard["lane"]), float(guard["position"]), int(guard["side"]))
 		var friendly: bool = int(guard["side"]) == 0
-		arena.draw_texture_rect(dwarf_texture if friendly else goblin_texture, Rect2(gp + Vector2(-30, -58), Vector2(60, 75)), false)
+		var guard_art: Texture2D = dwarf_texture if friendly else goblin_texture
+		if friendly and selected_race == 1:
+			guard_art = goblin_texture
+		elif friendly and selected_race == 2:
+			guard_art = elf_texture
+		elif friendly and selected_race == 3:
+			guard_art = void_texture
+		arena.draw_texture_rect(guard_art, Rect2(gp + Vector2(-30, -58), Vector2(60, 75)), false)
 		_draw_health_bar(gp, float(guard["health"]), float(guard["max_health"]), friendly, 42)
 	for unit in units:
 		var p := _point(unit["lane"], clampf(unit["position"], 0.0, 1.0), unit["side"])
 		var bob := sin(visual_time * 10.0 + float(unit["position"]) * 12.0) * 2.0
 		var color: Color = RACE_COLORS[selected_race] if unit["side"] == 0 else Color("ff8c96")
-		arena.draw_texture_rect(dwarf_texture if int(unit["side"]) == 0 else goblin_texture, Rect2(p + Vector2(-25, -50 + bob), Vector2(50, 63)), false)
+		var unit_art: Texture2D = goblin_texture
+		if int(unit["side"]) == 0:
+			match selected_race:
+				0: unit_art = dwarf_texture
+				1: unit_art = goblin_texture
+				2: unit_art = elf_texture
+				3: unit_art = void_texture
+		arena.draw_texture_rect(unit_art, Rect2(p + Vector2(-25, -50 + bob), Vector2(50, 63)), false)
 		_draw_health_bar(p + Vector2(0, bob), float(unit["health"]), float(unit["max_health"]), int(unit["side"]) == 0)
 	for i in 9:
 		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
