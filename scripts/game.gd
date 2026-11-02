@@ -638,6 +638,27 @@ func _draw_arena() -> void:
 		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
 		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))
 	arena.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_draw_minimap()
+
+func _draw_minimap() -> void:
+	# Fixed screen-space overview, independent from the scrolling battlefield.
+	var origin := Vector2(arena.size.x - 132.0, 16.0)
+	var rect := Rect2(origin, Vector2(116, 102))
+	arena.draw_rect(rect.grow(4), Color("081522", 0.82))
+	arena.draw_rect(rect, Color("2b5548", 0.95))
+	for path in 3:
+		var points := PackedVector2Array()
+		for step in 25:
+			var world := _point(path, float(step) / 24.0, 0)
+			points.append(origin + Vector2(58, 51) + Vector2(world.x / 15.0, world.y / 11.0))
+		arena.draw_polyline(points, Color("cfb88a"), 3.0, true)
+	arena.draw_circle(origin + Vector2(10, 51), 5, Color("7ab6ff"))
+	arena.draw_circle(origin + Vector2(106, 51), 5, Color("ff7b9b"))
+	var viewport_center: Vector2 = -camera_offset / camera_zoom
+	var camera_marker := origin + Vector2(58, 51) + Vector2(viewport_center.x / 15.0, viewport_center.y / 11.0)
+	camera_marker.x = clampf(camera_marker.x, origin.x + 5.0, origin.x + 111.0)
+	camera_marker.y = clampf(camera_marker.y, origin.y + 5.0, origin.y + 97.0)
+	arena.draw_rect(Rect2(camera_marker - Vector2(6, 6), Vector2(12, 12)), Color("f9f5dc"), false, 2.0)
 
 func _draw_ruin(p: Vector2, seed: int) -> void:
 	var stone := Color("68716d") if seed % 2 == 0 else Color("77776b")
