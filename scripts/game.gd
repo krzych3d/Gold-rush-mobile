@@ -261,7 +261,7 @@ func _show_race_selection() -> void:
 		portrait.size_flags_stretch_ratio = 1.0
 		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		var epic_portrait_path := "res://assets/epic/portraits/" + RACE_NAMES[i].to_lower() + ".jpg"
+		var epic_portrait_path: String = "res://assets/epic/portraits/%s.jpg" % str(RACE_NAMES[i]).to_lower()
 		portrait.texture = load(epic_portrait_path) if ResourceLoader.exists(epic_portrait_path) else load("res://assets/factions/" + RACE_NAMES[i].to_lower() + "_epic.svg")
 		row.add_child(portrait)
 		var details := VBoxContainer.new()
