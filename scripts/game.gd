@@ -422,6 +422,7 @@ func _guard_combat(dt: float) -> void:
 			guards.erase(guard)
 			continue
 		guard["cooldown"] = maxf(0.0, float(guard["cooldown"]) - dt)
+		guard["attack_time"] = maxf(0.0, float(guard.get("attack_time", 0.0)) - dt)
 		var gp: Vector2 = _point(int(guard["lane"]), float(guard["position"]), int(guard["side"]))
 		var target: Dictionary = {}
 		var nearest := 135.0
@@ -435,6 +436,8 @@ func _guard_combat(dt: float) -> void:
 				target = unit
 		if not target.is_empty() and float(guard["cooldown"]) <= 0.0:
 			target["health"] -= 26.0
+			target["hit_time"] = 0.24
+			guard["attack_time"] = 0.38
 			hit_sparks.append({"p": _point(int(target["lane"]), clampf(float(target["position"]), 0.0, 1.0), int(target["side"])), "life": 0.5, "friendly": int(guard["side"]) == 0})
 			guard["cooldown"] = 0.9
 			if float(target["health"]) <= 0.0:
@@ -450,7 +453,7 @@ func _guard_combat(dt: float) -> void:
 				guard["health"] -= (9.0 if int(unit["kind"]) == -1 else 14.0) * dt
 
 func _record_fallen(data: Dictionary) -> void:
-	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0})
+	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false))})
 	if fallen_actors.size() > 30:
 		fallen_actors.pop_front()
 
@@ -563,7 +566,7 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	if side == 0:
 		unit_health *= 1.0 + float(raid_boost) * 0.12
 		unit_speed *= 1.0 + float(raid_boost) * 0.08
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": []})
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
 	if phase == "SELECT":
@@ -603,6 +606,9 @@ func _simulate(dt: float) -> void:
 			hit_sparks.erase(spark)
 	_guard_combat(dt)
 	for unit in units.duplicate():
+		unit["action_time"] = float(unit.get("action_time", 0.0)) + dt
+		unit["hit_time"] = maxf(0.0, float(unit.get("hit_time", 0.0)) - dt)
+		unit["attack_time"] = maxf(0.0, float(unit.get("attack_time", 0.0)) - dt)
 		if float(unit.get("steal_timer", 0.0)) > 0.0:
 			unit["steal_timer"] = maxf(0.0, float(unit["steal_timer"]) - dt)
 			continue
@@ -627,6 +633,7 @@ func _simulate(dt: float) -> void:
 						trap["charges"] = 0
 					else:
 						unit["health"] -= 40.0 if trap["kind"] == 0 else 25.0
+						unit["hit_time"] = 0.28
 						if trap["kind"] == 1:
 							unit["stunned"] = 2.5
 						trap["charges"] -= 1
@@ -646,6 +653,7 @@ func _simulate(dt: float) -> void:
 				gold[defender] -= amount
 				unit["carried"] = amount
 				unit["steal_timer"] = 0.65
+				unit["action_time"] = 0.0
 				if _check_vaults():
 					return
 				unit["returning"] = true
@@ -653,7 +661,7 @@ func _simulate(dt: float) -> void:
 			unit["position"] -= unit["speed"] * dt
 			if unit["position"] <= 0.0:
 				gold[unit["side"]] += unit["carried"]
-				deposit_actors.append({"side": int(unit["side"]), "lane": int(unit["lane"]), "kind": int(unit["kind"]), "age": 0.0})
+				deposit_actors.append({"side": int(unit["side"]), "lane": int(unit["lane"]), "kind": int(unit["kind"]), "age": 0.0, "amount": int(unit["carried"])})
 				units.erase(unit)
 
 func _check_vaults() -> bool:
@@ -920,8 +928,10 @@ func _draw_arena() -> void:
 			animation_row = 1
 		if float(data.get("steal_timer", 0.0)) > 0.0:
 			animation_row = 5
-		if float(data.get("stunned", 0.0)) > 0.0:
+		if float(data.get("hit_time", 0.0)) > 0.0 or float(data.get("stunned", 0.0)) > 0.0:
 			animation_row = 3
+		if float(data.get("attack_time", 0.0)) > 0.0:
+			animation_row = 2
 		elif animation_row != 5 and phase == "ATTACK":
 			for opponent in units:
 				if int(opponent["side"]) == int(actor["side"]) or int(opponent["lane"]) != int(data["lane"]):
@@ -932,8 +942,10 @@ func _draw_arena() -> void:
 					break
 		var fps: float = 5.0 if animation_row == 0 else 12.0 if animation_row == 1 else 11.0 if animation_row == 2 else 10.0
 		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
-		var animation_frame: int = int(floor(visual_time * fps + frame_offset)) % 8
+		var animation_frame: int = int(floor(float(data.get("action_time", visual_time)) * fps + frame_offset)) % 8
 		# Each atlas frame has its own limb and weapon pose.
+		if animation_row == 3 and float(data.get("hit_time", 0.0)) > 0.0:
+			animation_frame = mini(7, int((0.28 - float(data["hit_time"])) * 28.0))
 		if animation_row == 5:
 			animation_frame = mini(7, int((0.65 - float(data.get("steal_timer", 0.0))) * 12.0))
 		# Movement-aware animation: idle breathing, two-step gait and hit recoil.
@@ -969,7 +981,7 @@ func _draw_arena() -> void:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, 42.0 if actor["guard"] else 34.0)
 		# Animated weapon glints and combat trails while raiders are fighting.
-		if phase == "ATTACK" and not actor["guard"]:
+		if phase == "ATTACK" and animation_row == 2:
 			var strike: float = sin(visual_time * 12.0 + float(data["position"]) * 23.0)
 			if strike > 0.72:
 				var fx_color := Color("78ddff", 0.72) if friendly else Color("ff996e", 0.72)
@@ -1013,7 +1025,7 @@ func _draw_arena() -> void:
 			death_atlas = atlas_shadow_wolf if int(fallen["kind"]) == 1 else atlas_goblin_saboteur if int(fallen["kind"]) == 2 else atlas_goblin_raider
 		var death_frame: int = mini(7, int(float(fallen["age"]) * 10.0))
 		var fallen_transform := _sprite_transform(death_p)
-		if int(fallen["side"]) == 1:
+		if (int(fallen["side"]) == 1) != bool(fallen.get("returning", false)):
 			fallen_transform.x.x *= -1.0
 		arena.draw_set_transform_matrix(fallen_transform)
 		arena.draw_texture_rect_region(death_atlas, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)))
