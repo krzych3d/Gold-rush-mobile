@@ -73,7 +73,7 @@ var void_texture: Texture2D = preload("res://assets/world/void_assassin.svg")
 var waterfall_texture: Texture2D = preload("res://assets/world/waterfall.svg")
 var ground_texture: Texture2D = preload("res://assets/world/enchanted_ground.svg")
 var valley_texture: Texture2D = preload("res://assets/world/epic_valley.svg")
-var epic_battlefield_texture: Texture2D = preload("res://assets/epic/world/battlefield_v2.jpg")
+var epic_battlefield_texture: Texture2D = preload("res://assets/epic/world/battlefield_clean.jpg")
 var cliff_texture: Texture2D = preload("res://assets/world/mossy_cliff.svg")
 var grove_texture: Texture2D = preload("res://assets/world/moonlit_grove.svg")
 var shrine_texture: Texture2D = preload("res://assets/world/ancient_shrine.svg")
@@ -642,9 +642,8 @@ func _refresh() -> void:
 func _point(path: int, progress: float, side: int) -> Vector2:
 	var t: float = progress if side == 0 else 1.0 - progress
 	var x: float = lerpf(-WORLD_HALF_LENGTH, WORLD_HALF_LENGTH, t)
-	var lane_y: float = (float(path) - 1.0) * 310.0
-	var bend: float = sin(t * TAU + float(path) * 1.35) * 38.0 * sin(t * PI)
-	return Vector2(x, lane_y + bend)
+	var lane_y: float = -200.0 + float(path) * 245.0
+	return Vector2(x, lane_y)
 
 func _iso_project(world: Vector2) -> Vector2:
 	return ISO_X * world.x + ISO_Y * world.y
