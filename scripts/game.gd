@@ -72,6 +72,7 @@ var elf_texture: Texture2D = preload("res://assets/world/elf_ranger.svg")
 var void_texture: Texture2D = preload("res://assets/world/void_assassin.svg")
 var waterfall_texture: Texture2D = preload("res://assets/world/waterfall.svg")
 var ground_texture: Texture2D = preload("res://assets/world/enchanted_ground.svg")
+var valley_texture: Texture2D = preload("res://assets/world/epic_valley.svg")
 var cliff_texture: Texture2D = preload("res://assets/world/mossy_cliff.svg")
 var grove_texture: Texture2D = preload("res://assets/world/moonlit_grove.svg")
 var shrine_texture: Texture2D = preload("res://assets/world/ancient_shrine.svg")
@@ -695,8 +696,8 @@ func _on_arena_resized() -> void:
 func _fit_map() -> void:
 	# The projected map spans x +/- 1290 and y +/- 645 world pixels.
 	# Reserve extra room for castle silhouettes and world decorations.
-	var width_factor: float = arena.size.x / 2900.0
-	var height_factor: float = arena.size.y / 1600.0
+	var width_factor: float = arena.size.x / 3100.0
+	var height_factor: float = arena.size.y / 1750.0
 	camera_zoom = clampf(minf(width_factor, height_factor), 0.12, 2.25)
 	camera_offset = Vector2.ZERO
 	overview_mode = true
@@ -792,18 +793,9 @@ func _draw_arena() -> void:
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("0c1d2b"))
 	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
-	# Layered illustrated ground tiles, camera culled for mobile performance.
-	var tile_size := 512.0
-	var view_center: Vector2 = _iso_unproject(-camera_offset / camera_zoom)
-	var half_view: Vector2 = Vector2(arena.size.x + arena.size.y, arena.size.x + arena.size.y) / maxf(camera_zoom, 0.1)
-	var min_x: int = maxi(-5, int(floor((view_center.x - half_view.x - 64.0) / tile_size)))
-	var max_x: int = mini(4, int(ceil((view_center.x + half_view.x + 64.0) / tile_size)))
-	var min_y: int = maxi(-4, int(floor((view_center.y - half_view.y - 64.0) / tile_size)))
-	var max_y: int = mini(3, int(ceil((view_center.y + half_view.y + 64.0) / tile_size)))
-	for ty in range(min_y, max_y + 1):
-		for tx in range(min_x, max_x + 1):
-			var tile_pos := Vector2(float(tx) * tile_size, float(ty) * tile_size)
-			arena.draw_texture_rect(ground_texture, Rect2(tile_pos, Vector2.ONE * tile_size), false)
+	# One cohesive enchanted-valley backdrop instead of repeating flat grass tiles.
+	# All roads, bridges, castles and units remain independent gameplay objects.
+	arena.draw_texture_rect(valley_texture, Rect2(Vector2(-1300, -900), Vector2(2600, 1800)), false)
 	# Painted mossy escarpments and raised terrain formations.
 	for i in 24:
 		var bx: float = sin(float(i) * 31.2) * 1300.0
