@@ -73,6 +73,7 @@ var void_texture: Texture2D = preload("res://assets/world/void_assassin.svg")
 var waterfall_texture: Texture2D = preload("res://assets/world/waterfall.svg")
 var ground_texture: Texture2D = preload("res://assets/world/enchanted_ground.svg")
 var valley_texture: Texture2D = preload("res://assets/world/epic_valley.svg")
+var epic_battlefield_texture: Texture2D = preload("res://assets/epic/world/battlefield.jpg")
 var cliff_texture: Texture2D = preload("res://assets/world/mossy_cliff.svg")
 var grove_texture: Texture2D = preload("res://assets/world/moonlit_grove.svg")
 var shrine_texture: Texture2D = preload("res://assets/world/ancient_shrine.svg")
@@ -260,7 +261,7 @@ func _show_race_selection() -> void:
 		portrait.size_flags_stretch_ratio = 1.0
 		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		var epic_portrait_path := "res://assets/epic/portraits/" + RACE_NAMES[i].to_lower() + ".png"
+		var epic_portrait_path := "res://assets/epic/portraits/" + RACE_NAMES[i].to_lower() + ".jpg"
 		portrait.texture = load(epic_portrait_path) if ResourceLoader.exists(epic_portrait_path) else load("res://assets/factions/" + RACE_NAMES[i].to_lower() + "_epic.svg")
 		row.add_child(portrait)
 		var details := VBoxContainer.new()
@@ -796,11 +797,7 @@ func _draw_arena() -> void:
 	center = Vector2.ZERO
 	# One cohesive enchanted-valley backdrop instead of repeating flat grass tiles.
 	# All roads, bridges, castles and units remain independent gameplay objects.
-	var epic_map_path := "res://assets/epic/world/battlefield.png"
-	if ResourceLoader.exists(epic_map_path):
-		arena.draw_texture_rect(load(epic_map_path), Rect2(Vector2(-1200, -520), Vector2(2400, 1040)), false)
-	else:
-		arena.draw_texture_rect(valley_texture, Rect2(Vector2(-1300, -750), Vector2(2600, 1500)), false)
+	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2(-1200, -520), Vector2(2400, 1040)), false)
 	# Painted mossy escarpments and raised terrain formations.
 	for i in 5:
 		var bx: float = sin(float(i) * 31.2) * 1300.0
