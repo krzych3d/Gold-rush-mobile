@@ -455,7 +455,7 @@ func _record_fallen(data: Dictionary) -> void:
 
 func _draw_health_bar(p: Vector2, health: float, max_health: float, friendly: bool, width: float = 34.0) -> void:
 	var ratio: float = clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
-	var top_left := p + Vector2(-width * 0.5, -82)
+	var top_left := p + Vector2(-width * 0.5, -118)
 	arena.draw_rect(Rect2(top_left - Vector2(2, 2), Vector2(width + 4, 12)), Color("08111c"))
 	arena.draw_rect(Rect2(top_left, Vector2(width, 8)), Color("542f37"))
 	arena.draw_rect(Rect2(top_left, Vector2(width * ratio, 8)), Color("55e98b") if friendly else Color("ff6976"))
@@ -930,9 +930,10 @@ func _draw_arena() -> void:
 				if p.distance_to(opponent_p) < 125.0:
 					animation_row = 2
 					break
-		var fps: float = 7.0 if animation_row == 0 else 12.0 if animation_row == 1 else 14.0
+		var fps: float = 5.0 if animation_row == 0 else 12.0 if animation_row == 1 else 11.0 if animation_row == 2 else 10.0
 		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
 		var animation_frame: int = int(floor(visual_time * fps + frame_offset)) % 8
+		# Each atlas frame has its own limb and weapon pose.
 		if animation_row == 5:
 			animation_frame = mini(7, int((0.65 - float(data.get("steal_timer", 0.0))) * 12.0))
 		# Movement-aware animation: idle breathing, two-step gait and hit recoil.
@@ -940,11 +941,11 @@ func _draw_arena() -> void:
 		var pace: float = 12.5 if kind == 0 else 7.5 if kind == 1 else 10.0
 		var walk_phase: float = visual_time * (pace if moving else 2.4) + float(data["position"]) * 21.0
 		var stride: float = sin(walk_phase)
-		var lift: float = absf(stride) * (1.2 if moving else 0.3)
-		var squash: float = 1.0 + (0.045 if moving else 0.012) * cos(walk_phase * 2.0)
+		var lift: float = absf(stride) * (0.8 if moving else 0.15)
+		var squash: float = 1.0 + (0.008 if moving else 0.003) * cos(walk_phase * 2.0)
 		var bob: float = -lift
 		var scale_factor: float = 1.16 if actor["guard"] else 1.0
-		var tilt: float = stride * (0.012 if moving else 0.004)
+		var tilt: float = stride * (0.004 if moving else 0.001)
 		var facing: float = 1.0 if friendly else -1.0
 		if not actor["guard"] and bool(data.get("returning", false)):
 			facing = -facing
