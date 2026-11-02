@@ -11,6 +11,8 @@ const LOOTS := [50, 160, 40]
 const HP := [45.0, 180.0, 75.0]
 const SPEED := [0.21, 0.105, 0.15]
 const TRAP_COSTS := [55, 75, 155]
+const GUARD_COST := 130
+const GUARD_HP := 190.0
 
 var selected_race := 0
 var wave := 1
@@ -27,6 +29,8 @@ var lane := 1
 var orders: Array = [[], []]
 var traps: Array = [[], []]
 var units: Array = []
+var guards: Array = []
+var guard_button: Button
 var rng := RandomNumberGenerator.new()
 var message := "Build your army with coins. Protect your vault!"
 var hud: Label
@@ -125,6 +129,13 @@ func _ready() -> void:
 				button.pressed.connect(_buy_unit.bind(index))
 			else:
 				button.pressed.connect(_buy_trap.bind(index))
+	guard_button = Button.new()
+	guard_button.text = "HIRE DEFENDER 130"
+	guard_button.custom_minimum_size.y = 48
+	guard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root.add_child(guard_button)
+	_style_button(guard_button, true)
+	guard_button.pressed.connect(_buy_guard)
 	var economy_row := HBoxContainer.new()
 	root.add_child(economy_row)
 	invest_button = Button.new()
@@ -302,6 +313,61 @@ func _buy_raid_boost() -> void:
 	message = "Raid training %d/3: faster, stronger thieves." % raid_boost
 	_refresh()
 
+func _buy_guard() -> void:
+	if phase != "PREP":
+		return
+	var count := 0
+	for guard in guards:
+		if int(guard["side"]) == 0 and int(guard["lane"]) == lane:
+			count += 1
+	if gold[0] < GUARD_COST or count >= 3:
+		message = "Need 130 vault gold; max 3 defenders per lane."
+		_refresh()
+		return
+	gold[0] -= GUARD_COST
+	guards.append({"side": 0, "lane": lane, "position": 0.19 + float(count) * 0.11, "health": GUARD_HP, "max_health": GUARD_HP, "cooldown": 0.0})
+	_check_vaults()
+	message = "Defender assigned to lane %d" % (lane + 1)
+	_refresh()
+
+func _guard_combat(dt: float) -> void:
+	for guard in guards.duplicate():
+		if float(guard["health"]) <= 0.0:
+			guards.erase(guard)
+			continue
+		guard["cooldown"] = maxf(0.0, float(guard["cooldown"]) - dt)
+		var gp: Vector2 = _point(int(guard["lane"]), float(guard["position"]), int(guard["side"]))
+		var target: Dictionary = {}
+		var nearest := 135.0
+		for unit in units:
+			if int(unit["side"]) == int(guard["side"]) or int(unit["lane"]) != int(guard["lane"]):
+				continue
+			var up: Vector2 = _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"]))
+			var distance: float = gp.distance_to(up)
+			if distance < nearest:
+				nearest = distance
+				target = unit
+		if not target.is_empty() and float(guard["cooldown"]) <= 0.0:
+			target["health"] -= 26.0
+			guard["cooldown"] = 0.9
+			if float(target["health"]) <= 0.0:
+				if int(target["carried"]) > 0:
+					gold[int(guard["side"])] += int(target["carried"])
+				units.erase(target)
+		for unit in units:
+			if int(unit["side"]) == int(guard["side"]) or int(unit["lane"]) != int(guard["lane"]):
+				continue
+			var up: Vector2 = _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"]))
+			if gp.distance_to(up) < 48.0:
+				guard["health"] -= (9.0 if int(unit["kind"]) == -1 else 14.0) * dt
+
+func _draw_health_bar(p: Vector2, health: float, max_health: float, friendly: bool, width: float = 34.0) -> void:
+	var ratio: float = clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
+	var top_left := p + Vector2(-width * 0.5, -54)
+	arena.draw_rect(Rect2(top_left - Vector2(2, 2), Vector2(width + 4, 10)), Color("08111c"))
+	arena.draw_rect(Rect2(top_left, Vector2(width, 6)), Color("542f37"))
+	arena.draw_rect(Rect2(top_left, Vector2(width * ratio, 6)), Color("55e98b") if friendly else Color("ff6976"))
+
 func _buy_unit(kind: int) -> void:
 	if phase != "PREP":
 		return
@@ -346,6 +412,15 @@ func _bot_prepare() -> void:
 		gold[1] -= COSTS[kind]
 		_check_vaults()
 		budget -= COSTS[kind]
+	if gold[1] >= GUARD_COST + 1 and guards.size() < mini(3 + wave, 9):
+		var bot_lane: int = rng.randi_range(0, 2)
+		var bot_count := 0
+		for guard in guards:
+			if int(guard["side"]) == 1 and int(guard["lane"]) == bot_lane:
+				bot_count += 1
+		if bot_count < 3:
+			gold[1] -= GUARD_COST
+			guards.append({"side": 1, "lane": bot_lane, "position": 0.19 + float(bot_count) * 0.11, "health": GUARD_HP, "max_health": GUARD_HP, "cooldown": 0.0})
 	if gold[1] >= 55 and traps[1].size() < wave * 2:
 		gold[1] -= 55
 		_check_vaults()
@@ -390,7 +465,7 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	if side == 0:
 		unit_health *= 1.0 + float(raid_boost) * 0.12
 		unit_speed *= 1.0 + float(raid_boost) * 0.08
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
 
 func _tick() -> void:
 	if phase == "SELECT":
@@ -416,6 +491,7 @@ func _tick() -> void:
 	_refresh()
 
 func _simulate(dt: float) -> void:
+	_guard_combat(dt)
 	for unit in units.duplicate():
 		if unit["stunned"] > 0.0:
 			unit["stunned"] -= dt
@@ -509,6 +585,7 @@ func _refresh() -> void:
 	info.text = message + "\nLane: %d | Units: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
 	for i in range(3, 9):
 		controls[i].disabled = phase != "PREP"
+	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST
 	invest_button.disabled = phase != "PREP" or bank_level >= 5 or gold[0] < 180 + bank_level * 110
 	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < 120
 	invest_button.text = "BANK LV%d (%d)" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "BANK MAX"
@@ -709,11 +786,21 @@ func _draw_arena() -> void:
 			arena.draw_circle(p + Vector2(0, 5), 12, Color("142c35", 0.6))
 			arena.draw_circle(p, 10, [Color("bdb7a9"), Color("e5ac4e"), Color("a8a0cf")][trap["kind"]])
 			arena.draw_circle(p + Vector2(-3, -3), 3, Color("fff2cb"))
+	for guard in guards:
+		var gp: Vector2 = _point(int(guard["lane"]), float(guard["position"]), int(guard["side"]))
+		var friendly: bool = int(guard["side"]) == 0
+		arena.draw_circle(gp + Vector2(0, 12), 20, Color("0a1c25", 0.65))
+		arena.draw_rect(Rect2(gp + Vector2(-14, -29), Vector2(28, 39)), Color("4b88aa") if friendly else Color("b75d6a"))
+		arena.draw_circle(gp + Vector2(0, -30), 11, Color("e2c29f"))
+		arena.draw_colored_polygon(PackedVector2Array([gp + Vector2(-15, -33), gp + Vector2(0, -49), gp + Vector2(15, -33)]), Color("c6d6dd"))
+		arena.draw_line(gp + Vector2(18, -8), gp + Vector2(18, -40), Color("f1d99c"), 5)
+		_draw_health_bar(gp, float(guard["health"]), float(guard["max_health"]), friendly, 42)
 	for unit in units:
 		var p := _point(unit["lane"], clampf(unit["position"], 0.0, 1.0), unit["side"])
 		var bob := sin(visual_time * 10.0 + float(unit["position"]) * 12.0) * 2.0
 		var color: Color = RACE_COLORS[selected_race] if unit["side"] == 0 else Color("ff8c96")
 		_draw_character(p + Vector2(0, bob), color, unit)
+		_draw_health_bar(p + Vector2(0, bob), float(unit["health"]), float(unit["max_health"]), int(unit["side"]) == 0)
 	for i in 9:
 		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
 		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
