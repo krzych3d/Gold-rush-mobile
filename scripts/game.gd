@@ -502,24 +502,25 @@ func _draw_arena() -> void:
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("141e32"))
 	arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
 	center = Vector2.ZERO
-	# An expansive isometric landscape, built from layered diamond tiles.
-	var tile_w: float = 116.0
-	var tile_h: float = 58.0
-	for gy in range(-13, 14):
-		for gx in range(-13, 14):
-			var tile_center := Vector2(float(gx - gy) * tile_w * 0.5, float(gx + gy) * tile_h * 0.5)
-			var seed: int = absi(gx * 37 + gy * 83 + gx * gy * 7)
-			var base := Color("31594a") if seed % 7 < 3 else Color("3b6851")
-			if seed % 19 == 0:
-				base = Color("41604b")
-			var corners := PackedVector2Array([
-				tile_center + Vector2(0, -tile_h * 0.5),
-				tile_center + Vector2(tile_w * 0.5, 0),
-				tile_center + Vector2(0, tile_h * 0.5),
-				tile_center + Vector2(-tile_w * 0.5, 0)
-			])
-			arena.draw_colored_polygon(corners, base)
-			arena.draw_polyline(PackedVector2Array([corners[0], corners[1], corners[2]]), Color("1c3c36", 0.26), 1.2)
+	# Layered terrain: broad painted patches instead of a visible checkerboard.
+	arena.draw_rect(Rect2(Vector2(-2300, -1700), Vector2(4600, 3400)), Color("253f39"))
+	for i in 90:
+		var sx: float = sin(float(i) * 71.37) * 1600.0
+		var sy: float = cos(float(i) * 38.19) * 1200.0
+		var radius: float = 95.0 + fposmod(float(i) * 23.7, 125.0)
+		arena.draw_circle(Vector2(sx, sy), radius, Color("345b49", 0.38) if i % 3 == 0 else Color("43674e", 0.28))
+	# Elevated rocky escarpments with lit top surfaces and dark vertical faces.
+	for i in 24:
+		var bx: float = sin(float(i) * 31.2) * 1300.0
+		var by: float = cos(float(i) * 22.6) * 950.0
+		var base := Vector2(bx, by)
+		var width: float = 50.0 + fposmod(float(i) * 19.0, 65.0)
+		var height: float = 22.0 + fposmod(float(i) * 11.0, 24.0)
+		var top := PackedVector2Array([base + Vector2(0, -height), base + Vector2(width, 0), base + Vector2(0, height), base + Vector2(-width, 0)])
+		var bottom := PackedVector2Array([base + Vector2(-width, 0), base + Vector2(0, height), base + Vector2(0, height + 22), base + Vector2(-width, 22)])
+		arena.draw_colored_polygon(bottom, Color("192c2c"))
+		arena.draw_colored_polygon(top, Color("4c6457") if i % 2 == 0 else Color("596e59"))
+		arena.draw_line(base + Vector2(-width, 0), base + Vector2(0, -height), Color("8a9473", 0.5), 2.0)
 	# Winding three-lane routes with cobblestone edges.
 	for path in 3:
 		var points := PackedVector2Array()
@@ -534,7 +535,7 @@ func _draw_arena() -> void:
 			arena.draw_line(stone + Vector2(-7, -18), stone + Vector2(6, -12), Color("665d4a", 0.5), 2.0)
 			arena.draw_line(stone + Vector2(7, 9), stone + Vector2(-5, 18), Color("e1cba2", 0.32), 2.0)
 	# Dense forests and magical crystals occupy the space between lanes.
-	for i in 155:
+	for i in 240:
 		var fx := sin(float(i) * 127.1) * arena.size.x * 1.7
 		var fy := cos(float(i) * 53.7) * arena.size.y * 1.35
 		var pos := Vector2(fx, fy)
@@ -582,11 +583,21 @@ func _draw_tree(p: Vector2, seed: float) -> void:
 	_draw_tree_parts(p, size, seed)
 
 func _draw_tree_parts(p: Vector2, size: float, seed: float) -> void:
-	arena.draw_circle(p + Vector2(6, 12), size * 0.78, Color("102c29", 0.38))
-	arena.draw_line(p + Vector2(0, 8), p + Vector2(0, -size), Color("59432f"), 6.0)
-	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -size * 2.9), p + Vector2(size, -size * 0.45), p + Vector2(-size, -size * 0.45)]), Color("183e3b"))
-	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -size * 2.55), p + Vector2(size * 0.8, -size * 0.9), p + Vector2(-size * 0.8, -size * 0.9)]), Color("326953") if int(seed) % 3 != 0 else Color("467b64"))
-	arena.draw_line(p + Vector2(-size * 0.45, -size * 1.1), p + Vector2(0, -size * 2.3), Color("83a782", 0.3), 2.0)
+	# Broadleaf crowns are layered and shaded, with visible trunks and depth.
+	var sway: float = sin(visual_time * 0.85 + seed) * 2.2
+	var crown := p + Vector2(sway, -size * 1.8)
+	_draw_tree_canopy(p, crown, size, seed)
+
+func _draw_tree_canopy(p: Vector2, crown: Vector2, size: float, seed: float) -> void:
+	arena.draw_circle(p + Vector2(13, 12), size * 1.15, Color("0d2625", 0.42))
+	arena.draw_line(p + Vector2(0, 4), crown + Vector2(0, 10), Color("59452f"), 9.0)
+	var deep := Color("173b34") if int(seed) % 3 == 0 else Color("234a39")
+	var mid := Color("366a4b") if int(seed) % 3 == 0 else Color("477853")
+	arena.draw_circle(crown + Vector2(-size * 0.55, 5), size * 0.88, deep)
+	arena.draw_circle(crown + Vector2(size * 0.58, 3), size * 0.85, deep)
+	arena.draw_circle(crown + Vector2(0, -size * 0.35), size * 1.12, mid)
+	arena.draw_circle(crown + Vector2(-size * 0.4, -size * 0.7), size * 0.65, Color("5e9160", 0.72))
+	arena.draw_circle(crown + Vector2(size * 0.3, -size * 0.8), size * 0.42, Color("8caf71", 0.38))
 
 func _draw_crystal(p: Vector2, seed: float) -> void:
 	var glow := Color("9d8aff") if int(seed) % 2 == 0 else Color("77e4d2")
