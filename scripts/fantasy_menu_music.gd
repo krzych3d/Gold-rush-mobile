@@ -49,7 +49,7 @@ func _sample_music(t: float) -> float:
 	pad *= 0.15 * (0.85 + 0.15 * sin(TAU * t / 8.0))
 	# Airy flute melody, following a minor pentatonic/modal motif.
 	var melody_step := int(floor(t * 2.0)) % 16
-	var melody := [0, 2, 3, 5, 4, 3, 1, 2, 0, 4, 5, 7, 6, 4, 3, 2][melody_step]
+	var melody: int = [0, 2, 3, 5, 4, 3, 1, 2, 0, 4, 5, 7, 6, 4, 3, 2][melody_step]
 	var note := float(NOTES[melody]) + root + 12.0
 	var note_t := fposmod(t, 0.5)
 	var breath := smoothstep(0.0, 0.06, note_t) * (1.0 - smoothstep(0.28, 0.49, note_t))
