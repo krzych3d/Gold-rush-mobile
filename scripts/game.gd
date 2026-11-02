@@ -885,7 +885,7 @@ func _draw_arena() -> void:
 		var tilt: float = sin(visual_time * 8.0 + float(data["position"]) * 14.0) * (0.035 if actor["guard"] else 0.075)
 		arena.draw_set_transform_matrix(_sprite_transform(p, tilt))
 		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), false)
-		arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
+		arena.draw_set_transform_matrix(_iso_transform())
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, 42.0 if actor["guard"] else 34.0)
@@ -915,12 +915,12 @@ func _draw_minimap() -> void:
 		var points := PackedVector2Array()
 		for step in 25:
 			var world := _point(path, float(step) / 24.0, 0)
-			points.append(origin + Vector2(58, 51) + Vector2(world.x / 15.0, world.y / 11.0))
+			points.append(origin + Vector2(58, 51) + _iso_project(world) / 23.0)
 		arena.draw_polyline(points, Color("cfb88a"), 3.0, true)
 	arena.draw_circle(origin + Vector2(10, 51), 5, Color("7ab6ff"))
 	arena.draw_circle(origin + Vector2(106, 51), 5, Color("ff7b9b"))
 	var viewport_center: Vector2 = _iso_unproject(-camera_offset / camera_zoom)
-	var camera_marker := origin + Vector2(58, 51) + Vector2(viewport_center.x / 15.0, viewport_center.y / 11.0)
+	var camera_marker := origin + Vector2(58, 51) + _iso_project(viewport_center) / 23.0
 	camera_marker.x = clampf(camera_marker.x, origin.x + 5.0, origin.x + 111.0)
 	camera_marker.y = clampf(camera_marker.y, origin.y + 5.0, origin.y + 97.0)
 	arena.draw_rect(Rect2(camera_marker - Vector2(6, 6), Vector2(12, 12)), Color("f9f5dc"), false, 2.0)
