@@ -1,12 +1,19 @@
 extends AudioStreamPlayer
 # Original procedural fantasy menu score. No external audio assets or licensing.
-const RATE := 22050.0
+const RATE := 11025.0
 const LOOP_SECONDS := 32.0
 const NOTES := [0, 3, 7, 10, 12, 15, 19, 22]
 const CHORD_ROOTS := [0, -2, -5, -7, 0, 3, -2, -5]
 var playback: AudioStreamGeneratorPlayback
 var sample_index := 0
 var music_enabled := true
+var cached_bar := -1
+var cached_melody_step := -1
+var cached_harp_step := -1
+var pad_frequencies := PackedFloat32Array()
+var flute_frequency := 440.0
+var harp_frequency := 440.0
+var bell_frequency := 880.0
 
 func _ready() -> void:
 	var generator := AudioStreamGenerator.new()
@@ -21,7 +28,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not music_enabled or playback == null:
 		return
-	var available := mini(playback.get_frames_available(), 4096)
+	var available := mini(playback.get_frames_available(), 1024)
 	for i in available:
 		var t := float(sample_index) / RATE
 		var sample := _sample_music(t)
@@ -35,37 +42,39 @@ func _tone(t: float, frequency: float) -> float:
 	return sin(TAU * frequency * t)
 
 func _sample_music(t: float) -> float:
-	var bar := int(floor(t / 4.0)) % 8
-	var root := float(CHORD_ROOTS[bar])
-	var bar_t := fposmod(t, 4.0)
-	var intro := smoothstep(0.0, 3.0, t)
-	var phrase := fposmod(t, LOOP_SECONDS)
-	var fade := intro * (0.90 + 0.10 * cos(TAU * phrase / LOOP_SECONDS))
-	# Wide, gently beating elven string choir.
+	var bar: int = int(t / 4.0) % 8
+	var root: float = float(CHORD_ROOTS[bar])
+	if bar != cached_bar:
+		cached_bar = bar
+		pad_frequencies.clear()
+		for interval in [0.0, 7.0, 12.0]:
+			pad_frequencies.append(_frequency(root + interval - 12.0))
+		bell_frequency = _frequency(root + 31.0)
+		cached_melody_step = -1
+		cached_harp_step = -1
+	var melody_step: int = int(t * 2.0) % 16
+	if melody_step != cached_melody_step:
+		cached_melody_step = melody_step
+		var melody: int = [0, 2, 3, 5, 4, 3, 1, 2, 0, 4, 5, 7, 6, 4, 3, 2][melody_step]
+		flute_frequency = _frequency(float(NOTES[melody]) + root + 12.0)
+	var harp_step: int = int(t * 4.0) % 8
+	if harp_step != cached_harp_step:
+		cached_harp_step = harp_step
+		harp_frequency = _frequency(root + float(NOTES[harp_step]) + 12.0)
 	var pad := 0.0
-	for interval in [0.0, 7.0, 12.0]:
-		var hz := _frequency(root + interval - 12.0)
-		pad += (_tone(t, hz) + 0.36 * _tone(t, hz * 1.003)) / 3.0
-	pad *= 0.15 * (0.85 + 0.15 * sin(TAU * t / 8.0))
-	# Airy flute melody, following a minor pentatonic/modal motif.
-	var melody_step := int(floor(t * 2.0)) % 16
-	var melody: int = [0, 2, 3, 5, 4, 3, 1, 2, 0, 4, 5, 7, 6, 4, 3, 2][melody_step]
-	var note := float(NOTES[melody]) + root + 12.0
-	var note_t := fposmod(t, 0.5)
-	var breath := smoothstep(0.0, 0.06, note_t) * (1.0 - smoothstep(0.28, 0.49, note_t))
-	var flute_hz := _frequency(note)
-	var vibrato := 1.0 + 0.0025 * sin(TAU * 5.0 * t)
-	var flute := (0.8 * _tone(t, flute_hz * vibrato) + 0.13 * _tone(t, flute_hz * 2.0)) * breath * 0.13
-	# Sparkling harp notes and occasional fairy bells.
-	var harp_step := int(floor(t * 4.0)) % 8
-	var harp_hz := _frequency(root + float(NOTES[harp_step]) + 12.0)
-	var harp_t := fposmod(t, 0.25)
-	var harp := (_tone(t, harp_hz) + 0.27 * _tone(t, harp_hz * 2.0)) * exp(-harp_t * 18.0) * 0.075
-	var bell_t := fposmod(t, 2.0)
-	var bell_hz := _frequency(root + 31.0)
-	var bell := (_tone(t, bell_hz) + 0.22 * _tone(t, bell_hz * 2.01)) * exp(-bell_t * 3.8) * 0.04
-	# Low cinematic pulse at the start of each bar.
-	var pulse := sin(TAU * 55.0 * t) * exp(-bar_t * 4.0) * 0.09
+	for hz in pad_frequencies:
+		pad += sin(TAU * hz * t)
+	pad *= 0.047
+	var note_t: float = fposmod(t, 0.5)
+	var breath: float = smoothstep(0.0, 0.06, note_t) * (1.0 - smoothstep(0.28, 0.49, note_t))
+	var flute: float = sin(TAU * flute_frequency * t) * breath * 0.13
+	var harp_t: float = fposmod(t, 0.25)
+	var harp: float = sin(TAU * harp_frequency * t) * exp(-harp_t * 18.0) * 0.075
+	var bell_t: float = fposmod(t, 2.0)
+	var bell: float = sin(TAU * bell_frequency * t) * exp(-bell_t * 3.8) * 0.04
+	var bar_t: float = fposmod(t, 4.0)
+	var pulse: float = sin(TAU * 55.0 * t) * exp(-bar_t * 4.0) * 0.09
+	var fade: float = smoothstep(0.0, 3.0, t)
 	return clampf((pad + flute + harp + bell + pulse) * fade, -0.8, 0.8)
 
 func set_music_enabled(enabled: bool) -> void:
