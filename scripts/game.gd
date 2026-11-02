@@ -45,6 +45,11 @@ var selection_layer: ColorRect
 var faction_cards: Array[PanelContainer] = []
 var camera_offset := Vector2.ZERO
 var camera_zoom := 1.0
+var overview_mode := true
+var expanded_map := false
+var gameplay_panel: VBoxContainer
+var map_toggle_button: Button
+var camera_controls_row: HBoxContainer
 # True 2:1 diamond projection: world X/Y become screen diagonal axes.
 const ISO_X := Vector2(1.0, 0.5)
 const ISO_Y := Vector2(-1.0, 0.5)
@@ -100,14 +105,16 @@ func _ready() -> void:
 	root.add_child(arena)
 	arena.mouse_filter = Control.MOUSE_FILTER_STOP
 	arena.gui_input.connect(_arena_input)
+	arena.resized.connect(_on_arena_resized)
 	camera_hint = Label.new()
-	camera_hint.text = "DRAG TO PAN  •  PINCH TO ZOOM"
+	camera_hint.text = "FULL BATTLEFIELD: FIT MAP  •  EXPAND  •  PINCH TO ZOOM"
 	camera_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(camera_hint, 15, Color("a9c7d8"))
 	root.add_child(camera_hint)
 	var camera_controls := HBoxContainer.new()
+	camera_controls_row = camera_controls
 	root.add_child(camera_controls)
-	for label in ["−", "CENTER", "+"]:
+	for label in ["−", "FIT MAP", "+", "EXPAND"]:
 		var control := Button.new()
 		control.text = label
 		control.custom_minimum_size.y = 34
@@ -118,24 +125,29 @@ func _ready() -> void:
 			control.pressed.connect(_change_zoom.bind(-0.15))
 		elif label == "+":
 			control.pressed.connect(_change_zoom.bind(0.15))
+		elif label == "EXPAND":
+			map_toggle_button = control
+			control.pressed.connect(_toggle_map_expanded)
 		else:
 			control.pressed.connect(_center_camera)
+	gameplay_panel = VBoxContainer.new()
+	root.add_child(gameplay_panel)
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.custom_minimum_size.y = 48
-	root.add_child(info)
+	gameplay_panel.add_child(info)
 	_style_label(info, 18, Color("f0e7cf"))
 	race_button = Button.new()
 	race_button.text = "CHOOSE YOUR RACE"
 	race_button.custom_minimum_size.y = 0
 	race_button.visible = false
-	root.add_child(race_button)
+	gameplay_panel.add_child(race_button)
 	_style_button(race_button, true)
 	race_button.disabled = true
 	for labels in [["LANE 1", "LANE 2", "LANE 3"], ["RUNNER 75", "CARRIER 140", "SABOTEUR 110"], ["SPIKES 55", "SNARE 75", "TURRET 155"]]:
 		var row := HBoxContainer.new()
-		root.add_child(row)
+		gameplay_panel.add_child(row)
 		for index in 3:
 			var button := Button.new()
 			button.text = labels[index]
@@ -154,11 +166,11 @@ func _ready() -> void:
 	guard_button.text = "HIRE DEFENDER 130"
 	guard_button.custom_minimum_size.y = 48
 	guard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	root.add_child(guard_button)
+	gameplay_panel.add_child(guard_button)
 	_style_button(guard_button, true)
 	guard_button.pressed.connect(_buy_guard)
 	var economy_row := HBoxContainer.new()
-	root.add_child(economy_row)
+	gameplay_panel.add_child(economy_row)
 	invest_button = Button.new()
 	invest_button.text = "UPGRADE BANK"
 	invest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -176,7 +188,7 @@ func _ready() -> void:
 	var start := Button.new()
 	start.text = "START ATTACK"
 	start.custom_minimum_size.y = 60
-	root.add_child(start)
+	gameplay_panel.add_child(start)
 	_style_button(start, false)
 	controls.append(start)
 	start.pressed.connect(_start_pressed)
@@ -676,13 +688,32 @@ func _style_button(button: Button, is_lane: bool) -> void:
 		style.content_margin_right = 3
 		button.add_theme_stylebox_override(state, style)
 
-func _center_camera() -> void:
+func _on_arena_resized() -> void:
+	if overview_mode:
+		call_deferred("_fit_map")
+
+func _fit_map() -> void:
+	# The projected map spans x +/- 1290 and y +/- 645 world pixels.
+	# Reserve extra room for castle silhouettes and world decorations.
+	var width_factor: float = arena.size.x / 2900.0
+	var height_factor: float = arena.size.y / 1600.0
+	camera_zoom = clampf(minf(width_factor, height_factor), 0.12, 2.25)
 	camera_offset = Vector2.ZERO
-	camera_zoom = 1.0
+	overview_mode = true
 	arena.queue_redraw()
 
+func _center_camera() -> void:
+	_fit_map()
+
+func _toggle_map_expanded() -> void:
+	expanded_map = not expanded_map
+	gameplay_panel.visible = not expanded_map
+	map_toggle_button.text = "CONTROLS" if expanded_map else "EXPAND"
+	call_deferred("_fit_map")
+
 func _change_zoom(delta: float) -> void:
-	camera_zoom = clampf(camera_zoom + delta, 0.65, 2.25)
+	camera_zoom = clampf(camera_zoom + delta, 0.12, 2.25)
+	overview_mode = false
 	arena.queue_redraw()
 
 func _arena_input(event: InputEvent) -> void:
@@ -705,10 +736,12 @@ func _arena_input(event: InputEvent) -> void:
 			var points: Array = touch_points.values()
 			var distance: float = (points[0] as Vector2).distance_to(points[1] as Vector2)
 			if last_pinch_distance > 0.0:
-				camera_zoom = clampf(camera_zoom * distance / maxf(last_pinch_distance, 1.0), 0.65, 2.25)
+				camera_zoom = clampf(camera_zoom * distance / maxf(last_pinch_distance, 1.0), 0.12, 2.25)
+				overview_mode = false
 			last_pinch_distance = distance
 			drag_distance = 100.0
 		else:
+			overview_mode = false
 			camera_offset += event.relative
 			camera_offset.x = clampf(camera_offset.x, -arena.size.x * 1.4, arena.size.x * 1.4)
 			camera_offset.y = clampf(camera_offset.y, -arena.size.y * 1.4, arena.size.y * 1.4)
