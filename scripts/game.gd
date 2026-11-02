@@ -42,6 +42,7 @@ var info: Label
 var arena: Control
 var controls: Array[Button] = []
 var visual_time := 0.0
+var menu_music: AudioStreamPlayer
 var title_label: Label
 var race_button: Button
 var selection_layer: ColorRect
@@ -100,6 +101,9 @@ var banner_texture: Texture2D = preload("res://assets/world/war_banner.svg")
 
 func _ready() -> void:
 	rng.randomize()
+	menu_music = preload("res://scripts/fantasy_menu_music.gd").new()
+	menu_music.name = "EnchantedMenuScore"
+	add_child(menu_music)
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
