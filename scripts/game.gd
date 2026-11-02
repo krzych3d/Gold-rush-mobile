@@ -19,6 +19,11 @@ var remaining := PREP_TIME
 var gold := [1000, 1000]
 var wallet := [360, 360]
 var interest_last := [0, 0]
+var bank_level := 0
+var bank_button: Button
+var invest_button: Button
+var raid_button: Button
+var raid_boost := 0
 var victory_reason := ""
 var lane := 1
 var orders: Array = [[], []]
@@ -122,6 +127,29 @@ func _ready() -> void:
 				button.pressed.connect(_buy_unit.bind(index))
 			else:
 				button.pressed.connect(_buy_trap.bind(index))
+	var economy_row := HBoxContainer.new()
+	root.add_child(economy_row)
+	bank_button = Button.new()
+	bank_button.text = "BANK +100"
+	bank_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bank_button.custom_minimum_size.y = 48
+	_style_button(bank_button, true)
+	economy_row.add_child(bank_button)
+	bank_button.pressed.connect(_deposit_gold)
+	invest_button = Button.new()
+	invest_button.text = "UPGRADE BANK"
+	invest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	invest_button.custom_minimum_size.y = 48
+	_style_button(invest_button, true)
+	economy_row.add_child(invest_button)
+	invest_button.pressed.connect(_upgrade_bank)
+	raid_button = Button.new()
+	raid_button.text = "RAID BOOST"
+	raid_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	raid_button.custom_minimum_size.y = 48
+	_style_button(raid_button, true)
+	economy_row.add_child(raid_button)
+	raid_button.pressed.connect(_buy_raid_boost)
 	var start := Button.new()
 	start.text = "START ATTACK"
 	start.custom_minimum_size.y = 60
@@ -264,6 +292,31 @@ func _select_lane(index: int) -> void:
 	message = "Selected lane %d" % (lane + 1)
 	_refresh()
 
+func _deposit_gold() -> void:
+	if phase != "PREP" or wallet[0] < 100:
+		return
+	wallet[0] -= 100
+	gold[0] += 100
+	message = "100 coins secured in your vault."
+	_refresh()
+
+func _upgrade_bank() -> void:
+	var cost: int = 180 + bank_level * 110
+	if phase != "PREP" or bank_level >= 5 or wallet[0] < cost:
+		return
+	wallet[0] -= cost
+	bank_level += 1
+	message = "BANK LEVEL %d! +4%% interest each wave." % bank_level
+	_refresh()
+
+func _buy_raid_boost() -> void:
+	if phase != "PREP" or wallet[0] < 120 or raid_boost >= 3:
+		return
+	wallet[0] -= 120
+	raid_boost += 1
+	message = "Raid training %d/3: faster, stronger thieves." % raid_boost
+	_refresh()
+
 func _buy_unit(kind: int) -> void:
 	if phase != "PREP":
 		return
@@ -345,6 +398,9 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 			3:
 				unit_speed *= 1.1
 				unit_capacity += 15
+	if side == 0:
+		unit_health *= 1.0 + float(raid_boost) * 0.12
+		unit_speed *= 1.0 + float(raid_boost) * 0.08
 	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
 
 func _tick() -> void:
@@ -444,7 +500,7 @@ func _end_wave() -> void:
 		return
 	# Vault savings compound; dwarves receive a substantial faction bonus.
 	for side in 2:
-		var rate: float = 0.28 if side == 0 and selected_race == 0 else 0.18
+		var rate: float = (0.28 if selected_race == 0 else 0.18) + float(bank_level) * 0.04 if side == 0 else 0.18
 		var payout: int = maxi(20, int(floor(float(gold[side]) * rate)))
 		interest_last[side] = payout
 		gold[side] += payout
@@ -458,10 +514,15 @@ func _refresh() -> void:
 	race_button.text = "RACE: " + RACE_NAMES[selected_race]
 	race_button.disabled = true
 	hud.text = "VAULT %d  •  ENEMY %d  •  COINS %d" % [gold[0], gold[1], wallet[0]]
-	timer_label.text = "WAVE %d  |  %s  |  %02d s  |  INTEREST %d%%" % [wave, phase, int(maxf(0.0, ceilf(remaining))), 28 if selected_race == 0 else 18]
+	timer_label.text = "WAVE %d  |  %s  |  %02d s  |  INTEREST %d%%" % [wave, phase, int(maxf(0.0, ceilf(remaining))), (28 if selected_race == 0 else 18) + bank_level * 4]
 	info.text = message + "\nLane: %d | Units: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
 	for i in range(3, 9):
 		controls[i].disabled = phase != "PREP"
+	bank_button.disabled = phase != "PREP" or wallet[0] < 100
+	invest_button.disabled = phase != "PREP" or bank_level >= 5 or wallet[0] < 180 + bank_level * 110
+	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or wallet[0] < 120
+	invest_button.text = "BANK LV%d (%d)" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "BANK MAX"
+	raid_button.text = "RAID LV%d (120)" % raid_boost if raid_boost < 3 else "RAID MAX"
 	controls[9].disabled = phase == "ATTACK"
 	controls[9].text = "PLAY AGAIN" if phase == "END" else "UNLEASH THE RAID" if phase == "PREP" else "BATTLE IN PROGRESS"
 	for i in 3:
