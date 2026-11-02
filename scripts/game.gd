@@ -31,6 +31,9 @@ var traps: Array = [[], []]
 var units: Array = []
 var guards: Array = []
 var guard_button: Button
+var ability_button: Button
+var ability_used := false
+const ABILITY_NAMES := ["IRON WALL", "GOBLIN FRENZY", "MOON BLESSING", "SHADOW STEP"]
 var rng := RandomNumberGenerator.new()
 var message := "Build your army with coins. Protect your vault!"
 var hud: Label
@@ -188,6 +191,12 @@ func _ready() -> void:
 	gameplay_panel.add_child(guard_button)
 	_style_button(guard_button, true)
 	guard_button.pressed.connect(_buy_guard)
+	ability_button = Button.new()
+	ability_button.custom_minimum_size.y = 40
+	ability_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gameplay_panel.add_child(ability_button)
+	_style_button(ability_button, true)
+	ability_button.pressed.connect(_use_race_ability)
 	var economy_row := HBoxContainer.new()
 	gameplay_panel.add_child(economy_row)
 	invest_button = Button.new()
@@ -347,6 +356,26 @@ func _change_race() -> void:
 func _select_lane(index: int) -> void:
 	lane = index
 	message = "Selected lane %d" % (lane + 1)
+	_refresh()
+
+func _use_race_ability() -> void:
+	if phase != "PREP" or ability_used or gold[0] <= 120:
+		return
+	gold[0] -= 120
+	ability_used = true
+	match selected_race:
+		0:
+			for guard in guards:
+				if int(guard["side"]) == 0:
+					guard["health"] = float(guard["health"]) + 60.0
+					guard["max_health"] = float(guard["max_health"]) + 60.0
+		1:
+			pass # Frenzy applied to all friendly raiders on spawn.
+		2:
+			pass # Moon blessing adds extra capacity on spawn.
+		3:
+			pass # Shadow step grants one trap evasion on spawn.
+	message = ABILITY_NAMES[selected_race] + " ACTIVATED"
 	_refresh()
 
 func _upgrade_bank() -> void:
@@ -512,6 +541,11 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	var unit_health: float = 60.0 if kind == -1 else HP[kind]
 	var unit_speed: float = 0.145 if kind == -1 else SPEED[kind]
 	var unit_capacity: int = 25 if kind == -1 else LOOTS[kind]
+	if side == 0 and ability_used:
+		match selected_race:
+			1: unit_speed *= 1.35
+			2: unit_capacity += 35
+			3: unit_speed *= 1.18
 	if side == 0:
 		match selected_race:
 			0:
@@ -527,7 +561,7 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	if side == 0:
 		unit_health *= 1.0 + float(raid_boost) * 0.12
 		unit_speed *= 1.0 + float(raid_boost) * 0.08
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "triggered": []})
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": side == 0 and ability_used and selected_race == 3, "triggered": []})
 
 func _tick() -> void:
 	if phase == "SELECT":
@@ -657,6 +691,8 @@ func _refresh() -> void:
 	for i in range(3, 9):
 		controls[i].disabled = phase != "PREP"
 	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST
+	ability_button.disabled = phase != "PREP" or ability_used or gold[0] <= 120
+	ability_button.text = ("✦ " + ABILITY_NAMES[selected_race] + "  •  120 GOLD") if not ability_used else ("✓ " + ABILITY_NAMES[selected_race] + " ACTIVE")
 	invest_button.disabled = phase != "PREP" or bank_level >= 5 or gold[0] < 180 + bank_level * 110
 	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < 120
 	invest_button.text = "BANK LV%d (%d)" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "BANK MAX"
@@ -665,6 +701,7 @@ func _refresh() -> void:
 	controls[9].text = "PLAY AGAIN" if phase == "END" else "UNLEASH THE RAID" if phase == "PREP" else "BATTLE IN PROGRESS"
 	for i in 3:
 		controls[i].modulate = Color("ffe29a") if i == lane else Color.WHITE
+		controls[i].text = ("◆ " if i == lane else "") + "LANE %d" % (i + 1)
 	arena.queue_redraw()
 
 func _point(path: int, progress: float, side: int) -> Vector2:
