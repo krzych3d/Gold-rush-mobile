@@ -2,7 +2,7 @@ extends Control
 
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
-const RACE_DESCRIPTIONS := ["Ironbeards - armored warriors and fortified vaults", "Green Shadows - swift thieves and daring escapes", "Moon Guardians - resilient magic and extra loot", "Astral Assassins - swift strikes and rich hauls"]
+const RACE_DESCRIPTIONS := ["Ironbeards - 28% vault interest, heavy armor and fortifications", "Green Shadows - 18% interest, fast raids and escapes", "Moon Guardians - 18% interest, magic and extra loot", "Astral Assassins - 18% interest, swift strikes and rich hauls"]
 const RACE_COLORS := [Color("d7a85c"), Color("78c978"), Color("a6dfff"), Color("ba8aff")]
 const PREP_TIME := 30.0
 const ATTACK_TIME := 60.0
@@ -500,7 +500,10 @@ func _end_wave() -> void:
 		return
 	# Vault savings compound; dwarves receive a substantial faction bonus.
 	for side in 2:
-		var rate: float = (0.28 if selected_race == 0 else 0.18) + float(bank_level) * 0.04 if side == 0 else 0.18
+		var rate: float = 0.18
+		if side == 0:
+			rate = 0.28 if selected_race == 0 else 0.18
+			rate += float(bank_level) * 0.04
 		var payout: int = maxi(20, int(floor(float(gold[side]) * rate)))
 		interest_last[side] = payout
 		gold[side] += payout
