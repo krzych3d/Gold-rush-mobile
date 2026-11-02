@@ -642,7 +642,9 @@ func _iso_transform() -> Transform2D:
 
 func _sprite_transform(p: Vector2, rotation: float = 0.0) -> Transform2D:
 	# Billboard sprites stay upright while their feet occupy isometric ground.
-	return Transform2D(rotation, Vector2.ONE * camera_zoom, arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom)
+	var sprite_basis := Transform2D(rotation, Vector2.ONE * camera_zoom)
+	sprite_basis.origin = arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom
+	return sprite_basis
 
 func _draw_iso_sprite(texture: Texture2D, p: Vector2, size: Vector2, tint: Color = Color.WHITE) -> void:
 	arena.draw_set_transform_matrix(_sprite_transform(p))
