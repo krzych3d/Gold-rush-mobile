@@ -65,6 +65,7 @@ var last_pinch_distance := 0.0
 var terrain_details: Array = []
 var hit_sparks: Array = []
 var fallen_actors: Array = []
+var deposit_actors: Array = []
 var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
 var crystal_texture: Texture2D = preload("res://assets/world/arcane_crystal.svg")
 var dwarf_texture: Texture2D = preload("res://assets/world/dwarf_guard.svg")
@@ -561,7 +562,7 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	if side == 0:
 		unit_health *= 1.0 + float(raid_boost) * 0.12
 		unit_speed *= 1.0 + float(raid_boost) * 0.08
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": []})
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": []})
 
 func _tick() -> void:
 	if phase == "SELECT":
@@ -587,6 +588,10 @@ func _tick() -> void:
 	_refresh()
 
 func _simulate(dt: float) -> void:
+	for deposit in deposit_actors.duplicate():
+		deposit["age"] = float(deposit["age"]) + dt
+		if float(deposit["age"]) >= 0.75:
+			deposit_actors.erase(deposit)
 	for fallen in fallen_actors.duplicate():
 		fallen["age"] = float(fallen["age"]) + dt
 		if float(fallen["age"]) >= 0.8:
@@ -597,6 +602,9 @@ func _simulate(dt: float) -> void:
 			hit_sparks.erase(spark)
 	_guard_combat(dt)
 	for unit in units.duplicate():
+		if float(unit.get("steal_timer", 0.0)) > 0.0:
+			unit["steal_timer"] = maxf(0.0, float(unit["steal_timer"]) - dt)
+			continue
 		if unit["stunned"] > 0.0:
 			unit["stunned"] -= dt
 			continue
@@ -636,6 +644,7 @@ func _simulate(dt: float) -> void:
 				var amount: int = mini(unit["capacity"], gold[defender])
 				gold[defender] -= amount
 				unit["carried"] = amount
+				unit["steal_timer"] = 0.65
 				if _check_vaults():
 					return
 				unit["returning"] = true
@@ -643,6 +652,7 @@ func _simulate(dt: float) -> void:
 			unit["position"] -= unit["speed"] * dt
 			if unit["position"] <= 0.0:
 				gold[unit["side"]] += unit["carried"]
+				deposit_actors.append({"side": int(unit["side"]), "lane": int(unit["lane"]), "kind": int(unit["kind"]), "age": 0.0})
 				units.erase(unit)
 
 func _check_vaults() -> bool:
@@ -890,7 +900,7 @@ func _draw_arena() -> void:
 				3: art = sprite_arcane_mage if kind == 2 else sprite_shadow_wolf
 		else:
 			art = sprite_shadow_wolf if kind == 1 else sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
-		# Atlas rows: 0 idle, 1 walk, 2 attack, 3 hit, 4 defeat.
+		# Atlas rows: 0 idle, 1 walk, 2 attack, 3 hit, 4 defeat, 5 deposit/loot.
 		# 128px frames, 8 per action; independently warped torso, limbs and weapon.
 		var atlas: Texture2D = atlas_goblin_raider
 		if art == sprite_dwarf_defender:
@@ -908,9 +918,11 @@ func _draw_arena() -> void:
 		var animation_row: int = 0
 		if not actor["guard"] and phase == "ATTACK":
 			animation_row = 1
+		if float(data.get("steal_timer", 0.0)) > 0.0:
+			animation_row = 5
 		if float(data.get("stunned", 0.0)) > 0.0:
 			animation_row = 3
-		elif phase == "ATTACK":
+		elif animation_row != 5 and phase == "ATTACK":
 			for opponent in units:
 				if int(opponent["side"]) == int(actor["side"]) or int(opponent["lane"]) != int(data["lane"]):
 					continue
@@ -921,16 +933,18 @@ func _draw_arena() -> void:
 		var fps: float = 7.0 if animation_row == 0 else 12.0 if animation_row == 1 else 14.0
 		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
 		var animation_frame: int = int(floor(visual_time * fps + frame_offset)) % 8
+		if animation_row == 5:
+			animation_frame = mini(7, int((0.65 - float(data.get("steal_timer", 0.0))) * 12.0))
 		# Movement-aware animation: idle breathing, two-step gait and hit recoil.
-		var moving: bool = not bool(actor["guard"]) and phase == "ATTACK" and float(data.get("stunned", 0.0)) <= 0.0
+		var moving: bool = not bool(actor["guard"]) and phase == "ATTACK" and animation_row == 1 and float(data.get("stunned", 0.0)) <= 0.0
 		var pace: float = 12.5 if kind == 0 else 7.5 if kind == 1 else 10.0
 		var walk_phase: float = visual_time * (pace if moving else 2.4) + float(data["position"]) * 21.0
 		var stride: float = sin(walk_phase)
-		var lift: float = absf(stride) * (5.0 if moving else 0.7)
+		var lift: float = absf(stride) * (1.2 if moving else 0.3)
 		var squash: float = 1.0 + (0.045 if moving else 0.012) * cos(walk_phase * 2.0)
 		var bob: float = -lift
 		var scale_factor: float = 1.16 if actor["guard"] else 1.0
-		var tilt: float = stride * (0.07 if moving else 0.018)
+		var tilt: float = stride * (0.012 if moving else 0.004)
 		var facing: float = 1.0 if friendly else -1.0
 		if not actor["guard"] and bool(data.get("returning", false)):
 			facing = -facing
@@ -961,6 +975,27 @@ func _draw_arena() -> void:
 				var weapon_tip := p + Vector2(18.0 if friendly else -18.0, -20.0)
 				arena.draw_arc(weapon_tip, 14.0, -1.1, 1.3, 14, fx_color, 2.6)
 				arena.draw_circle(weapon_tip, 3.5, fx_color)
+	# Deposit gold at the home vault with a dedicated eight-frame coin-release action.
+	for deposit in deposit_actors:
+		var dp: Vector2 = _point(int(deposit["lane"]), 0.0, int(deposit["side"]))
+		if not _in_camera(dp, 100.0):
+			continue
+		var da: Texture2D = atlas_goblin_raider
+		if int(deposit["side"]) == 0:
+			match selected_race:
+				0: da = atlas_dwarf_carrier if int(deposit["kind"]) == 1 else atlas_arcane_mage if int(deposit["kind"]) == 2 else atlas_dwarf_defender
+				1: da = atlas_goblin_saboteur if int(deposit["kind"]) == 2 else atlas_goblin_raider
+				2: da = atlas_arcane_mage if int(deposit["kind"]) == 2 else atlas_elf_ranger
+				3: da = atlas_arcane_mage if int(deposit["kind"]) == 2 else atlas_shadow_wolf
+		else:
+			da = atlas_shadow_wolf if int(deposit["kind"]) == 1 else atlas_goblin_saboteur if int(deposit["kind"]) == 2 else atlas_goblin_raider
+		var dtf := _sprite_transform(dp)
+		if int(deposit["side"]) == 1:
+			dtf.x.x *= -1.0
+		arena.draw_set_transform_matrix(dtf)
+		var deposit_frame: int = mini(7, int(float(deposit["age"]) * 11.0))
+		arena.draw_texture_rect_region(da, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)))
+		arena.draw_set_transform_matrix(_iso_transform())
 	# Play the defeat row once before removing fallen units from the screen.
 	for fallen in fallen_actors:
 		var death_p: Vector2 = _point(int(fallen["lane"]), float(fallen["position"]), int(fallen["side"]))
