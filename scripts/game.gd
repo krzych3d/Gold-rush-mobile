@@ -51,6 +51,10 @@ var camera_hint: Label
 var touch_points: Dictionary = {}
 var last_pinch_distance := 0.0
 var terrain_details: Array = []
+var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
+var crystal_texture: Texture2D = preload("res://assets/world/arcane_crystal.svg")
+var dwarf_texture: Texture2D = preload("res://assets/world/dwarf_guard.svg")
+var goblin_texture: Texture2D = preload("res://assets/world/goblin_raider.svg")
 
 func _ready() -> void:
 	rng.randomize()
@@ -810,17 +814,13 @@ func _draw_arena() -> void:
 	for guard in guards:
 		var gp: Vector2 = _point(int(guard["lane"]), float(guard["position"]), int(guard["side"]))
 		var friendly: bool = int(guard["side"]) == 0
-		arena.draw_circle(gp + Vector2(0, 12), 20, Color("0a1c25", 0.65))
-		arena.draw_rect(Rect2(gp + Vector2(-14, -29), Vector2(28, 39)), Color("4b88aa") if friendly else Color("b75d6a"))
-		arena.draw_circle(gp + Vector2(0, -30), 11, Color("e2c29f"))
-		arena.draw_colored_polygon(PackedVector2Array([gp + Vector2(-15, -33), gp + Vector2(0, -49), gp + Vector2(15, -33)]), Color("c6d6dd"))
-		arena.draw_line(gp + Vector2(18, -8), gp + Vector2(18, -40), Color("f1d99c"), 5)
+		arena.draw_texture_rect(dwarf_texture if friendly else goblin_texture, Rect2(gp + Vector2(-30, -58), Vector2(60, 75)), false)
 		_draw_health_bar(gp, float(guard["health"]), float(guard["max_health"]), friendly, 42)
 	for unit in units:
 		var p := _point(unit["lane"], clampf(unit["position"], 0.0, 1.0), unit["side"])
 		var bob := sin(visual_time * 10.0 + float(unit["position"]) * 12.0) * 2.0
 		var color: Color = RACE_COLORS[selected_race] if unit["side"] == 0 else Color("ff8c96")
-		_draw_character(p + Vector2(0, bob), color, unit)
+		arena.draw_texture_rect(dwarf_texture if int(unit["side"]) == 0 else goblin_texture, Rect2(p + Vector2(-25, -50 + bob), Vector2(50, 63)), false)
 		_draw_health_bar(p + Vector2(0, bob), float(unit["health"]), float(unit["max_health"]), int(unit["side"]) == 0)
 	for i in 9:
 		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
@@ -875,8 +875,8 @@ func _draw_ruin(p: Vector2, seed: int) -> void:
 	arena.draw_circle(p, 6.0 + sin(visual_time * 2.0 + float(seed)) * 2.0, Color("a6fff0"))
 
 func _draw_tree(p: Vector2, seed: float) -> void:
-	var size: float = 17.0 + fposmod(seed * 13.0, 17.0)
-	_draw_tree_parts(p, size, seed)
+	var size: float = 85.0 + fposmod(seed * 11.0, 45.0)
+	arena.draw_texture_rect(pine_texture, Rect2(p + Vector2(-size * 0.36, -size), Vector2(size * 0.72, size)), false)
 
 func _draw_tree_parts(p: Vector2, size: float, seed: float) -> void:
 	# Broadleaf crowns are layered and shaded, with visible trunks and depth.
@@ -896,10 +896,9 @@ func _draw_tree_canopy(p: Vector2, crown: Vector2, size: float, seed: float) -> 
 	arena.draw_circle(crown + Vector2(size * 0.3, -size * 0.8), size * 0.42, Color("8caf71", 0.38))
 
 func _draw_crystal(p: Vector2, seed: float) -> void:
-	var glow := Color("9d8aff") if int(seed) % 2 == 0 else Color("77e4d2")
-	arena.draw_circle(p, 22.0, Color(glow.r, glow.g, glow.b, 0.12))
-	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(-10, 0), p + Vector2(0, -35), p + Vector2(12, -4), p + Vector2(0, 9)]), glow)
-	arena.draw_line(p + Vector2(0, -35), p + Vector2(0, 8), Color("f4f3ff", 0.6), 2.0)
+	var pulse: float = 1.0 + sin(visual_time * 2.0 + seed) * 0.07
+	arena.draw_circle(p + Vector2(0, -24), 32.0 * pulse, Color("6de7ff", 0.10))
+	arena.draw_texture_rect(crystal_texture, Rect2(p + Vector2(-27, -70), Vector2(54, 70) * pulse), false)
 
 func _draw_fort(p: Vector2, color: Color, side: int) -> void:
 	var glow := Color("f9d786") if side == 0 else Color("e88af1")
