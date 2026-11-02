@@ -221,7 +221,7 @@ func _ready() -> void:
 	controls.append(start)
 	start.pressed.connect(_start_pressed)
 	var clock := Timer.new()
-	clock.wait_time = 0.1
+	clock.wait_time = 0.05
 	clock.timeout.connect(_tick)
 	add_child(clock)
 	clock.start()
@@ -566,19 +566,19 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 func _tick() -> void:
 	if phase == "SELECT":
 		return
-	visual_time += 0.1
+	visual_time += 0.05
 	arena.queue_redraw()
 	if phase == "END":
 		return
 	if _check_vaults():
 		_refresh()
 		return
-	remaining -= 0.1
+	remaining -= 0.05
 	if phase == "PREP":
 		if remaining <= 0.0:
 			_begin_attack()
 	else:
-		_simulate(0.1)
+		_simulate(0.05)
 		if _check_vaults():
 			_refresh()
 			return
