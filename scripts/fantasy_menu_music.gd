@@ -40,8 +40,7 @@ func _sample_music(t: float) -> float:
 	var bar_t := fposmod(t, 4.0)
 	var intro := smoothstep(0.0, 3.0, t)
 	var phrase := fposmod(t, LOOP_SECONDS)
-	var outro := 1.0 - smoothstep(30.0, 32.0, phrase)
-	var fade := intro * (0.75 + 0.25 * outro)
+	var fade := intro * (0.90 + 0.10 * cos(TAU * phrase / LOOP_SECONDS))
 	# Wide, gently beating elven string choir.
 	var pad := 0.0
 	for interval in [0.0, 7.0, 12.0]:
