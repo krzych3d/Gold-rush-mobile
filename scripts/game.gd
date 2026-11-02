@@ -584,7 +584,7 @@ func _tick() -> void:
 	performance_elapsed += 0.05
 	if performance_elapsed >= 1.0:
 		performance_elapsed = 0.0
-		performance_label.text = "FPS %d  |  DRAW %.1f ms  |  UNITS %d" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, units.size() + guards.size()]
+		performance_label.text = "FPS %d  |  SCRIPT %.1f ms  |  UNITS %d" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, units.size() + guards.size()]
 	if phase == "SELECT":
 		return
 	visual_time += 0.05
