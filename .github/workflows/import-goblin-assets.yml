@@ -1,0 +1,54 @@
+name: Import goblin animation pack
+on:
+  workflow_dispatch:
+    inputs:
+      zip_url:
+        description: "HTTPS URL of a ZIP containing goblin_raider_*.png strips (e.g. GitHub issue attachment)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: goblin-assets-import
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Validate archive URL
+        env:
+          ZIP_URL: ${{ inputs.zip_url }}
+        run: |
+          python3 - <<'PY'
+          import os, urllib.parse
+          u = urllib.parse.urlsplit(os.environ["ZIP_URL"])
+          if u.scheme != "https" or u.hostname not in ("github.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com", "raw.githubusercontent.com", "user-images.githubusercontent.com"):
+              raise SystemExit("Only HTTPS GitHub-hosted files are accepted")
+          if u.username or u.password:
+              raise SystemExit("Credentials in URLs are forbidden")
+          print("GitHub-hosted source accepted")
+          PY
+      - name: Download and validate PNG atlas pack
+        env:
+          ZIP_URL: ${{ inputs.zip_url }}
+        run: |
+          curl --fail --location --silent --show-error --retry 2 --max-time 90 --max-filesize 30000000 "$ZIP_URL" --output /tmp/goblin_pack.zip
+          python3 ci/import_goblin_pack.py /tmp/goblin_pack.zip
+      - name: Commit imported assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/epic/animations/goblin_raider_*.png
+          if git diff --cached --quiet; then
+            echo "No changes in atlas files"
+          else
+            git commit -m "Import validated Goblin Raider animation atlases"
+            git push
+          fi
