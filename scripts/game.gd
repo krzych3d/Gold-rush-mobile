@@ -105,8 +105,8 @@ var banner_texture: Texture2D = preload("res://assets/world/war_banner.svg")
 func _ready() -> void:
 	rng.randomize()
 	# Optional test atlas: keep the shipping animation when the file is absent.
-	if ResourceLoader.exists("res://assets/epic/animations/goblin_walk_aligned.png"):
-		goblin_walk_prototype = load("res://assets/epic/animations/goblin_walk_aligned.png") as Texture2D
+	if ResourceLoader.exists("res://assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png"):
+		goblin_walk_prototype = load("res://assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png") as Texture2D
 	menu_music = preload("res://scripts/fantasy_menu_music.gd").new()
 	menu_music.name = "EnchantedMenuScore"
 	add_child(menu_music)
