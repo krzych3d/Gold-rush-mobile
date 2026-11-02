@@ -948,15 +948,7 @@ func _draw_arena() -> void:
 			animation_row = 3
 		if float(data.get("attack_time", 0.0)) > 0.0 and animation_row != 3 and animation_row != 5:
 			animation_row = 2
-		elif animation_row == 1 and phase == "ATTACK":
-			for opponent in units:
-				if int(opponent["side"]) == int(actor["side"]) or int(opponent["lane"]) != int(data["lane"]):
-					continue
-				var opponent_p: Vector2 = _point(int(opponent["lane"]), float(opponent["position"]), int(opponent["side"]))
-				if p.distance_to(opponent_p) < 125.0:
-					animation_row = 2
-					break
-		var fps: float = 5.0 if animation_row == 0 else 12.0 if animation_row == 1 else 11.0 if animation_row == 2 else 10.0
+		var fps: float = 5.0 if animation_row == 0 else 10.0 if animation_row == 1 else 11.0 if animation_row == 2 else 10.0
 		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
 		var animation_frame: int = int(floor(float(data.get("action_time", visual_time)) * fps + frame_offset)) % 8
 		# Advance the atlas frames; individual poses are supplied by the artwork.
@@ -969,11 +961,11 @@ func _draw_arena() -> void:
 		var pace: float = 12.5 if kind == 0 else 7.5 if kind == 1 else 10.0
 		var walk_phase: float = visual_time * (pace if moving else 2.4) + float(data["position"]) * 21.0
 		var stride: float = sin(walk_phase)
-		var lift: float = absf(stride) * (0.8 if moving else 0.15)
+		var lift: float = absf(stride) * (0.35 if moving else 0.08)
 		var squash: float = 1.0 + (0.008 if moving else 0.003) * cos(walk_phase * 2.0)
 		var bob: float = -lift
 		var scale_factor: float = 1.16 if actor["guard"] else 1.0
-		var tilt: float = stride * (0.004 if moving else 0.001)
+		var tilt: float = stride * (0.002 if moving else 0.0)
 		var facing: float = 1.0 if friendly else -1.0
 		if not actor["guard"] and bool(data.get("returning", false)):
 			facing = -facing
