@@ -120,6 +120,7 @@ func _ready() -> void:
 	_style_label(timer_label, 19, Color("d5e8fa"))
 	arena = Control.new()
 	arena.custom_minimum_size = Vector2(0, 300)
+	arena.size_flags_stretch_ratio = 2.0
 	arena.clip_contents = true
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena.draw.connect(_draw_arena)
@@ -455,9 +456,9 @@ func _record_fallen(data: Dictionary) -> void:
 
 func _draw_health_bar(p: Vector2, health: float, max_health: float, friendly: bool, width: float = 34.0) -> void:
 	var ratio: float = clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
-	var top_left := p + Vector2(-width * 0.5, -118)
-	arena.draw_rect(Rect2(top_left - Vector2(2, 2), Vector2(width + 4, 12)), Color("08111c"))
-	arena.draw_rect(Rect2(top_left, Vector2(width, 8)), Color("542f37"))
+	var top_left := p + Vector2(-width * 0.5, -122)
+	arena.draw_rect(Rect2(top_left - Vector2(2, 2), Vector2(width + 4, 12)), Color("08111c", 0.86))
+	arena.draw_rect(Rect2(top_left, Vector2(width, 8)), Color("542f37", 0.78))
 	arena.draw_rect(Rect2(top_left, Vector2(width * ratio, 8)), Color("55e98b") if friendly else Color("ff6976"))
 
 func _buy_unit(kind: int) -> void:
@@ -776,7 +777,7 @@ func _on_arena_resized() -> void:
 
 func _fit_map() -> void:
 	# Fixed camera: fit the complete painted map, including both castles.
-	camera_zoom = maxf(0.01, minf(arena.size.x / 2400.0, arena.size.y / 1060.0))
+	camera_zoom = maxf(0.01, minf(arena.size.x / 2440.0, arena.size.y / 1100.0))
 	camera_offset = Vector2.ZERO
 	overview_mode = true
 	arena.queue_redraw()
@@ -840,8 +841,7 @@ func _draw_arena() -> void:
 	var h: float = arena.size.y * 0.68
 	# Fill the tall phone viewport with a dimmed scenic continuation.
 	# The crisp, fully visible battlefield is drawn above in world coordinates.
-	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2.ZERO, arena.size), false, Color(0.25, 0.36, 0.43, 0.55))
-	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("071421", 0.42))
+	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("071421"))
 	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
 	# The battlefield is now one high-detail painting. Never draw the old
