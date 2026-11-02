@@ -17,10 +17,8 @@ var wave := 1
 var phase := "SELECT"
 var remaining := PREP_TIME
 var gold := [1000, 1000]
-var wallet := [360, 360]
 var interest_last := [0, 0]
 var bank_level := 0
-var bank_button: Button
 var invest_button: Button
 var raid_button: Button
 var raid_boost := 0
@@ -129,13 +127,6 @@ func _ready() -> void:
 				button.pressed.connect(_buy_trap.bind(index))
 	var economy_row := HBoxContainer.new()
 	root.add_child(economy_row)
-	bank_button = Button.new()
-	bank_button.text = "BANK +100"
-	bank_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bank_button.custom_minimum_size.y = 48
-	_style_button(bank_button, true)
-	economy_row.add_child(bank_button)
-	bank_button.pressed.connect(_deposit_gold)
 	invest_button = Button.new()
 	invest_button.text = "UPGRADE BANK"
 	invest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -292,27 +283,21 @@ func _select_lane(index: int) -> void:
 	message = "Selected lane %d" % (lane + 1)
 	_refresh()
 
-func _deposit_gold() -> void:
-	if phase != "PREP" or wallet[0] < 100:
-		return
-	wallet[0] -= 100
-	gold[0] += 100
-	message = "100 coins secured in your vault."
-	_refresh()
-
 func _upgrade_bank() -> void:
 	var cost: int = 180 + bank_level * 110
-	if phase != "PREP" or bank_level >= 5 or wallet[0] < cost:
+	if phase != "PREP" or bank_level >= 5 or gold[0] < cost:
 		return
-	wallet[0] -= cost
+	gold[0] -= cost
+	_check_vaults()
 	bank_level += 1
 	message = "BANK LEVEL %d! +4%% interest each wave." % bank_level
 	_refresh()
 
 func _buy_raid_boost() -> void:
-	if phase != "PREP" or wallet[0] < 120 or raid_boost >= 3:
+	if phase != "PREP" or gold[0] < 120 or raid_boost >= 3:
 		return
-	wallet[0] -= 120
+	gold[0] -= 120
+	_check_vaults()
 	raid_boost += 1
 	message = "Raid training %d/3: faster, stronger thieves." % raid_boost
 	_refresh()
@@ -324,11 +309,12 @@ func _buy_unit(kind: int) -> void:
 	for order in orders[0]:
 		if order["lane"] == lane:
 			lane_count += 1
-	if wallet[0] < COSTS[kind] or orders[0].size() >= 6 or lane_count >= 4:
+	if gold[0] < COSTS[kind] or orders[0].size() >= 6 or lane_count >= 4:
 		message = "Not enough gold or unit limit reached."
 		_refresh()
 		return
-	wallet[0] -= COSTS[kind]
+	gold[0] -= COSTS[kind]
+	_check_vaults()
 	orders[0].append({"kind": kind, "lane": lane})
 	message = "Thief queued on lane %d" % (lane + 1)
 	_refresh()
@@ -340,26 +326,29 @@ func _buy_trap(kind: int) -> void:
 	for trap in traps[0]:
 		if trap["lane"] == lane:
 			lane_count += 1
-	if wallet[0] < TRAP_COSTS[kind] or lane_count >= 5:
+	if gold[0] < TRAP_COSTS[kind] or lane_count >= 5:
 		message = "Not enough gold or trap limit reached."
 		_refresh()
 		return
-	wallet[0] -= TRAP_COSTS[kind]
+	gold[0] -= TRAP_COSTS[kind]
+	_check_vaults()
 	traps[0].append({"lane": lane, "kind": kind, "charges": [3, 2, 999][kind]})
 	message = "Trap built on lane %d" % (lane + 1)
 	_refresh()
 
 func _bot_prepare() -> void:
-	var budget: int = mini(400, wallet[1])
+	var budget: int = mini(400, gold[1])
 	while budget >= 75 and orders[1].size() < 4:
 		var kind := rng.randi_range(0, 2)
-		if COSTS[kind] > budget or COSTS[kind] > wallet[1]:
+		if COSTS[kind] > budget or COSTS[kind] > gold[1]:
 			break
 		orders[1].append({"lane": rng.randi_range(0, 2), "kind": kind})
-		wallet[1] -= COSTS[kind]
+		gold[1] -= COSTS[kind]
+		_check_vaults()
 		budget -= COSTS[kind]
-	if wallet[1] >= 55 and traps[1].size() < wave * 2:
-		wallet[1] -= 55
+	if gold[1] >= 55 and traps[1].size() < wave * 2:
+		gold[1] -= 55
+		_check_vaults()
 		traps[1].append({"lane": rng.randi_range(0, 2), "kind": 0, "charges": 3})
 
 func _start_pressed() -> void:
@@ -507,23 +496,21 @@ func _end_wave() -> void:
 		var payout: int = maxi(20, int(floor(float(gold[side]) * rate)))
 		interest_last[side] = payout
 		gold[side] += payout
-		wallet[side] += 160 + mini(wave * 25, 250)
 	wave += 1
 	phase = "PREP"
 	remaining = PREP_TIME
-	message = "INTEREST +%d GOLD  •  RECRUITMENT +%d" % [interest_last[0], 160 + mini((wave - 1) * 25, 250)]
+	message = "INTEREST +%d GOLD! Protect savings or invest in your army." % interest_last[0]
 
 func _refresh() -> void:
 	race_button.text = "RACE: " + RACE_NAMES[selected_race]
 	race_button.disabled = true
-	hud.text = "VAULT %d  •  ENEMY %d  •  COINS %d" % [gold[0], gold[1], wallet[0]]
+	hud.text = "YOUR GOLD %d  •  ENEMY %d" % [gold[0], gold[1]]
 	timer_label.text = "WAVE %d  |  %s  |  %02d s  |  INTEREST %d%%" % [wave, phase, int(maxf(0.0, ceilf(remaining))), (28 if selected_race == 0 else 18) + bank_level * 4]
 	info.text = message + "\nLane: %d | Units: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
 	for i in range(3, 9):
 		controls[i].disabled = phase != "PREP"
-	bank_button.disabled = phase != "PREP" or wallet[0] < 100
-	invest_button.disabled = phase != "PREP" or bank_level >= 5 or wallet[0] < 180 + bank_level * 110
-	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or wallet[0] < 120
+	invest_button.disabled = phase != "PREP" or bank_level >= 5 or gold[0] < 180 + bank_level * 110
+	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < 120
 	invest_button.text = "BANK LV%d (%d)" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "BANK MAX"
 	raid_button.text = "RAID LV%d (120)" % raid_boost if raid_boost < 3 else "RAID MAX"
 	controls[9].disabled = phase == "ATTACK"
