@@ -107,9 +107,16 @@ func _ready() -> void:
 	# Optional test atlas: keep the shipping animation when the file is absent.
 	if ResourceLoader.exists("res://assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png"):
 		goblin_walk_prototype = load("res://assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png") as Texture2D
-	menu_music = preload("res://scripts/fantasy_menu_music.gd").new()
+	menu_music = AudioStreamPlayer.new()
 	menu_music.name = "EnchantedMenuScore"
+	menu_music.volume_db = -9.0
 	add_child(menu_music)
+	if ResourceLoader.exists("res://assets/audio/enchanted_vault_theme.wav"):
+		var score := load("res://assets/audio/enchanted_vault_theme.wav") as AudioStreamWAV
+		if score != null:
+			score.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			menu_music.stream = score
+			menu_music.play()
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
@@ -971,8 +978,9 @@ func _draw_arena() -> void:
 		var scale_factor: float = 1.16 if actor["guard"] else 1.0
 		var tilt: float = stride * (0.002 if moving else 0.0)
 		var facing: float = 1.0 if friendly else -1.0
+		# Face the actual travel direction, including the return trip with gold.
 		if not actor["guard"] and bool(data.get("returning", false)):
-			facing = -facing
+			facing *= -1.0
 		var staggered: bool = not actor["guard"] and float(data.get("stunned", 0.0)) > 0.0
 		if staggered:
 			tilt = 0.16 * sin(visual_time * 17.0)
@@ -987,8 +995,8 @@ func _draw_arena() -> void:
 		var animation_transform := Transform2D(tilt, sprite_scale * camera_zoom)
 		animation_transform.origin = arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom
 		arena.draw_set_transform_matrix(animation_transform)
-		if goblin_walk_prototype != null and animation_row == 1 and atlas == atlas_goblin_raider:
-			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12
+		if goblin_walk_prototype != null and atlas == atlas_goblin_raider and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
+			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12 if animation_row == 1 else 0
 			arena.draw_texture_rect_region(goblin_walk_prototype, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)))
 		else:
 			arena.draw_texture_rect_region(atlas, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(animation_frame * 128), float(animation_row * 128)), Vector2(128, 128)))
