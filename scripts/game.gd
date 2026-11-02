@@ -42,6 +42,7 @@ var info: Label
 var arena: Control
 var controls: Array[Button] = []
 var visual_time := 0.0
+var goblin_walk_prototype: Texture2D
 var menu_music: AudioStreamPlayer
 var performance_label: Label
 var performance_elapsed := 0.0
@@ -103,6 +104,9 @@ var banner_texture: Texture2D = preload("res://assets/world/war_banner.svg")
 
 func _ready() -> void:
 	rng.randomize()
+	# Optional test atlas: keep the shipping animation when the file is absent.
+	if ResourceLoader.exists("res://assets/epic/animations/goblin_walk_aligned.png"):
+		goblin_walk_prototype = load("res://assets/epic/animations/goblin_walk_aligned.png") as Texture2D
 	menu_music = preload("res://scripts/fantasy_menu_music.gd").new()
 	menu_music.name = "EnchantedMenuScore"
 	add_child(menu_music)
@@ -983,7 +987,11 @@ func _draw_arena() -> void:
 		var animation_transform := Transform2D(tilt, sprite_scale * camera_zoom)
 		animation_transform.origin = arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom
 		arena.draw_set_transform_matrix(animation_transform)
-		arena.draw_texture_rect_region(atlas, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(animation_frame * 128), float(animation_row * 128)), Vector2(128, 128)))
+		if goblin_walk_prototype != null and animation_row == 1 and atlas == atlas_goblin_raider:
+			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12
+			arena.draw_texture_rect_region(goblin_walk_prototype, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)))
+		else:
+			arena.draw_texture_rect_region(atlas, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(animation_frame * 128), float(animation_row * 128)), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
