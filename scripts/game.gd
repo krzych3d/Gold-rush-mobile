@@ -553,6 +553,25 @@ func _draw_arena() -> void:
 		arena.draw_colored_polygon(bottom, Color("192c2c"))
 		arena.draw_colored_polygon(top, Color("4c6457") if i % 2 == 0 else Color("596e59"))
 		arena.draw_line(base + Vector2(-width, 0), base + Vector2(0, -height), Color("8a9473", 0.5), 2.0)
+	# A river cuts diagonally through the battlefield; lanes cross it on stone bridges.
+	var river := PackedVector2Array()
+	for step in 41:
+		var ry: float = -1250.0 + float(step) * 62.5
+		var rx: float = sin(ry / 230.0) * 100.0 + ry * 0.14
+		river.append(Vector2(rx, ry))
+	arena.draw_polyline(river, Color("142f3c"), 170.0, true)
+	arena.draw_polyline(river, Color("285365"), 151.0, true)
+	arena.draw_polyline(river, Color("397b88"), 119.0, true)
+	for i in 30:
+		var ry: float = -1150.0 + float(i) * 78.0
+		var rx: float = sin(ry / 230.0) * 100.0 + ry * 0.14
+		var ripple := Vector2(rx + sin(visual_time * 0.6 + float(i)) * 19.0, ry)
+		arena.draw_arc(ripple, 13.0 + float(i % 3) * 6.0, 0.2, PI - 0.2, 12, Color("a5e7e4", 0.35), 2.0)
+	# Ancient stone foundations and glowing sigils make the terrain navigable.
+	for i in 9:
+		var angle: float = float(i) * TAU / 9.0
+		var center_ruin := Vector2(cos(angle) * 980.0, sin(angle) * 700.0)
+		_draw_ruin(center_ruin, i)
 	# Winding three-lane routes with cobblestone edges.
 	for path in 3:
 		var points := PackedVector2Array()
@@ -566,6 +585,16 @@ func _draw_arena() -> void:
 			var stone := _point(path, float(j) / 31.0, 0)
 			arena.draw_line(stone + Vector2(-7, -18), stone + Vector2(6, -12), Color("665d4a", 0.5), 2.0)
 			arena.draw_line(stone + Vector2(7, 9), stone + Vector2(-5, 18), Color("e1cba2", 0.32), 2.0)
+	# Elevated bridges reconnect the three routes across the river.
+	for path in 3:
+		var crossing := _point(path, 0.5, 0)
+		arena.draw_rect(Rect2(crossing + Vector2(-83, -35), Vector2(166, 70)), Color("30343a"))
+		arena.draw_rect(Rect2(crossing + Vector2(-76, -41), Vector2(152, 65)), Color("9d9689"))
+		for k in 7:
+			var sx: float = crossing.x - 65.0 + float(k) * 21.0
+			arena.draw_line(Vector2(sx, crossing.y - 38), Vector2(sx - 5.0, crossing.y + 23), Color("686c69", 0.55), 2.0)
+		arena.draw_line(crossing + Vector2(-81, -37), crossing + Vector2(81, -37), Color("d9c5a0"), 6.0)
+		arena.draw_line(crossing + Vector2(-81, 26), crossing + Vector2(81, 26), Color("60594f"), 6.0)
 	# Dense forests and magical crystals occupy the space between lanes.
 	for i in 240:
 		var fx := sin(float(i) * 127.1) * arena.size.x * 1.7
@@ -609,6 +638,19 @@ func _draw_arena() -> void:
 		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
 		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))
 	arena.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _draw_ruin(p: Vector2, seed: int) -> void:
+	var stone := Color("68716d") if seed % 2 == 0 else Color("77776b")
+	arena.draw_circle(p + Vector2(12, 18), 61, Color("0c2325", 0.3))
+	arena.draw_colored_polygon(PackedVector2Array([p + Vector2(0, -36), p + Vector2(64, 0), p + Vector2(0, 32), p + Vector2(-64, 0)]), Color("444e4a"))
+	arena.draw_arc(p, 44, 0.0, TAU, 32, Color("8d8875"), 6.0)
+	for k in 4:
+		var a: float = float(k) * TAU / 4.0 + 0.4
+		var pillar := p + Vector2(cos(a) * 38.0, sin(a) * 22.0)
+		arena.draw_rect(Rect2(pillar + Vector2(-9, -31), Vector2(18, 34)), stone.darkened(0.35))
+		arena.draw_rect(Rect2(pillar + Vector2(-9, -36), Vector2(18, 10)), stone.lightened(0.28))
+	arena.draw_arc(p, 27, visual_time * 0.25, visual_time * 0.25 + PI * 1.5, 24, Color("6ce8d4", 0.65), 3.0)
+	arena.draw_circle(p, 6.0 + sin(visual_time * 2.0 + float(seed)) * 2.0, Color("a6fff0"))
 
 func _draw_tree(p: Vector2, seed: float) -> void:
 	var size: float = 17.0 + fposmod(seed * 13.0, 17.0)
