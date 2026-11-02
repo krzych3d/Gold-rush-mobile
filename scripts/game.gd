@@ -45,6 +45,10 @@ var selection_layer: ColorRect
 var faction_cards: Array[PanelContainer] = []
 var camera_offset := Vector2.ZERO
 var camera_zoom := 1.0
+# True 2:1 diamond projection: world X/Y become screen diagonal axes.
+const ISO_X := Vector2(0.8660254, 0.5)
+const ISO_Y := Vector2(-0.8660254, 0.5)
+const WORLD_HALF_LENGTH := 1050.0
 var dragging_map := false
 var drag_distance := 0.0
 var camera_hint: Label
@@ -618,12 +622,29 @@ func _refresh() -> void:
 	arena.queue_redraw()
 
 func _point(path: int, progress: float, side: int) -> Vector2:
-	var center := Vector2.ZERO
 	var t: float = progress if side == 0 else 1.0 - progress
-	var x: float = lerpf(-arena.size.x * 0.75, arena.size.x * 0.75, t)
-	var lane_y: float = (float(path) - 1.0) * 210.0
-	var bend: float = sin(t * PI * 2.0 + float(path) * 1.35) * 45.0 * sin(t * PI)
-	return center + Vector2(x, lane_y + bend)
+	var x: float = lerpf(-WORLD_HALF_LENGTH, WORLD_HALF_LENGTH, t)
+	var lane_y: float = (float(path) - 1.0) * 240.0
+	var bend: float = sin(t * TAU + float(path) * 1.35) * 55.0 * sin(t * PI)
+	return Vector2(x, lane_y + bend)
+
+func _iso_project(world: Vector2) -> Vector2:
+	return ISO_X * world.x + ISO_Y * world.y
+
+func _iso_unproject(screen: Vector2) -> Vector2:
+	return Vector2(screen.x / (2.0 * ISO_X.x) + screen.y, screen.y - screen.x / (2.0 * ISO_X.x))
+
+func _iso_transform() -> Transform2D:
+	return Transform2D(ISO_X * camera_zoom, ISO_Y * camera_zoom, arena.size * 0.5 + camera_offset)
+
+func _sprite_transform(p: Vector2, rotation: float = 0.0) -> Transform2D:
+	# Billboard sprites stay upright while their feet occupy isometric ground.
+	return Transform2D(rotation, Vector2.ONE * camera_zoom, arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom)
+
+func _draw_iso_sprite(texture: Texture2D, p: Vector2, size: Vector2, tint: Color = Color.WHITE) -> void:
+	arena.draw_set_transform_matrix(_sprite_transform(p))
+	arena.draw_texture_rect(texture, Rect2(Vector2(-size.x * 0.5, -size.y), size), false, tint)
+	arena.draw_set_transform_matrix(_iso_transform())
 
 func _style_label(label: Label, font_size: int, color: Color) -> void:
 	label.add_theme_font_size_override("font_size", font_size)
@@ -722,21 +743,20 @@ func _generate_terrain_details() -> void:
 		terrain_details.append({"p": p, "seed": float(i), "type": i % 17})
 
 func _in_camera(p: Vector2, margin: float = 100.0) -> bool:
-	var half: Vector2 = arena.size * 0.5 / camera_zoom
-	var center: Vector2 = -camera_offset / camera_zoom
-	return absf(p.x - center.x) < half.x + margin and absf(p.y - center.y) < half.y + margin
+	var projected: Vector2 = _iso_project(p) * camera_zoom + camera_offset
+	return absf(projected.x) < arena.size.x * 0.5 + margin * camera_zoom and absf(projected.y) < arena.size.y * 0.5 + margin * camera_zoom
 
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
 	var h: float = arena.size.y * 0.68
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("141e32"))
-	arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
+	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
 	# Layered illustrated ground tiles, camera culled for mobile performance.
 	var tile_size := 512.0
-	var view_center: Vector2 = -camera_offset / camera_zoom
-	var half_view: Vector2 = arena.size * 0.5 / camera_zoom
+	var view_center: Vector2 = _iso_unproject(-camera_offset / camera_zoom)
+	var half_view: Vector2 = Vector2(arena.size.x + arena.size.y, arena.size.x + arena.size.y) / maxf(camera_zoom, 0.1)
 	var min_x: int = maxi(-5, int(floor((view_center.x - half_view.x - 64.0) / tile_size)))
 	var max_x: int = mini(4, int(ceil((view_center.x + half_view.x + 64.0) / tile_size)))
 	var min_y: int = maxi(-4, int(floor((view_center.y - half_view.y - 64.0) / tile_size)))
@@ -753,7 +773,7 @@ func _draw_arena() -> void:
 		if _in_camera(base, 170.0):
 			var scale_factor: float = 0.65 + fposmod(float(i) * 0.19, 0.5)
 			var rock_size := Vector2(210, 145) * scale_factor
-			arena.draw_texture_rect(cliff_texture, Rect2(base - rock_size * 0.5, rock_size), false)
+			_draw_iso_sprite(cliff_texture, base + Vector2(0, rock_size.y * 0.5), rock_size)
 	# A river cuts diagonally through the battlefield; lanes cross it on stone bridges.
 	var river := PackedVector2Array()
 	for step in 41:
@@ -774,7 +794,7 @@ func _draw_arena() -> void:
 		var fx: float = sin(fy / 230.0) * 100.0 + fy * 0.14
 		var fall_pos := Vector2(fx, fy)
 		if _in_camera(fall_pos, 260.0):
-			arena.draw_texture_rect(waterfall_texture, Rect2(fall_pos + Vector2(-82, -105), Vector2(164, 210)), false, Color(1, 1, 1, 0.94))
+			_draw_iso_sprite(waterfall_texture, fall_pos + Vector2(0, 95), Vector2(164, 210), Color(1, 1, 1, 0.94))
 	# Ancient stone foundations and glowing sigils make the terrain navigable.
 	for i in 9:
 		var angle: float = float(i) * TAU / 9.0
@@ -796,9 +816,9 @@ func _draw_arena() -> void:
 			var delta: Vector2 = end_p - start_p
 			var mid: Vector2 = (start_p + end_p) * 0.5
 			if _in_camera(mid, 180.0):
-				arena.draw_set_transform(arena.size * 0.5 + camera_offset + mid * camera_zoom, delta.angle(), Vector2.ONE * camera_zoom)
+				arena.draw_set_transform_matrix(_iso_transform() * Transform2D(delta.angle(), mid))
 				arena.draw_texture_rect(road_texture, Rect2(Vector2(-delta.length() * 0.5, -32), Vector2(delta.length() + 3, 64)), false, Color(1, 1, 1, 0.78))
-				arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
+				arena.draw_set_transform_matrix(_iso_transform())
 		for j in 32:
 			var stone := _point(path, float(j) / 31.0, 0)
 			arena.draw_line(stone + Vector2(-7, -18), stone + Vector2(6, -12), Color("665d4a", 0.5), 2.0)
@@ -806,7 +826,7 @@ func _draw_arena() -> void:
 	# Hand-painted stone bridge sprites at the three river crossings.
 	for path in 3:
 		var crossing: Vector2 = _point(path, 0.5, 0)
-		arena.draw_texture_rect(bridge_texture, Rect2(crossing + Vector2(-100, -54), Vector2(200, 108)), false)
+		_draw_iso_sprite(bridge_texture, crossing + Vector2(0, 54), Vector2(220, 120))
 	# Forest, flowers, stones and arcane formations: render only visible props.
 	for item in terrain_details:
 		var p: Vector2 = item["p"]
@@ -863,8 +883,8 @@ func _draw_arena() -> void:
 		arena.draw_circle(p + Vector2(2, 11), 17.0 * scale_factor, Color("071924", 0.42))
 		var art_size := Vector2(52, 66) * scale_factor
 		var tilt: float = sin(visual_time * 8.0 + float(data["position"]) * 14.0) * (0.035 if actor["guard"] else 0.075)
-		arena.draw_set_transform(arena.size * 0.5 + camera_offset + (p + Vector2(0, 12 + bob)) * camera_zoom, tilt, Vector2.ONE * camera_zoom)
-		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y), art_size), false)
+		arena.draw_set_transform_matrix(_sprite_transform(p, tilt))
+		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), false)
 		arena.draw_set_transform(arena.size * 0.5 + camera_offset, 0.0, Vector2.ONE * camera_zoom)
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
@@ -899,7 +919,7 @@ func _draw_minimap() -> void:
 		arena.draw_polyline(points, Color("cfb88a"), 3.0, true)
 	arena.draw_circle(origin + Vector2(10, 51), 5, Color("7ab6ff"))
 	arena.draw_circle(origin + Vector2(106, 51), 5, Color("ff7b9b"))
-	var viewport_center: Vector2 = -camera_offset / camera_zoom
+	var viewport_center: Vector2 = _iso_unproject(-camera_offset / camera_zoom)
 	var camera_marker := origin + Vector2(58, 51) + Vector2(viewport_center.x / 15.0, viewport_center.y / 11.0)
 	camera_marker.x = clampf(camera_marker.x, origin.x + 5.0, origin.x + 111.0)
 	camera_marker.y = clampf(camera_marker.y, origin.y + 5.0, origin.y + 97.0)
@@ -932,7 +952,7 @@ func _draw_ruin(p: Vector2, seed: int) -> void:
 
 func _draw_tree(p: Vector2, seed: float) -> void:
 	var size: float = 85.0 + fposmod(seed * 11.0, 45.0)
-	arena.draw_texture_rect(pine_texture, Rect2(p + Vector2(-size * 0.36, -size), Vector2(size * 0.72, size)), false)
+	_draw_iso_sprite(pine_texture, p, Vector2(size * 0.72, size))
 
 func _draw_tree_parts(p: Vector2, size: float, seed: float) -> void:
 	# Broadleaf crowns are layered and shaded, with visible trunks and depth.
@@ -954,13 +974,13 @@ func _draw_tree_canopy(p: Vector2, crown: Vector2, size: float, seed: float) -> 
 func _draw_crystal(p: Vector2, seed: float) -> void:
 	var pulse: float = 1.0 + sin(visual_time * 2.0 + seed) * 0.07
 	arena.draw_circle(p + Vector2(0, -24), 32.0 * pulse, Color("6de7ff", 0.10))
-	arena.draw_texture_rect(crystal_texture, Rect2(p + Vector2(-27, -70), Vector2(54, 70) * pulse), false)
+	_draw_iso_sprite(crystal_texture, p, Vector2(54, 70) * pulse)
 
 func _draw_fort(p: Vector2, color: Color, side: int) -> void:
 	var glow := Color("f9d786") if side == 0 else Color("e88af1")
 	# Render detailed fantasy vault artwork in the battlefield world.
 	arena.draw_circle(p + Vector2(0, -70), 83, Color(glow.r, glow.g, glow.b, 0.10))
-	arena.draw_texture_rect(vault_texture, Rect2(p + Vector2(-112, -175), Vector2(224, 224)), false, Color("ffffff") if side == 0 else Color("ffc0bd"))
+	_draw_iso_sprite(vault_texture, p + Vector2(0, 48), Vector2(250, 250), Color("ffffff") if side == 0 else Color("ffc0bd"))
 
 func _draw_fort_body(p: Vector2, color: Color, glow: Color) -> void:
 	# Tall isometric keep with shaded side walls, roof planes and battlements.
