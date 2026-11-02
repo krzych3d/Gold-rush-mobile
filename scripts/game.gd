@@ -73,7 +73,7 @@ var void_texture: Texture2D = preload("res://assets/world/void_assassin.svg")
 var waterfall_texture: Texture2D = preload("res://assets/world/waterfall.svg")
 var ground_texture: Texture2D = preload("res://assets/world/enchanted_ground.svg")
 var valley_texture: Texture2D = preload("res://assets/world/epic_valley.svg")
-var epic_battlefield_texture: Texture2D = preload("res://assets/epic/world/battlefield.jpg")
+var epic_battlefield_texture: Texture2D = preload("res://assets/epic/world/battlefield_v2.jpg")
 var cliff_texture: Texture2D = preload("res://assets/world/mossy_cliff.svg")
 var grove_texture: Texture2D = preload("res://assets/world/moonlit_grove.svg")
 var shrine_texture: Texture2D = preload("res://assets/world/ancient_shrine.svg")
@@ -792,106 +792,37 @@ func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
 	var h: float = arena.size.y * 0.68
-	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("0c1d2b"))
+	# Fill the tall phone viewport with a dimmed scenic continuation.
+	# The crisp, fully visible battlefield is drawn above in world coordinates.
+	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2.ZERO, arena.size), false, Color(0.25, 0.36, 0.43, 0.55))
+	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("071421", 0.42))
 	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
-	# One cohesive enchanted-valley backdrop instead of repeating flat grass tiles.
-	# All roads, bridges, castles and units remain independent gameplay objects.
-	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2(-1200, -520), Vector2(2400, 1040)), false)
-	# Painted mossy escarpments and raised terrain formations.
-	for i in 5:
-		var bx: float = sin(float(i) * 31.2) * 1300.0
-		var by: float = cos(float(i) * 22.6) * 950.0
-		var base := Vector2(bx, by)
-		if _in_camera(base, 170.0):
-			var scale_factor: float = 0.42 + fposmod(float(i) * 0.11, 0.25)
-			var rock_size := Vector2(210, 145) * scale_factor
-			_draw_iso_sprite(cliff_texture, base + Vector2(0, rock_size.y * 0.5), rock_size)
-	# A river cuts diagonally through the battlefield; lanes cross it on stone bridges.
-	var river := PackedVector2Array()
-	for step in 41:
-		var ry: float = -1250.0 + float(step) * 62.5
-		var rx: float = sin(ry / 230.0) * 100.0 + ry * 0.14
-		river.append(Vector2(rx, ry))
-	arena.draw_polyline(river, Color("142f3c"), 170.0, true)
-	arena.draw_polyline(river, Color("285365"), 151.0, true)
-	arena.draw_polyline(river, Color("397b88"), 119.0, true)
-	for i in 30:
-		var ry: float = -1150.0 + float(i) * 78.0
-		var rx: float = sin(ry / 230.0) * 100.0 + ry * 0.14
-		var ripple := Vector2(rx + sin(visual_time * 0.6 + float(i)) * 19.0, ry)
-		arena.draw_arc(ripple, 13.0 + float(i % 3) * 6.0, 0.2, PI - 0.2, 12, Color("a5e7e4", 0.35), 2.0)
-	# Glowing waterfall scenery at the ends of the river gorge.
-	for falls_index in 2:
-		var fy: float = -1020.0 if falls_index == 0 else 950.0
-		var fx: float = sin(fy / 230.0) * 100.0 + fy * 0.14
-		var fall_pos := Vector2(fx, fy)
-		if _in_camera(fall_pos, 260.0):
-			_draw_iso_sprite(waterfall_texture, fall_pos + Vector2(0, 95), Vector2(164, 210), Color(1, 1, 1, 0.94))
-	# Ancient stone foundations and glowing sigils make the terrain navigable.
-	for i in 9:
-		var angle: float = float(i) * TAU / 9.0
-		var center_ruin := Vector2(cos(angle) * 980.0, sin(angle) * 700.0)
-		_draw_ruin(center_ruin, i)
-	# Winding three-lane routes with cobblestone edges.
-	for path in 3:
-		var points := PackedVector2Array()
-		for step in 41:
-			points.append(_point(path, float(step) / 40.0, 0))
-		arena.draw_polyline(points, Color("142b2b"), 88.0, true)
-		arena.draw_polyline(points, Color("72634f"), 80.0, true)
-		arena.draw_polyline(points, Color("a89571"), 70.0, true)
-		arena.draw_polyline(points, Color("c4aa7b") if path == lane else Color("a78f69"), 46.0, true)
-		# Illustrated cobblestone texture overlays the road while preserving the path.
-		for segment in 20:
-			var start_p: Vector2 = _point(path, float(segment) / 20.0, 0)
-			var end_p: Vector2 = _point(path, float(segment + 1) / 20.0, 0)
-			var delta: Vector2 = end_p - start_p
-			var mid: Vector2 = (start_p + end_p) * 0.5
-			if _in_camera(mid, 180.0):
-				arena.draw_set_transform_matrix(_iso_transform() * Transform2D(delta.angle(), mid))
-				arena.draw_texture_rect(road_texture, Rect2(Vector2(-delta.length() * 0.5, -32), Vector2(delta.length() + 3, 64)), false, Color(1, 1, 1, 0.78))
-				arena.draw_set_transform_matrix(_iso_transform())
-		for j in 32:
-			var stone := _point(path, float(j) / 31.0, 0)
-			arena.draw_line(stone + Vector2(-7, -18), stone + Vector2(6, -12), Color("665d4a", 0.5), 2.0)
-			arena.draw_line(stone + Vector2(7, 9), stone + Vector2(-5, 18), Color("e1cba2", 0.32), 2.0)
-	# Hand-painted stone bridge sprites at the three river crossings.
-	for path in 3:
-		var crossing: Vector2 = _point(path, 0.5, 0)
-		_draw_iso_sprite(bridge_texture, crossing + Vector2(0, 54), Vector2(220, 120))
-	# Multi-layer world props with painted silhouettes and varied sizes.
-	for item in terrain_details:
-		var p: Vector2 = item["p"]
-		if not _in_camera(p, 190.0):
-			continue
-		var seed: float = item["seed"]
-		var kind: int = int(item["type"])
-		var prop_scale: float = float(item["scale"])
-		if kind == 0 or kind == 21:
-			_draw_iso_sprite(crystal_texture, p, Vector2(42, 60) * prop_scale)
-		elif kind == 1 or kind == 2:
-			_draw_iso_sprite(grove_texture, p, Vector2(150, 155) * prop_scale)
-		elif kind == 3:
-			_draw_iso_sprite(shrine_texture, p, Vector2(120, 130) * prop_scale)
-		elif kind == 4:
-			_draw_iso_sprite(banner_texture, p, Vector2(45, 80) * prop_scale)
-		elif kind < 17:
-			_draw_iso_sprite(pine_texture, p, Vector2(72, 105) * prop_scale)
-		elif kind < 20:
-			_draw_iso_sprite(cliff_texture, p, Vector2(90, 65) * prop_scale)
-		else:
-			_draw_flowers(p, seed)
-	# Animated lanterns at strategic points along each road.
-	for path in 3:
-		for j in 1:
-			var lamp := _point(path, float(j + 1) / 6.0, 0) + Vector2(0, -48)
-			_draw_iso_sprite(banner_texture, lamp + Vector2(0, 40), Vector2(43, 75))
-			arena.draw_circle(lamp, 9.0 + sin(visual_time * 2.0 + float(j)) * 1.5, Color("f6d47b", 0.25))
+	# The battlefield is now one high-detail painting. Never draw the old
+	# geometric river, bridges, trees, roads or duplicate castles over it.
+	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2(-1200, -530), Vector2(2400, 1060)), false)
+	# Subtle animated magic and river glints. These do not obscure the lanes.
+	for i in 18:
+		var phase_shift: float = float(i) * 1.618
+		var water_y: float = -440.0 + fposmod(float(i) * 67.0 + visual_time * 21.0, 880.0)
+		var water_x: float = sin(water_y * 0.008) * 36.0
+		var water_pos := Vector2(water_x, water_y)
+		var shimmer: float = 0.20 + 0.15 * sin(visual_time * 3.0 + phase_shift)
+		arena.draw_line(water_pos - Vector2(12, 0), water_pos + Vector2(12, 0), Color(0.64, 0.96, 1.0, shimmer), 2.0)
+	for i in 24:
+		var seed: float = float(i) * 2.399
+		var px: float = -1130.0 + fposmod(float(i) * 167.0, 2260.0)
+		var py: float = -450.0 + fposmod(float(i) * 103.0 + sin(visual_time * 0.8 + seed) * 18.0, 900.0)
+		var glow: float = 0.35 + 0.3 * sin(visual_time * 1.9 + seed)
+		arena.draw_circle(Vector2(px, py), 2.4 + glow, Color(1.0, 0.79, 0.38, glow))
 	for side in 2:
 		var fort := _point(1, 0, side)
 		var base_color := Color("4f86bf") if side == 0 else Color("ad5265")
-		_draw_fort(fort, base_color, side)
+		# Fortresses are already painted into the background. Add pulsing
+		# vault aura only, keeping the castle illustration unobstructed.
+		var aura := Color("8ad7ff") if side == 0 else Color("ff8a73")
+		var aura_alpha: float = 0.10 + 0.06 * sin(visual_time * 2.0 + float(side))
+		arena.draw_arc(fort + Vector2(0, -35), 56.0, 0.0, TAU, 40, Color(aura.r, aura.g, aura.b, aura_alpha), 4.0)
 		for trap in traps[side]:
 			var p := _point(trap["lane"], 0.67, 1 - side)
 			p.y += float(traps[side].find(trap) % 3 - 1) * 13.0
@@ -929,6 +860,14 @@ func _draw_arena() -> void:
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, 42.0 if actor["guard"] else 34.0)
+		# Animated weapon glints and combat trails while raiders are fighting.
+		if phase == "ATTACK" and not actor["guard"]:
+			var strike: float = sin(visual_time * 12.0 + float(data["position"]) * 23.0)
+			if strike > 0.72:
+				var fx_color := Color("78ddff", 0.72) if friendly else Color("ff996e", 0.72)
+				var weapon_tip := p + Vector2(18.0 if friendly else -18.0, -20.0)
+				arena.draw_arc(weapon_tip, 14.0, -1.1, 1.3, 14, fx_color, 2.6)
+				arena.draw_circle(weapon_tip, 3.5, fx_color)
 	for spark in hit_sparks:
 		var p: Vector2 = spark["p"]
 		var life: float = float(spark["life"]) / 0.5
