@@ -865,6 +865,36 @@ func _draw_arena() -> void:
 				3: art = sprite_arcane_mage if kind == 2 else sprite_shadow_wolf
 		else:
 			art = sprite_shadow_wolf if kind == 1 else sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
+		# Atlas rows: 0 idle, 1 walk, 2 attack, 3 hit, 4 defeat.
+		var atlas: Texture2D = atlas_goblin_raider
+		if art == sprite_dwarf_defender:
+			atlas = atlas_dwarf_defender
+		elif art == sprite_dwarf_carrier:
+			atlas = atlas_dwarf_carrier
+		elif art == sprite_elf_ranger:
+			atlas = atlas_elf_ranger
+		elif art == sprite_arcane_mage:
+			atlas = atlas_arcane_mage
+		elif art == sprite_goblin_saboteur:
+			atlas = atlas_goblin_saboteur
+		elif art == sprite_shadow_wolf:
+			atlas = atlas_shadow_wolf
+		var animation_row: int = 0
+		if not actor["guard"] and phase == "ATTACK":
+			animation_row = 1
+		if float(data.get("stunned", 0.0)) > 0.0:
+			animation_row = 3
+		elif phase == "ATTACK":
+			for opponent in units:
+				if int(opponent["side"]) == int(actor["side"]) or int(opponent["lane"]) != int(data["lane"]):
+					continue
+				var opponent_p: Vector2 = _point(int(opponent["lane"]), float(opponent["position"]), int(opponent["side"]))
+				if p.distance_to(opponent_p) < 125.0:
+					animation_row = 2
+					break
+		var fps: float = 7.0 if animation_row == 0 else 12.0 if animation_row == 1 else 14.0
+		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
+		var animation_frame: int = int(floor(visual_time * fps + frame_offset)) % 8
 		# Movement-aware animation: idle breathing, two-step gait and hit recoil.
 		var moving: bool = not bool(actor["guard"]) and phase == "ATTACK" and float(data.get("stunned", 0.0)) <= 0.0
 		var pace: float = 12.5 if kind == 0 else 7.5 if kind == 1 else 10.0
@@ -892,7 +922,7 @@ func _draw_arena() -> void:
 		var animation_transform := Transform2D(tilt, sprite_scale * camera_zoom)
 		animation_transform.origin = arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom
 		arena.draw_set_transform_matrix(animation_transform)
-		arena.draw_texture_rect(art, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), false)
+		arena.draw_texture_rect_region(atlas, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(animation_frame * 128), float(animation_row * 128)), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
