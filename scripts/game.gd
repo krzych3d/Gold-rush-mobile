@@ -51,6 +51,7 @@ var camera_hint: Label
 var touch_points: Dictionary = {}
 var last_pinch_distance := 0.0
 var terrain_details: Array = []
+var hit_sparks: Array = []
 var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
 var crystal_texture: Texture2D = preload("res://assets/world/arcane_crystal.svg")
 var dwarf_texture: Texture2D = preload("res://assets/world/dwarf_guard.svg")
@@ -362,6 +363,7 @@ func _guard_combat(dt: float) -> void:
 				target = unit
 		if not target.is_empty() and float(guard["cooldown"]) <= 0.0:
 			target["health"] -= 26.0
+			hit_sparks.append({"p": _point(int(target["lane"]), clampf(float(target["position"]), 0.0, 1.0), int(target["side"])), "life": 0.5, "friendly": int(guard["side"]) == 0})
 			guard["cooldown"] = 0.9
 			if float(target["health"]) <= 0.0:
 				if int(target["carried"]) > 0:
@@ -504,6 +506,10 @@ func _tick() -> void:
 	_refresh()
 
 func _simulate(dt: float) -> void:
+	for spark in hit_sparks.duplicate():
+		spark["life"] = float(spark["life"]) - dt
+		if float(spark["life"]) <= 0.0:
+			hit_sparks.erase(spark)
 	_guard_combat(dt)
 	for unit in units.duplicate():
 		if unit["stunned"] > 0.0:
@@ -828,31 +834,43 @@ func _draw_arena() -> void:
 			arena.draw_circle(p + Vector2(0, 5), 12, Color("142c35", 0.6))
 			arena.draw_circle(p, 10, [Color("bdb7a9"), Color("e5ac4e"), Color("a8a0cf")][trap["kind"]])
 			arena.draw_circle(p + Vector2(-3, -3), 3, Color("fff2cb"))
+	# Draw combatants in depth order, including foot shadows and hit feedback.
+	var actors: Array = []
 	for guard in guards:
-		var gp: Vector2 = _point(int(guard["lane"]), float(guard["position"]), int(guard["side"]))
-		var friendly: bool = int(guard["side"]) == 0
-		var guard_art: Texture2D = dwarf_texture if friendly else goblin_texture
-		if friendly and selected_race == 1:
-			guard_art = goblin_texture
-		elif friendly and selected_race == 2:
-			guard_art = elf_texture
-		elif friendly and selected_race == 3:
-			guard_art = void_texture
-		arena.draw_texture_rect(guard_art, Rect2(gp + Vector2(-30, -58), Vector2(60, 75)), false)
-		_draw_health_bar(gp, float(guard["health"]), float(guard["max_health"]), friendly, 42)
+		actors.append({"p": _point(int(guard["lane"]), float(guard["position"]), int(guard["side"])), "data": guard, "guard": true, "side": int(guard["side"])})
 	for unit in units:
-		var p := _point(unit["lane"], clampf(unit["position"], 0.0, 1.0), unit["side"])
-		var bob := sin(visual_time * 10.0 + float(unit["position"]) * 12.0) * 2.0
-		var color: Color = RACE_COLORS[selected_race] if unit["side"] == 0 else Color("ff8c96")
-		var unit_art: Texture2D = goblin_texture
-		if int(unit["side"]) == 0:
+		actors.append({"p": _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"])), "data": unit, "guard": false, "side": int(unit["side"])})
+	actors.sort_custom(func(a, b): return a["p"].y < b["p"].y)
+	for actor in actors:
+		var p: Vector2 = actor["p"]
+		if not _in_camera(p, 100.0):
+			continue
+		var data: Dictionary = actor["data"]
+		var friendly: bool = int(actor["side"]) == 0
+		var art: Texture2D = goblin_texture
+		if friendly:
 			match selected_race:
-				0: unit_art = dwarf_texture
-				1: unit_art = goblin_texture
-				2: unit_art = elf_texture
-				3: unit_art = void_texture
-		arena.draw_texture_rect(unit_art, Rect2(p + Vector2(-25, -50 + bob), Vector2(50, 63)), false)
-		_draw_health_bar(p + Vector2(0, bob), float(unit["health"]), float(unit["max_health"]), int(unit["side"]) == 0)
+				0: art = dwarf_texture
+				1: art = goblin_texture
+				2: art = elf_texture
+				3: art = void_texture
+		var bob: float = 0.0 if actor["guard"] else sin(visual_time * 11.0 + float(data["position"]) * 17.0) * 2.0
+		var scale_factor: float = 1.16 if actor["guard"] else 1.0
+		arena.draw_circle(p + Vector2(2, 11), 17.0 * scale_factor, Color("071924", 0.42))
+		var art_size := Vector2(52, 66) * scale_factor
+		arena.draw_texture_rect(art, Rect2(p + Vector2(-art_size.x * 0.5, -art_size.y + 13 + bob), art_size), false)
+		if actor["guard"]:
+			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
+		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, 42.0 if actor["guard"] else 34.0)
+	for spark in hit_sparks:
+		var p: Vector2 = spark["p"]
+		var life: float = float(spark["life"]) / 0.5
+		var color := Color("ffdd8c") if spark["friendly"] else Color("ff748f")
+		arena.draw_circle(p + Vector2(0, -29), 23.0 * (1.0 - life), Color(color.r, color.g, color.b, life * 0.2))
+		for k in 6:
+			var angle: float = TAU * float(k) / 6.0 + visual_time
+			var direction := Vector2(cos(angle), sin(angle))
+			arena.draw_line(p + Vector2(0, -29) + direction * 7.0, p + Vector2(0, -29) + direction * (10.0 + (1.0 - life) * 23.0), Color(color.r, color.g, color.b, life), 2.5)
 	for i in 9:
 		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
 		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
