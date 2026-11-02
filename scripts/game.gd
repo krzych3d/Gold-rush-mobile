@@ -61,6 +61,7 @@ var touch_points: Dictionary = {}
 var last_pinch_distance := 0.0
 var terrain_details: Array = []
 var hit_sparks: Array = []
+var fallen_actors: Array = []
 var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
 var crystal_texture: Texture2D = preload("res://assets/world/arcane_crystal.svg")
 var dwarf_texture: Texture2D = preload("res://assets/world/dwarf_guard.svg")
@@ -404,6 +405,7 @@ func _guard_combat(dt: float) -> void:
 			hit_sparks.append({"p": _point(int(target["lane"]), clampf(float(target["position"]), 0.0, 1.0), int(target["side"])), "life": 0.5, "friendly": int(guard["side"]) == 0})
 			guard["cooldown"] = 0.9
 			if float(target["health"]) <= 0.0:
+				_record_fallen(target)
 				if int(target["carried"]) > 0:
 					gold[int(guard["side"])] += int(target["carried"])
 				units.erase(target)
@@ -413,6 +415,11 @@ func _guard_combat(dt: float) -> void:
 			var up: Vector2 = _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"]))
 			if gp.distance_to(up) < 48.0:
 				guard["health"] -= (9.0 if int(unit["kind"]) == -1 else 14.0) * dt
+
+func _record_fallen(data: Dictionary) -> void:
+	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0})
+	if fallen_actors.size() > 30:
+		fallen_actors.pop_front()
 
 func _draw_health_bar(p: Vector2, health: float, max_health: float, friendly: bool, width: float = 34.0) -> void:
 	var ratio: float = clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
@@ -544,6 +551,10 @@ func _tick() -> void:
 	_refresh()
 
 func _simulate(dt: float) -> void:
+	for fallen in fallen_actors.duplicate():
+		fallen["age"] = float(fallen["age"]) + dt
+		if float(fallen["age"]) >= 0.8:
+			fallen_actors.erase(fallen)
 	for spark in hit_sparks.duplicate():
 		spark["life"] = float(spark["life"]) - dt
 		if float(spark["life"]) <= 0.0:
@@ -574,6 +585,7 @@ func _simulate(dt: float) -> void:
 						traps[defender].erase(trap)
 					break
 		if unit["health"] <= 0:
+			_record_fallen(unit)
 			if unit["carried"] > 0:
 				gold[defender] += unit["carried"]
 			units.erase(unit)
@@ -935,6 +947,24 @@ func _draw_arena() -> void:
 				var weapon_tip := p + Vector2(18.0 if friendly else -18.0, -20.0)
 				arena.draw_arc(weapon_tip, 14.0, -1.1, 1.3, 14, fx_color, 2.6)
 				arena.draw_circle(weapon_tip, 3.5, fx_color)
+	# Play the defeat row once before removing fallen units from the screen.
+	for fallen in fallen_actors:
+		var death_p: Vector2 = _point(int(fallen["lane"]), float(fallen["position"]), int(fallen["side"]))
+		if not _in_camera(death_p, 100.0):
+			continue
+		var death_atlas: Texture2D = atlas_goblin_raider
+		if int(fallen["side"]) == 0:
+			match selected_race:
+				0: death_atlas = atlas_dwarf_carrier if int(fallen["kind"]) == 1 else atlas_arcane_mage if int(fallen["kind"]) == 2 else atlas_dwarf_defender
+				1: death_atlas = atlas_goblin_saboteur if int(fallen["kind"]) == 2 else atlas_goblin_raider
+				2: death_atlas = atlas_arcane_mage if int(fallen["kind"]) == 2 else atlas_elf_ranger
+				3: death_atlas = atlas_arcane_mage if int(fallen["kind"]) == 2 else atlas_shadow_wolf
+		else:
+			death_atlas = atlas_shadow_wolf if int(fallen["kind"]) == 1 else atlas_goblin_saboteur if int(fallen["kind"]) == 2 else atlas_goblin_raider
+		var death_frame: int = mini(7, int(float(fallen["age"]) * 10.0))
+		arena.draw_set_transform_matrix(_sprite_transform(death_p))
+		arena.draw_texture_rect_region(death_atlas, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)))
+		arena.draw_set_transform_matrix(_iso_transform())
 	for spark in hit_sparks:
 		var p: Vector2 = spark["p"]
 		var life: float = float(spark["life"]) / 0.5
