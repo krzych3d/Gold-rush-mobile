@@ -1,6 +1,6 @@
 extends Control
 
-const MAX_WAVES := 5
+const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
 const RACE_DESCRIPTIONS := ["Ironbeards - armored warriors and fortified vaults", "Green Shadows - swift thieves and daring escapes", "Moon Guardians - resilient magic and extra loot", "Astral Assassins - swift strikes and rich hauls"]
 const RACE_COLORS := [Color("d7a85c"), Color("78c978"), Color("a6dfff"), Color("ba8aff")]
@@ -17,12 +17,15 @@ var wave := 1
 var phase := "SELECT"
 var remaining := PREP_TIME
 var gold := [1000, 1000]
+var wallet := [360, 360]
+var interest_last := [0, 0]
+var victory_reason := ""
 var lane := 1
 var orders: Array = [[], []]
 var traps: Array = [[], []]
 var units: Array = []
 var rng := RandomNumberGenerator.new()
-var message := "Every purchase reduces your vault!"
+var message := "Build your army with coins. Protect your vault!"
 var hud: Label
 var timer_label: Label
 var info: Label
@@ -268,11 +271,11 @@ func _buy_unit(kind: int) -> void:
 	for order in orders[0]:
 		if order["lane"] == lane:
 			lane_count += 1
-	if gold[0] < COSTS[kind] or orders[0].size() >= 6 or lane_count >= 4:
+	if wallet[0] < COSTS[kind] or orders[0].size() >= 6 or lane_count >= 4:
 		message = "Not enough gold or unit limit reached."
 		_refresh()
 		return
-	gold[0] -= COSTS[kind]
+	wallet[0] -= COSTS[kind]
 	orders[0].append({"kind": kind, "lane": lane})
 	message = "Thief queued on lane %d" % (lane + 1)
 	_refresh()
@@ -284,26 +287,26 @@ func _buy_trap(kind: int) -> void:
 	for trap in traps[0]:
 		if trap["lane"] == lane:
 			lane_count += 1
-	if gold[0] < TRAP_COSTS[kind] or lane_count >= 5:
+	if wallet[0] < TRAP_COSTS[kind] or lane_count >= 5:
 		message = "Not enough gold or trap limit reached."
 		_refresh()
 		return
-	gold[0] -= TRAP_COSTS[kind]
+	wallet[0] -= TRAP_COSTS[kind]
 	traps[0].append({"lane": lane, "kind": kind, "charges": [3, 2, 999][kind]})
 	message = "Trap built on lane %d" % (lane + 1)
 	_refresh()
 
 func _bot_prepare() -> void:
-	var budget: int = mini(350, int(gold[1] * 0.38))
+	var budget: int = mini(400, wallet[1])
 	while budget >= 75 and orders[1].size() < 4:
 		var kind := rng.randi_range(0, 2)
-		if COSTS[kind] > budget or COSTS[kind] >= gold[1]:
+		if COSTS[kind] > budget or COSTS[kind] > wallet[1]:
 			break
 		orders[1].append({"lane": rng.randi_range(0, 2), "kind": kind})
-		gold[1] -= COSTS[kind]
+		wallet[1] -= COSTS[kind]
 		budget -= COSTS[kind]
-	if gold[1] > 160 and traps[1].size() < wave * 2:
-		gold[1] -= 55
+	if wallet[1] >= 55 and traps[1].size() < wave * 2:
+		wallet[1] -= 55
 		traps[1].append({"lane": rng.randi_range(0, 2), "kind": 0, "charges": 3})
 
 func _start_pressed() -> void:
@@ -351,12 +354,18 @@ func _tick() -> void:
 	arena.queue_redraw()
 	if phase == "END":
 		return
+	if _check_vaults():
+		_refresh()
+		return
 	remaining -= 0.1
 	if phase == "PREP":
 		if remaining <= 0.0:
 			_begin_attack()
 	else:
 		_simulate(0.1)
+		if _check_vaults():
+			_refresh()
+			return
 		if remaining <= 0.0 or units.is_empty():
 			_end_wave()
 	_refresh()
@@ -397,12 +406,30 @@ func _simulate(dt: float) -> void:
 				var amount: int = mini(unit["capacity"], gold[defender])
 				gold[defender] -= amount
 				unit["carried"] = amount
+				if _check_vaults():
+					return
 				unit["returning"] = true
 		else:
 			unit["position"] -= unit["speed"] * dt
 			if unit["position"] <= 0.0:
 				gold[unit["side"]] += unit["carried"]
 				units.erase(unit)
+
+func _check_vaults() -> bool:
+	if phase == "END" or phase == "SELECT":
+		return phase == "END"
+	if gold[0] > 0 and gold[1] > 0:
+		return false
+	phase = "END"
+	remaining = 0.0
+	if gold[0] <= 0 and gold[1] <= 0:
+		message = "DRAW! BOTH VAULTS ARE EMPTY"
+	elif gold[1] <= 0:
+		message = "VICTORY! ENEMY VAULT DESTROYED"
+	else:
+		message = "DEFEAT! YOUR VAULT IS EMPTY"
+	victory_reason = message
+	return true
 
 func _end_wave() -> void:
 	if phase != "ATTACK":
@@ -413,23 +440,26 @@ func _end_wave() -> void:
 	units.clear()
 	orders[0].clear()
 	orders[1].clear()
-	if wave >= MAX_WAVES:
-		phase = "END"
-		message = "YOU WIN!" if gold[0] > gold[1] else "BOT WINS!" if gold[1] > gold[0] else "DRAW!"
+	if _check_vaults():
 		return
+	# Vault savings compound; dwarves receive a substantial faction bonus.
 	for side in 2:
-		gold[side] += mini(100, int(gold[side] * 0.08))
+		var rate: float = 0.28 if side == 0 and selected_race == 0 else 0.18
+		var payout: int = maxi(20, int(floor(float(gold[side]) * rate)))
+		interest_last[side] = payout
+		gold[side] += payout
+		wallet[side] += 160 + mini(wave * 25, 250)
 	wave += 1
 	phase = "PREP"
 	remaining = PREP_TIME
-	message = "Interest paid. Prepare for next wave!"
+	message = "INTEREST +%d GOLD  •  RECRUITMENT +%d" % [interest_last[0], 160 + mini((wave - 1) * 25, 250)]
 
 func _refresh() -> void:
 	race_button.text = "RACE: " + RACE_NAMES[selected_race]
 	race_button.disabled = true
-	hud.text = "YOUR VAULT: %d     ENEMY: %d" % [gold[0], gold[1]]
-	timer_label.text = "WAVE %d/%d | %s | %02d s" % [wave, MAX_WAVES, phase, int(maxf(0.0, ceilf(remaining)))]
-	info.text = message + "\nLane: %d | Thieves: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
+	hud.text = "VAULT %d  •  ENEMY %d  •  COINS %d" % [gold[0], gold[1], wallet[0]]
+	timer_label.text = "WAVE %d  |  %s  |  %02d s  |  INTEREST %d%%" % [wave, phase, int(maxf(0.0, ceilf(remaining))), 28 if selected_race == 0 else 18]
+	info.text = message + "\nLane: %d | Units: %d | Traps: %d" % [lane + 1, orders[0].size(), traps[0].size()]
 	for i in range(3, 9):
 		controls[i].disabled = phase != "PREP"
 	controls[9].disabled = phase == "ATTACK"
