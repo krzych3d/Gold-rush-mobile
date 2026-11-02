@@ -870,7 +870,9 @@ func _draw_arena() -> void:
 	for guard in guards:
 		actors.append({"p": _point(int(guard["lane"]), float(guard["position"]), int(guard["side"])), "data": guard, "guard": true, "side": int(guard["side"])})
 	for unit in units:
-		actors.append({"p": _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"])), "data": unit, "guard": false, "side": int(unit["side"])})
+		if float(unit["position"]) < -0.035:
+			continue # Units enter the battlefield gradually instead of stacking at the castle.
+		actors.append({"p": _point(int(unit["lane"]), clampf(float(unit["position"]), -0.035, 1.0), int(unit["side"])), "data": unit, "guard": false, "side": int(unit["side"])})
 	actors.sort_custom(func(a, b): return _iso_project(a["p"]).y < _iso_project(b["p"]).y)
 	for actor in actors:
 		var p: Vector2 = actor["p"]
