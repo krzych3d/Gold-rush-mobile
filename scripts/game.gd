@@ -46,6 +46,7 @@ var visual_time := 0.0
 var goblin_walk_prototype: Texture2D
 # Optional separate, foot-aligned 192px PNG strips: idle/walk/attack/hit/carry/deposit/death.
 var goblin_action_strips: Dictionary = {}
+# 10 imported epic RGBA atlases are now present; trigger a fresh Android build.
 # Optional 8x6 high-quality special action sheets. Base art remains playable
 # until the validated ZIP has actually been imported into the repository.
 var special_animation_atlases: Dictionary = {}
