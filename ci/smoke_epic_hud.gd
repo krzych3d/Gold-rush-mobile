@@ -28,7 +28,7 @@ func _run() -> void:
 		var button: Button = game.controls[index]
 		var icon: TextureRect = button.get_node_or_null("Artwork") as TextureRect
 		var label: Label = button.get_node_or_null("Caption") as Label
-		if icon == null or icon.texture == null or label == null or not button.pressed.is_connected(game._buy_unit.bind(index - 3)) and index < 6:
+		if icon == null or icon.texture == null or label == null or button.pressed.get_connections().is_empty():
 			_fail("Missing tap handler, image or caption on card %d" % index)
 			return
 		if button.size.y < 65.0:
