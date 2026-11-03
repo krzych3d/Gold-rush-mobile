@@ -720,10 +720,9 @@ func _tick() -> void:
 		return
 	visual_time += 0.05
 	render_elapsed += 0.05
-	# Rendering all 24 transparent 128px sprite regions every simulation step
-	# caused significant UI jank on low-end phones. 12.5 Hz scene redraw is
-	# sufficient for the current 8-frame sprite sheets; simulation stays 20 Hz.
-	if render_elapsed >= 0.08:
+	# Animate up to 20 frames per second; on lower-end Android screens the
+	# fixed simulation clock remains independent of painting the battlefield.
+	if render_elapsed >= 0.049:
 		render_elapsed = 0.0
 		arena.queue_redraw()
 	if phase == "END":
@@ -742,7 +741,12 @@ func _tick() -> void:
 			return
 		if remaining <= 0.0 or units.is_empty():
 			_end_wave()
-	_refresh()
+	# Buttons and rich text are expensive to layout on older Android devices.
+	# Update the clock and affordability 5×/sec rather than 20×/sec.
+	ui_elapsed += 0.05
+	if ui_elapsed >= 0.2 or phase == "END":
+		ui_elapsed = 0.0
+		_refresh()
 
 func _simulate(dt: float) -> void:
 	for side_traps in traps:
