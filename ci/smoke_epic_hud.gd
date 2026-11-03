@@ -60,6 +60,35 @@ func _run() -> void:
 		if button.size.y < 65.0:
 			_fail("Card tap target too small at index %d" % index)
 			return
+	# The UI must use generated fantasy texture art, not the old flat
+	# StyleBoxFlat controls that looked like stock Godot buttons.
+	for button_index in game.controls.size():
+		var skinned_button: Button = game.controls[button_index]
+		var artwork_style := skinned_button.get_theme_stylebox("normal")
+		if not (artwork_style is StyleBoxTexture):
+			_fail("Button %d lacks an illustrated nine-patch skin" % button_index)
+			return
+		var art_tex: Texture2D = (artwork_style as StyleBoxTexture).texture
+		if art_tex == null or art_tex.get_width() < 300:
+			_fail("Illustrated control art did not import from SVG %d" % button_index)
+			return
+	for key in ["IllustratedTitle", "ResourceArtwork", "PhaseArtwork", "MessageArtwork"]:
+		var plaque: PanelContainer = game.find_child(key, true, false) as PanelContainer
+		if plaque == null or not (plaque.get_theme_stylebox("panel") is StyleBoxTexture):
+			_fail("Missing fantasy artwork panel: " + key)
+			return
+	for button_index in range(3, 9):
+		var card: Button = game.controls[button_index]
+		var coin: TextureRect = card.get_node_or_null("GoldCoin") as TextureRect
+		var price: Label = card.get_node_or_null("Price") as Label
+		var aura: TextureRect = card.get_node_or_null("ArtGlow") as TextureRect
+		if coin == null or coin.texture == null or price == null or aura == null:
+			_fail("Missing dynamic currency or decorated hero art on card %d" % button_index)
+			return
+		if price.text != str(game.COSTS[button_index - 3] if button_index < 6 else game.TRAP_COSTS[button_index - 6]):
+			_fail("Price text is disconnected from game economy at card %d" % button_index)
+			return
+	print("Illustrated UI QA: gold-frame image skins, live prices and four plaques loaded")
 	# Choose Voidborn, verifying the card artwork changes to an actual role atlas.
 	game._choose_faction(3)
 	if game.last_icon_race != 3:
