@@ -80,6 +80,10 @@ var touch_points: Dictionary = {}
 var last_pinch_distance := 0.0
 var terrain_details: Array = []
 var hit_sparks: Array = []
+var turret_bolts: Array = []
+var turret_texture: Texture2D = preload("res://assets/ui/turret.svg")
+var spikes_texture: Texture2D = preload("res://assets/ui/spikes.svg")
+var snare_texture: Texture2D = preload("res://assets/ui/snare.svg")
 var fallen_actors: Array = []
 var deposit_actors: Array = []
 var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
@@ -616,7 +620,8 @@ func _buy_trap(kind: int) -> void:
 		return
 	gold[0] -= TRAP_COSTS[kind]
 	_check_vaults()
-	traps[0].append({"lane": lane, "kind": kind, "charges": [3, 2, 999][kind]})
+	traps[0].append({"lane": lane, "kind": kind, "charges": [3, 2, 999][kind],
+		"slot": lane_count, "cooldown": 0.0, "fire_time": 0.0})
 	message = "Trap built on lane %d" % (lane + 1)
 	_refresh()
 
@@ -642,7 +647,8 @@ func _bot_prepare() -> void:
 	if gold[1] >= 55 and traps[1].size() < wave * 2:
 		gold[1] -= 55
 		_check_vaults()
-		traps[1].append({"lane": rng.randi_range(0, 2), "kind": 0, "charges": 3})
+		traps[1].append({"lane": rng.randi_range(0, 2), "kind": 0, "charges": 3,
+			"slot": traps[1].size() % 4, "cooldown": 0.0, "fire_time": 0.0})
 
 func _start_pressed() -> void:
 	if phase == "END":
@@ -718,6 +724,14 @@ func _tick() -> void:
 	_refresh()
 
 func _simulate(dt: float) -> void:
+	for side_traps in traps:
+		for trap in side_traps:
+			trap["cooldown"] = maxf(0.0, float(trap.get("cooldown", 0.0)) - dt)
+			trap["fire_time"] = maxf(0.0, float(trap.get("fire_time", 0.0)) - dt)
+	for bolt in turret_bolts.duplicate():
+		bolt["age"] = float(bolt["age"]) + dt
+		if float(bolt["age"]) >= 0.36:
+			turret_bolts.erase(bolt)
 	for deposit in deposit_actors.duplicate():
 		deposit["age"] = float(deposit["age"]) + dt
 		if float(deposit["age"]) >= 0.75:
@@ -752,7 +766,18 @@ func _simulate(dt: float) -> void:
 					unit["triggered"].append(trap)
 					break
 				if trap["kind"] == 2:
-					unit["health"] -= 18.0 * dt
+					# Each tower is its own animated structure with an individual
+					# reload timer, rather than invisible continuous DPS.
+					if float(trap.get("cooldown", 0.0)) <= 0.0:
+						unit["health"] -= 11.0
+						unit["hit_time"] = 0.2
+						trap["cooldown"] = 0.6
+						trap["fire_time"] = 0.28
+						var muzzle: Vector2 = _trap_position(trap, defender) + Vector2(0, -65)
+						var hit_at: Vector2 = _point(int(unit["lane"]), float(unit["position"]), int(unit["side"])) + Vector2(0, -70)
+						turret_bolts.append({"from": muzzle, "to": hit_at, "age": 0.0, "friendly": defender == 0})
+						if turret_bolts.size() > 45:
+							turret_bolts.pop_front()
 				elif not unit["triggered"].has(trap):
 					unit["triggered"].append(trap)
 					if unit["kind"] == 2 and not unit["disarmed"]:
@@ -1124,6 +1149,10 @@ func _directional_sprite_transform(p: Vector2, facing: float, tilt: float = 0.0)
 	var origin := arena.size * 0.5 + camera_offset + _iso_project(p) * zoom
 	return Transform2D(Vector2(c * zoom * direction, sn * zoom * direction), Vector2(-sn * zoom, c * zoom), origin)
 
+func _trap_position(trap: Dictionary, owner: int) -> Vector2:
+	var slot: int = int(trap.get("slot", 0))
+	return _point(int(trap["lane"]), 0.48 + float(slot % 5) * 0.085, 1 - owner)
+
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
@@ -1156,11 +1185,28 @@ func _draw_arena() -> void:
 		var aura_alpha: float = 0.10 + 0.06 * sin(visual_time * 2.0 + float(side))
 		arena.draw_arc(fort + Vector2(0, -35), 56.0, 0.0, TAU, 40, Color(aura.r, aura.g, aura.b, aura_alpha), 4.0)
 		for trap in traps[side]:
-			var p := _point(trap["lane"], 0.67, 1 - side)
-			p.y += float(traps[side].find(trap) % 3 - 1) * 13.0
-			arena.draw_circle(p + Vector2(0, 5), 12, Color("142c35", 0.6))
-			arena.draw_circle(p, 10, [Color("bdb7a9"), Color("e5ac4e"), Color("a8a0cf")][trap["kind"]])
-			arena.draw_circle(p + Vector2(-3, -3), 3, Color("fff2cb"))
+			var p: Vector2 = _trap_position(trap, side)
+			var trap_kind: int = int(trap["kind"])
+			var icon_texture: Texture2D = turret_texture if trap_kind == 2 else snare_texture if trap_kind == 1 else spikes_texture
+			var shimmer: float = 0.55 + 0.25 * sin(visual_time * 4.0 + float(trap.get("slot", 0)))
+			arena.draw_circle(p + Vector2(0, 7), 29.0, Color("05091d", 0.55))
+			var glow: Color = Color("5bcfff", 0.40 * shimmer) if trap_kind == 2 else Color("b568ff", 0.4 * shimmer) if trap_kind == 1 else Color("ffae60", 0.3 * shimmer)
+			arena.draw_arc(p + Vector2(0, -32), 32.0 + 3.0 * shimmer, 0.0, TAU, 24, glow, 3.0)
+			arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-45, -87), Vector2(90, 90)), false)
+			if trap_kind == 2 and float(trap.get("fire_time", 0.0)) > 0.0:
+				var fire: float = float(trap["fire_time"]) / 0.28
+				arena.draw_circle(p + Vector2(0, -66), 13.0 + 6.0 * (1.0 - fire), Color("9aeaff", fire * 0.8))
+	# Animated turret bolts move between the tower and the target.
+	for bolt in turret_bolts:
+		var t: float = clampf(float(bolt["age"]) / 0.36, 0.0, 1.0)
+		var a: Vector2 = bolt["from"]
+		var b: Vector2 = bolt["to"]
+		var projectile: Vector2 = a.lerp(b, t) + Vector2(0, -38.0 * sin(t * PI))
+		var tail: Vector2 = a.lerp(b, maxf(0.0, t - 0.13)) + Vector2(0, -38.0 * sin(maxf(0.0, t - 0.13) * PI))
+		var shot_color: Color = Color("92eaff", 1.0 - 0.45 * t) if bool(bolt["friendly"]) else Color("ff8ab5", 1.0 - 0.45 * t)
+		arena.draw_line(tail, projectile, shot_color, 5.0)
+		arena.draw_circle(projectile, 6.0, shot_color)
+		arena.draw_circle(projectile, 2.5, Color("ffffff", 0.92))
 	# Draw combatants in depth order, including foot shadows and hit feedback.
 	var actors: Array = []
 	for guard in guards:
