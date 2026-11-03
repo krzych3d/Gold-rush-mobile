@@ -58,6 +58,8 @@ const GOBLIN_ACTION_FPS := [5.0, 11.0, 12.0, 12.0, 12.0, 12.0, 11.0]
 var menu_music: AudioStreamPlayer
 var performance_label: Label
 var performance_elapsed := 0.0
+var render_elapsed := 0.0
+var ui_elapsed := 0.0
 var title_label: Label
 var race_button: Button
 var selection_layer: ColorRect
@@ -172,16 +174,16 @@ func _ready() -> void:
 	header_frame.add_child(header)
 	var title := Label.new()
 	title_label = title
-	title.text = "⚔  VAULT WARS  ⚔"
+	title.text = "VAULT WARS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(title, 30, Color("ffdc95"))
+	_style_label(title, 25, Color("ffdc95"))
 	header.add_child(title)
 	var banner := HBoxContainer.new()
 	header.add_child(banner)
 	hud = Label.new()
 	hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_style_label(hud, 20, Color("f8d47e"))
+	_style_label(hud, 18, Color("f8d47e"))
 	banner.add_child(hud)
 	timer_label = Label.new()
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -196,11 +198,12 @@ func _ready() -> void:
 	var battlefield_frame := PanelContainer.new()
 	_apply_epic_panel(battlefield_frame, Color("071728"), Color("98713d"), 3)
 	battlefield_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	battlefield_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	battlefield_frame.size_flags_stretch_ratio = 3.0
+	# Keep the map panel close to its original 2400:1060 landscape ratio.
+	battlefield_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	battlefield_frame.custom_minimum_size.y = 335
 	root.add_child(battlefield_frame)
 	arena = Control.new()
-	arena.custom_minimum_size = Vector2(0, 230)
+	arena.custom_minimum_size = Vector2(0, 325)
 	arena.clip_contents = true
 	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -237,10 +240,12 @@ func _ready() -> void:
 
 	var command_frame := PanelContainer.new()
 	command_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_apply_epic_panel(command_frame, Color("10192e"), Color("bc884a"), 7)
+	command_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_apply_epic_panel(command_frame, Color("10192e"), Color("bc884a"), 5)
 	root.add_child(command_frame)
 	gameplay_panel = VBoxContainer.new()
-	gameplay_panel.add_theme_constant_override("separation", 4)
+	gameplay_panel.add_theme_constant_override("separation", 6)
+	gameplay_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	command_frame.add_child(gameplay_panel)
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -259,7 +264,8 @@ func _ready() -> void:
 	for index in 3:
 		var lane_button := Button.new()
 		lane_button.text = "LANE %d" % (index + 1)
-		lane_button.custom_minimum_size.y = 44
+		lane_button.custom_minimum_size.y = 50
+		lane_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		lane_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		lane_button.focus_mode = Control.FOCUS_NONE
 		_style_button(lane_button, true)
@@ -269,35 +275,39 @@ func _ready() -> void:
 
 	var unit_row := HBoxContainer.new()
 	unit_row.add_theme_constant_override("separation", 6)
+	unit_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gameplay_panel.add_child(unit_row)
 	for index in 3:
 		var unit_key: String = _character_key(0, index)
 		var unit_button := _epic_card(["RUNNER", "CARRIER", "SABOTEUR"][index],
-			COSTS[index], _preview_frame(_character_atlas(unit_key)), 88)
+			COSTS[index], _preview_frame(_character_atlas(unit_key)), 125)
 		unit_row.add_child(unit_button)
 		controls.append(unit_button)
 		unit_button.pressed.connect(_buy_unit.bind(index))
 
 	var trap_row := HBoxContainer.new()
 	trap_row.add_theme_constant_override("separation", 6)
+	trap_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gameplay_panel.add_child(trap_row)
 	for index in 3:
 		var icon_path: String = ["res://assets/ui/spikes.svg", "res://assets/ui/snare.svg", "res://assets/ui/turret.svg"][index]
 		var trap_button := _epic_card(["SPIKES", "SNARE", "TURRET"][index],
-			TRAP_COSTS[index], load(icon_path) as Texture2D, 80)
+			TRAP_COSTS[index], load(icon_path) as Texture2D, 108)
 		trap_row.add_child(trap_button)
 		controls.append(trap_button)
 		trap_button.pressed.connect(_buy_trap.bind(index))
 
 	guard_button = Button.new()
 	guard_button.text = "⚔  HIRE DEFENDER  ·  130 GOLD"
-	guard_button.custom_minimum_size.y = 43
+	guard_button.custom_minimum_size.y = 52
+	guard_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	guard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(guard_button, true)
 	gameplay_panel.add_child(guard_button)
 	guard_button.pressed.connect(_buy_guard)
 	ability_button = Button.new()
-	ability_button.custom_minimum_size.y = 43
+	ability_button.custom_minimum_size.y = 52
+	ability_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	ability_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(ability_button, false)
 	gameplay_panel.add_child(ability_button)
@@ -305,23 +315,27 @@ func _ready() -> void:
 
 	var economy_row := HBoxContainer.new()
 	economy_row.add_theme_constant_override("separation", 5)
+	economy_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gameplay_panel.add_child(economy_row)
 	invest_button = Button.new()
 	invest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	invest_button.custom_minimum_size.y = 43
+	invest_button.custom_minimum_size.y = 52
+	invest_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_button(invest_button, true)
 	economy_row.add_child(invest_button)
 	invest_button.pressed.connect(_upgrade_bank)
 	raid_button = Button.new()
 	raid_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	raid_button.custom_minimum_size.y = 43
+	raid_button.custom_minimum_size.y = 52
+	raid_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_button(raid_button, true)
 	economy_row.add_child(raid_button)
 	raid_button.pressed.connect(_buy_raid_boost)
 
 	var start := Button.new()
 	start.text = "⚔  UNLEASH THE RAID  ⚔"
-	start.custom_minimum_size.y = 53
+	start.custom_minimum_size.y = 64
+	start.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(start, false)
 	gameplay_panel.add_child(start)
@@ -705,7 +719,12 @@ func _tick() -> void:
 	if phase == "SELECT":
 		return
 	visual_time += 0.05
-	arena.queue_redraw()
+	render_elapsed += 0.05
+	# Animate up to 20 frames per second; on lower-end Android screens the
+	# fixed simulation clock remains independent of painting the battlefield.
+	if render_elapsed >= 0.049:
+		render_elapsed = 0.0
+		arena.queue_redraw()
 	if phase == "END":
 		return
 	if _check_vaults():
@@ -722,7 +741,12 @@ func _tick() -> void:
 			return
 		if remaining <= 0.0 or units.is_empty():
 			_end_wave()
-	_refresh()
+	# Buttons and rich text are expensive to layout on older Android devices.
+	# Update the clock and affordability 5×/sec rather than 20×/sec.
+	ui_elapsed += 0.05
+	if ui_elapsed >= 0.2 or phase == "END":
+		ui_elapsed = 0.0
+		_refresh()
 
 func _simulate(dt: float) -> void:
 	for side_traps in traps:
@@ -892,11 +916,11 @@ func _refresh() -> void:
 		var available_unit: bool = phase == "PREP" and gold[0] >= COSTS[i] and orders[0].size() < 6 and queued_in_lane < 4
 		var unit_card := controls[3 + i]
 		unit_card.disabled = not available_unit
-		unit_card.modulate = Color.WHITE if available_unit else Color(0.67, 0.69, 0.76)
+		unit_card.modulate = Color.WHITE
 		var available_trap: bool = phase == "PREP" and gold[0] >= TRAP_COSTS[i] and traps_in_lane < 5
 		var trap_card := controls[6 + i]
 		trap_card.disabled = not available_trap
-		trap_card.modulate = Color.WHITE if available_trap else Color(0.67, 0.69, 0.76)
+		trap_card.modulate = Color.WHITE
 	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST or guards_in_lane >= 3
 	ability_button.disabled = phase != "PREP" or ability_used or gold[0] < 120
 	ability_button.text = "✦ %s  •  120 GOLD" % ABILITY_NAMES[selected_race] if not ability_used else "✓ %s ACTIVE" % ABILITY_NAMES[selected_race]
@@ -961,7 +985,7 @@ func _preview_frame(sheet: Texture2D) -> Texture2D:
 		return null
 	var preview := AtlasTexture.new()
 	preview.atlas = sheet
-	preview.region = Rect2(0, 0, 128, 128)
+	preview.region = Rect2(15, 6, 100, 116)
 	return preview
 
 func _epic_card(caption: String, price: int, art: Texture2D, minimum_height: float) -> Button:
@@ -975,21 +999,24 @@ func _epic_card(caption: String, price: int, art: Texture2D, minimum_height: flo
 	portrait.name = "Artwork"
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait.texture = art
+	# Multiply the intentionally dark Voidborn sheet by a neutral brightness
+	# boost in the command cards, not on battlefield sprites.
+	portrait.modulate = Color(1.7, 1.7, 1.7)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	button.add_child(portrait)
-	portrait.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	portrait.offset_left = 7
-	portrait.offset_right = -7
-	portrait.offset_top = 2
-	portrait.offset_bottom = minimum_height - 31.0
+	portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	portrait.offset_left = 3
+	portrait.offset_right = -3
+	portrait.offset_top = 3
+	portrait.offset_bottom = -32
 	var label := Label.new()
 	label.name = "Caption"
 	label.text = "%s  •  %d" % [caption, price]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_style_label(label, 14, Color("fff0c7"))
+	_style_label(label, 17, Color("fff0c7"))
 	button.add_child(label)
 	label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	label.offset_top = -29
@@ -1022,10 +1049,10 @@ func _style_button(button: Button, is_lane: bool) -> void:
 		elif state == "pressed":
 			style.bg_color = Color("86572b")
 		elif state == "disabled":
-			style.bg_color = Color("1e273a")
+			style.bg_color = Color("24344b")
 		elif state == "focus":
 			style.bg_color = Color("1c3450")
-		style.border_color = Color("f8ca75") if state != "disabled" else Color("716955")
+		style.border_color = Color("f8ca75") if state != "disabled" else Color("a48c68")
 		style.set_border_width_all(2)
 		style.set_corner_radius_all(9)
 		style.content_margin_left = 4
@@ -1164,10 +1191,7 @@ func _draw_arena() -> void:
 	# Fill the tall phone viewport with a dimmed scenic continuation.
 	# The crisp, fully visible battlefield is drawn above in world coordinates.
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("071421"))
-	# A subtle, scaled scenery continuation fills the otherwise-empty margins
-	# around the fully visible widescreen battlefield on tall mobile displays.
-	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2.ZERO, arena.size),
-		false, Color(0.20, 0.26, 0.35, 0.34))
+	# No stretched, dark duplicate of the battlefield behind the crisp image.
 	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
 	# The battlefield is now one high-detail painting. Never draw the old
