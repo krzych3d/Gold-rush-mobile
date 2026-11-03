@@ -50,6 +50,9 @@ var goblin_action_strips: Dictionary = {}
 # Optional 8x6 high-quality special action sheets. Base art remains playable
 # until the validated ZIP has actually been imported into the repository.
 var special_animation_atlases: Dictionary = {}
+# Voidborn has four independent animated unit roles (guard, runner, carrier, mage).
+# Dedicated high-detail variants are loaded after the validated sprite-pack import.
+var void_animation_atlases: Dictionary = {}
 const GOBLIN_ACTIONS := ["idle", "walk", "attack", "hit", "death", "deposit", "carry"]
 const GOBLIN_ACTION_FPS := [5.0, 11.0, 12.0, 12.0, 12.0, 12.0, 11.0]
 var menu_music: AudioStreamPlayer
@@ -122,12 +125,18 @@ func _ready() -> void:
 			var strip := load(path) as Texture2D
 			if strip != null and strip.get_height() == 192 and strip.get_width() >= 192 and strip.get_width() % 192 == 0:
 				goblin_action_strips[action] = strip
-	for name in ["goblin_raider", "shadow_wolf", "arcane_mage"]:
+	for name in ["goblin_raider", "shadow_wolf", "arcane_mage", "dwarf_defender", "dwarf_carrier", "elf_ranger", "goblin_saboteur"]:
 		var special_path: String = "res://assets/epic/animations/%s_special_sheet.png" % name
 		if ResourceLoader.exists(special_path):
 			var special_tex := load(special_path) as Texture2D
 			if special_tex != null and special_tex.get_size() == Vector2(1024, 768):
 				special_animation_atlases[name] = special_tex
+	for name in ["void_sentinel", "void_stalker", "void_collector", "void_weaver"]:
+		var void_path: String = "res://assets/epic/animations/%s_sheet.png" % name
+		if ResourceLoader.exists(void_path):
+			var void_tex := load(void_path) as Texture2D
+			if void_tex != null and void_tex.get_size() == Vector2(1024, 768):
+				void_animation_atlases[name] = void_tex
 	menu_music = AudioStreamPlayer.new()
 	menu_music.name = "EnchantedMenuScore"
 	menu_music.volume_db = -9.0
@@ -476,7 +485,7 @@ func _guard_combat(dt: float) -> void:
 		if float(guard["health"]) <= 0.0:
 			# Defenders use the same non-looping defeat animation as raiders.
 			_record_fallen({"side": guard["side"], "lane": guard["lane"], "kind": 0,
-				"position": guard["position"], "returning": false})
+				"position": guard["position"], "returning": false, "guard": true})
 			guards.erase(guard)
 			continue
 		guard["cooldown"] = maxf(0.0, float(guard["cooldown"]) - dt)
@@ -518,7 +527,7 @@ func _guard_combat(dt: float) -> void:
 					unit["strike_cooldown"] = 0.65
 
 func _record_fallen(data: Dictionary) -> void:
-	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false))})
+	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false)), "guard": bool(data.get("guard", false))})
 	if fallen_actors.size() > 30:
 		fallen_actors.pop_front()
 
@@ -727,6 +736,8 @@ func _simulate(dt: float) -> void:
 				if _check_vaults():
 					return
 				unit["returning"] = true
+				# Reset pose phase exactly on direction reversal; return uses mirrored frames.
+				unit["action_time"] = 0.0
 		else:
 			unit["position"] -= unit["speed"] * dt
 			if unit["position"] <= 0.0:
@@ -913,6 +924,58 @@ func _in_camera(p: Vector2, margin: float = 100.0) -> bool:
 	var projected: Vector2 = _iso_project(p) * camera_zoom + camera_offset
 	return absf(projected.x) < arena.size.x * 0.5 + margin * camera_zoom and absf(projected.y) < arena.size.y * 0.5 + margin * camera_zoom
 
+func _character_key(side: int, kind: int, is_guard: bool = false) -> String:
+	# One authoritative map for battle, gold deposit, death and Animation Studio.
+	# Do not reuse a wolf as Voidborn or a generic mage as a Voidborn saboteur.
+	var role: int = clampi(kind, 0, 2)
+	if side != 0:
+		if is_guard:
+			return "goblin_raider"
+		return ["goblin_raider", "shadow_wolf", "goblin_saboteur"][role]
+	match selected_race:
+		0:
+			return "dwarf_defender" if is_guard or role == 0 else "dwarf_carrier" if role == 1 else "arcane_mage"
+		1:
+			return "goblin_raider" if is_guard or role != 2 else "goblin_saboteur"
+		2:
+			return "elf_ranger" if is_guard or role != 2 else "arcane_mage"
+		3:
+			if is_guard:
+				return "void_sentinel"
+			return ["void_stalker", "void_collector", "void_weaver"][role]
+	return "goblin_raider"
+
+func _character_atlas(key: String) -> Texture2D:
+	match key:
+		"dwarf_defender": return atlas_dwarf_defender
+		"dwarf_carrier": return atlas_dwarf_carrier
+		"elf_ranger": return atlas_elf_ranger
+		"arcane_mage": return atlas_arcane_mage
+		"goblin_raider": return atlas_goblin_raider
+		"goblin_saboteur": return atlas_goblin_saboteur
+		"shadow_wolf": return atlas_shadow_wolf
+		# Explicit fallbacks keep the game bootable before external PNG upload.
+		"void_sentinel": return void_animation_atlases.get(key, atlas_dwarf_defender)
+		"void_stalker": return void_animation_atlases.get(key, atlas_goblin_saboteur)
+		"void_collector": return void_animation_atlases.get(key, atlas_dwarf_carrier)
+		"void_weaver": return void_animation_atlases.get(key, atlas_arcane_mage)
+	return atlas_goblin_raider
+
+func _travel_facing(side: int, returning: bool) -> float:
+	# Side 0 attacks towards screen right; side 1 attacks towards screen left.
+	# The actual return journey always reverses that direction.
+	return -1.0 if ((side == 1) != returning) else 1.0
+
+func _directional_sprite_transform(p: Vector2, facing: float, tilt: float = 0.0) -> Transform2D:
+	# Construct a negative-X basis explicitly. No sprite mirror is inferred
+	# from Transform2D rotation/scale decomposition and no static images are rotated.
+	var direction: float = -1.0 if facing < 0.0 else 1.0
+	var c: float = cos(tilt)
+	var sn: float = sin(tilt)
+	var zoom: float = camera_zoom
+	var origin := arena.size * 0.5 + camera_offset + _iso_project(p) * zoom
+	return Transform2D(Vector2(c * zoom * direction, sn * zoom * direction), Vector2(-sn * zoom, c * zoom), origin)
+
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
@@ -962,30 +1025,10 @@ func _draw_arena() -> void:
 		var data: Dictionary = actor["data"]
 		var friendly: bool = int(actor["side"]) == 0
 		var kind: int = 0 if actor["guard"] else int(data["kind"])
-		var art: Texture2D = sprite_goblin_raider
-		if friendly:
-			match selected_race:
-				0: art = sprite_dwarf_carrier if kind == 1 else sprite_arcane_mage if kind == 2 else sprite_dwarf_defender
-				1: art = sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
-				2: art = sprite_arcane_mage if kind == 2 else sprite_elf_ranger
-				3: art = sprite_arcane_mage if kind == 2 else sprite_shadow_wolf
-		else:
-			art = sprite_shadow_wolf if kind == 1 else sprite_goblin_saboteur if kind == 2 else sprite_goblin_raider
-		# Atlas rows: 0 idle, 1 walk, 2 attack, 3 hit, 4 defeat, 5 deposit/loot.
-		# 128px frames, 8 per action; animation quality depends on atlas artwork.
-		var atlas: Texture2D = atlas_goblin_raider
-		if art == sprite_dwarf_defender:
-			atlas = atlas_dwarf_defender
-		elif art == sprite_dwarf_carrier:
-			atlas = atlas_dwarf_carrier
-		elif art == sprite_elf_ranger:
-			atlas = atlas_elf_ranger
-		elif art == sprite_arcane_mage:
-			atlas = atlas_arcane_mage
-		elif art == sprite_goblin_saboteur:
-			atlas = atlas_goblin_saboteur
-		elif art == sprite_shadow_wolf:
-			atlas = atlas_shadow_wolf
+		var character_key: String = _character_key(int(actor["side"]), kind, bool(actor["guard"]))
+		var atlas: Texture2D = _character_atlas(character_key)
+		# Each playable role maps to one actual sprite atlas, never a static placeholder.
+		# 6 rows × 8 distinct pose frames: idle, run, attack, hit, defeat, loot.
 		var animation_row: int = 0
 		if not actor["guard"] and phase == "ATTACK":
 			animation_row = 1
@@ -1019,10 +1062,7 @@ func _draw_arena() -> void:
 		var bob: float = -lift
 		var scale_factor: float = 1.0
 		var tilt: float = 0.0
-		var facing: float = 1.0 if friendly else -1.0
-		# Face the actual travel direction, including the return trip with gold.
-		if not actor["guard"] and bool(data.get("returning", false)):
-			facing *= -1.0
+		var facing: float = _travel_facing(int(actor["side"]), not bool(actor["guard"]) and bool(data.get("returning", false)))
 		var staggered: bool = not actor["guard"] and float(data.get("stunned", 0.0)) > 0.0
 		if staggered:
 			tilt = 0.16 * sin(visual_time * 17.0)
@@ -1033,34 +1073,27 @@ func _draw_arena() -> void:
 			var dust: float = (stride - 0.82) / 0.18
 			arena.draw_circle(p + Vector2(-facing * 15.0, 5.0), 3.0 + dust * 4.0, Color(0.85, 0.77, 0.58, dust * 0.28))
 		var art_size := Vector2(105, 112) * scale_factor
-		var sprite_scale := Vector2(facing * squash, 1.0 / squash)
-		var animation_transform := Transform2D(tilt, sprite_scale * camera_zoom)
-		animation_transform.origin = arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom
+		var animation_transform := _directional_sprite_transform(p, facing, tilt)
 		arena.draw_set_transform_matrix(animation_transform)
 		# A genuine special sprite replaces the basic pose only for actions it
 		# visually depicts. All other states keep the upgraded six-row atlas.
 		var special_sheet: Texture2D = null
 		var special_row: int = -1
-		if art == sprite_goblin_raider and special_animation_atlases.has("goblin_raider"):
-			special_sheet = special_animation_atlases["goblin_raider"]
+		if special_animation_atlases.has(character_key):
+			special_sheet = special_animation_atlases[character_key]
 			if animation_row == 2:
-				special_row = 2 # Dual-dagger combo
-			elif moving and (bool(data.get("returning", false)) or float(data.get("speed", 0.0)) > 0.19):
-				special_row = 0 # Sprint
-		elif art == sprite_shadow_wolf and special_animation_atlases.has("shadow_wolf"):
-			special_sheet = special_animation_atlases["shadow_wolf"]
-			if animation_row == 2:
-				special_row = 2 # Frenzy bite
-			elif moving and (bool(data.get("returning", false)) or float(data.get("speed", 0.0)) > 0.19):
-				special_row = 0 # Wolf sprint
-		elif art == sprite_arcane_mage and special_animation_atlases.has("arcane_mage"):
-			special_sheet = special_animation_atlases["arcane_mage"]
-			if animation_row == 2:
-				special_row = 3 # Arcane beam
-			elif moving and (bool(data.get("returning", false)) or float(data.get("speed", 0.0)) > 0.19):
-				special_row = 0 # Mage run
+				match character_key:
+					"arcane_mage": special_row = 3 # Beam
+					"dwarf_carrier": special_row = 3 # Bashing dodge
+					_: special_row = 2 # Distinct class attack (blade/arrow/hammer/bomb)
+			elif moving:
+				if character_key == "dwarf_carrier" and int(data.get("carried", 0)) > 0:
+					special_row = 2 # Returning with actual gold animation
+				elif bool(data.get("returning", false)) or float(data.get("speed", 0.0)) > 0.17:
+					special_row = 0 # Distinct sprint/run poses
+		# Voidborn uses its own six-row atlases, never the mage/wolf specials.
 		var goblin_action: String = GOBLIN_ACTIONS[animation_row]
-		if atlas == atlas_goblin_raider and animation_row == 1 and bool(data.get("returning", false)) and int(data.get("carried", 0)) > 0:
+		if character_key == "goblin_raider" and animation_row == 1 and bool(data.get("returning", false)) and int(data.get("carried", 0)) > 0:
 			goblin_action = "carry"
 		if special_sheet != null and special_row >= 0:
 			var special_frame: int = int(floor(float(data.get("action_time", visual_time)) * 12.0 + frame_offset)) % 8
@@ -1068,7 +1101,7 @@ func _draw_arena() -> void:
 				special_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * 8.0 / 0.45), 0, 7)
 			arena.draw_texture_rect_region(special_sheet, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size),
 				Rect2(Vector2(float(special_frame * 128), float(special_row * 128)), Vector2(128, 128)))
-		elif atlas == atlas_goblin_raider and goblin_action_strips.has(goblin_action):
+		elif character_key == "goblin_raider" and goblin_action_strips.has(goblin_action):
 			var strip: Texture2D = goblin_action_strips[goblin_action]
 			var count: int = strip.get_width() / 192
 			var strip_frame: int = int(floor(float(data.get("action_time", visual_time)) * GOBLIN_ACTION_FPS[animation_row] + frame_offset)) % count
@@ -1077,7 +1110,7 @@ func _draw_arena() -> void:
 			elif animation_row == 3:
 				strip_frame = clampi(int((0.28 - float(data.get("hit_time", 0.0))) * float(count) / 0.28), 0, count - 1)
 			arena.draw_texture_rect_region(strip, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(strip_frame * 192), 0.0), Vector2(192, 192)))
-		elif goblin_walk_prototype != null and not special_animation_atlases.has("goblin_raider") and atlas == atlas_goblin_raider and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
+		elif goblin_walk_prototype != null and not special_animation_atlases.has("goblin_raider") and character_key == "goblin_raider" and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
 			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12 if animation_row == 1 else 0
 			arena.draw_texture_rect_region(goblin_walk_prototype, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)))
 		else:
@@ -1088,7 +1121,7 @@ func _draw_arena() -> void:
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, 42.0 if actor["guard"] else 34.0)
 		# All seven character sheets now have their own attack visual language.
 		if phase == "ATTACK" and animation_row == 2:
-			_draw_attack_effect(p, art, facing, friendly, float(data.get("attack_time", 0.0)))
+			_draw_attack_effect(p, character_key, facing, friendly, float(data.get("attack_time", 0.0)))
 		if not actor["guard"] and int(data.get("carried", 0)) > 0:
 			_draw_carried_gold(p, facing, int(data["carried"]))
 	# Deposit gold at the home vault with a dedicated eight-frame coin-release action.
@@ -1096,21 +1129,13 @@ func _draw_arena() -> void:
 		var dp: Vector2 = _point(int(deposit["lane"]), 0.0, int(deposit["side"]))
 		if not _in_camera(dp, 100.0):
 			continue
-		var da: Texture2D = atlas_goblin_raider
-		if int(deposit["side"]) == 0:
-			match selected_race:
-				0: da = atlas_dwarf_carrier if int(deposit["kind"]) == 1 else atlas_arcane_mage if int(deposit["kind"]) == 2 else atlas_dwarf_defender
-				1: da = atlas_goblin_saboteur if int(deposit["kind"]) == 2 else atlas_goblin_raider
-				2: da = atlas_arcane_mage if int(deposit["kind"]) == 2 else atlas_elf_ranger
-				3: da = atlas_arcane_mage if int(deposit["kind"]) == 2 else atlas_shadow_wolf
-		else:
-			da = atlas_shadow_wolf if int(deposit["kind"]) == 1 else atlas_goblin_saboteur if int(deposit["kind"]) == 2 else atlas_goblin_raider
-		var dtf := _sprite_transform(dp)
-		if int(deposit["side"]) == 1:
-			dtf.x.x *= -1.0
+		var deposit_key: String = _character_key(int(deposit["side"]), int(deposit["kind"]))
+		var da: Texture2D = _character_atlas(deposit_key)
+		# Deposit occurs at the HOME vault, after the actor has turned around.
+		var dtf := _directional_sprite_transform(dp, _travel_facing(int(deposit["side"]), true))
 		arena.draw_set_transform_matrix(dtf)
 		var deposit_frame: int = mini(7, int(float(deposit["age"]) * 11.0))
-		if da == atlas_goblin_raider and goblin_action_strips.has("deposit"):
+		if deposit_key == "goblin_raider" and goblin_action_strips.has("deposit"):
 			var deposit_strip: Texture2D = goblin_action_strips["deposit"]
 			var deposit_count: int = deposit_strip.get_width() / 192
 			var df: int = mini(deposit_count - 1, int(float(deposit["age"]) / 0.75 * deposit_count))
@@ -1124,21 +1149,12 @@ func _draw_arena() -> void:
 		var death_p: Vector2 = _point(int(fallen["lane"]), float(fallen["position"]), int(fallen["side"]))
 		if not _in_camera(death_p, 100.0):
 			continue
-		var death_atlas: Texture2D = atlas_goblin_raider
-		if int(fallen["side"]) == 0:
-			match selected_race:
-				0: death_atlas = atlas_dwarf_carrier if int(fallen["kind"]) == 1 else atlas_arcane_mage if int(fallen["kind"]) == 2 else atlas_dwarf_defender
-				1: death_atlas = atlas_goblin_saboteur if int(fallen["kind"]) == 2 else atlas_goblin_raider
-				2: death_atlas = atlas_arcane_mage if int(fallen["kind"]) == 2 else atlas_elf_ranger
-				3: death_atlas = atlas_arcane_mage if int(fallen["kind"]) == 2 else atlas_shadow_wolf
-		else:
-			death_atlas = atlas_shadow_wolf if int(fallen["kind"]) == 1 else atlas_goblin_saboteur if int(fallen["kind"]) == 2 else atlas_goblin_raider
+		var death_key: String = _character_key(int(fallen["side"]), int(fallen["kind"]), bool(fallen.get("guard", false)))
+		var death_atlas: Texture2D = _character_atlas(death_key)
 		var death_frame: int = mini(7, int(float(fallen["age"]) * 10.0))
-		var fallen_transform := _sprite_transform(death_p)
-		if (int(fallen["side"]) == 1) != bool(fallen.get("returning", false)):
-			fallen_transform.x.x *= -1.0
+		var fallen_transform := _directional_sprite_transform(death_p, _travel_facing(int(fallen["side"]), bool(fallen.get("returning", false))))
 		arena.draw_set_transform_matrix(fallen_transform)
-		if death_atlas == atlas_goblin_raider and goblin_action_strips.has("death"):
+		if death_key == "goblin_raider" and goblin_action_strips.has("death"):
 			var death_strip: Texture2D = goblin_action_strips["death"]
 			var death_count: int = death_strip.get_width() / 192
 			var f: int = mini(death_count - 1, int(float(fallen["age"]) / 0.8 * death_count))
@@ -1162,7 +1178,7 @@ func _draw_arena() -> void:
 	arena.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# No minimap: the entire battlefield is always visible.
 
-func _draw_attack_effect(p: Vector2, art: Texture2D, facing: float, friendly: bool, remaining_attack: float) -> void:
+func _draw_attack_effect(p: Vector2, character_key: String, facing: float, friendly: bool, remaining_attack: float) -> void:
 	# Lightweight world-space effects; sprite anatomy comes from the actual atlas frames.
 	var progress: float = clampf(1.0 - remaining_attack / 0.45, 0.0, 1.0)
 	var energy: float = sin(progress * PI)
@@ -1170,28 +1186,28 @@ func _draw_attack_effect(p: Vector2, art: Texture2D, facing: float, friendly: bo
 		return
 	var tip := p + Vector2(facing * 19.0, -48.0)
 	var faction_color := Color("81dfff", 0.72 * energy) if friendly else Color("ff8b6e", 0.72 * energy)
-	if art == sprite_arcane_mage:
+	if character_key == "arcane_mage" || character_key == "void_weaver":
 		arena.draw_arc(tip, 14.0 + 17.0 * progress, 0.0, TAU, 20, Color("c49bff", 0.7 * energy), 2.6)
 		for i in 4:
 			var theta: float = progress * TAU + float(i) * TAU / 4.0
 			arena.draw_circle(tip + Vector2(cos(theta), sin(theta)) * 24.0, 3.0, faction_color)
-	elif art == sprite_elf_ranger:
+	elif character_key == "elf_ranger":
 		var arrow_base := p + Vector2(facing * 6.0, -52.0)
 		var arrow_head := arrow_base + Vector2(facing * (15.0 + 42.0 * progress), -6.0)
 		arena.draw_line(arrow_base, arrow_head, Color("c9f4b0", energy), 3.0)
 		arena.draw_line(arrow_head, arrow_head + Vector2(-facing * 10.0, -5.0), Color("c9f4b0", energy), 2.0)
 		arena.draw_line(arrow_head, arrow_head + Vector2(-facing * 10.0, 5.0), Color("c9f4b0", energy), 2.0)
-	elif art == sprite_shadow_wolf:
+	elif character_key == "shadow_wolf":
 		for i in 3:
 			var origin := tip + Vector2(0, float(i - 1) * 12.0)
 			arena.draw_arc(origin, 16.0, -0.8 + progress, 1.5 + progress, 12, Color("d2baff", 0.78 * energy), 2.5)
-	elif art == sprite_goblin_saboteur:
+	elif character_key == "goblin_saboteur" || character_key == "void_stalker":
 		for i in 5:
 			var drift: float = float(i) * 1.7 + progress * 3.0
 			arena.draw_circle(tip + Vector2(cos(drift) * 14.0, sin(drift) * 12.0), 3.0 + float(i % 2), Color("9dff80", 0.64 * energy))
-	elif art == sprite_dwarf_defender:
+	elif character_key == "dwarf_defender" || character_key == "void_sentinel":
 		arena.draw_arc(tip, 20.0, -1.5 + progress, 0.6 + progress * 2.0, 18, Color("ffd48c", 0.85 * energy), 4.0)
-	elif art == sprite_dwarf_carrier:
+	elif character_key == "dwarf_carrier" || character_key == "void_collector":
 		arena.draw_arc(tip, 18.0, -0.5 + progress, 1.1 + progress * 1.8, 16, Color("f7c76a", 0.7 * energy), 3.0)
 	else:
 		arena.draw_arc(tip, 18.0, -1.2 + progress, 1.2 + progress * 1.7, 17, faction_color, 3.3)
