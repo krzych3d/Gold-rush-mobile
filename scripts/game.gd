@@ -1029,6 +1029,20 @@ func _epic_card(caption: String, price: int, art: Texture2D, minimum_height: flo
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_NONE
 	_style_button(button, false)
+	var frame_name: String = "card_hero" if caption in ["RUNNER", "CARRIER", "SABOTEUR"] else "card_trap"
+	ornate_ui.button(button, frame_name, frame_name)
+	var glow := TextureRect.new()
+	glow.name = "ArtGlow"
+	glow.texture = ornate_ui.image("portrait_aura")
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glow.stretch_mode = TextureRect.STRETCH_SCALE
+	button.add_child(glow)
+	glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	glow.offset_left = 12
+	glow.offset_right = -12
+	glow.offset_top = 8
+	glow.offset_bottom = -37
 	var portrait := TextureRect.new()
 	portrait.name = "Artwork"
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1046,15 +1060,42 @@ func _epic_card(caption: String, price: int, art: Texture2D, minimum_height: flo
 	portrait.offset_bottom = -32
 	var label := Label.new()
 	label.name = "Caption"
-	label.text = "%s  •  %d" % [caption, price]
+	label.text = caption
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_style_label(label, 17, Color("fff0c7"))
 	button.add_child(label)
 	label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	label.offset_top = -29
-	label.offset_bottom = -2
+	label.offset_left = 4
+	label.offset_right = -83
+	label.offset_top = -36
+	label.offset_bottom = -4
+	var price_text := Label.new()
+	price_text.name = "Price"
+	price_text.text = str(price)
+	price_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	price_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	price_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_style_label(price_text, 17, Color("ffe7aa"))
+	button.add_child(price_text)
+	price_text.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	price_text.offset_left = -58
+	price_text.offset_right = -7
+	price_text.offset_top = -37
+	price_text.offset_bottom = -4
+	var coin := TextureRect.new()
+	coin.name = "GoldCoin"
+	coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	coin.texture = ornate_ui.image("coin")
+	coin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	coin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	button.add_child(coin)
+	coin.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	coin.offset_left = -88
+	coin.offset_right = -59
+	coin.offset_top = -35
+	coin.offset_bottom = -5
 	return button
 
 func _refresh_unit_icons() -> void:
