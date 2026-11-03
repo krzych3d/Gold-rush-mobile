@@ -66,6 +66,7 @@ var camera_offset := Vector2.ZERO
 var camera_zoom := 1.0
 var overview_mode := true
 var expanded_map := false
+var last_icon_race := -1
 var gameplay_panel: VBoxContainer
 var map_toggle_button: Button
 var camera_controls_row: HBoxContainer
@@ -80,6 +81,10 @@ var touch_points: Dictionary = {}
 var last_pinch_distance := 0.0
 var terrain_details: Array = []
 var hit_sparks: Array = []
+var turret_bolts: Array = []
+var turret_texture: Texture2D = preload("res://assets/ui/turret.svg")
+var spikes_texture: Texture2D = preload("res://assets/ui/spikes.svg")
+var snare_texture: Texture2D = preload("res://assets/ui/snare.svg")
 var fallen_actors: Array = []
 var deposit_actors: Array = []
 var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
@@ -147,50 +152,72 @@ func _ready() -> void:
 			score.loop_mode = AudioStreamWAV.LOOP_FORWARD
 			menu_music.stream = score
 			menu_music.play()
+	# Functional native Godot HUD. The full-screen concept painting is a style
+	# reference only: every control below is a real button with a real handler.
+	var backdrop := ColorRect.new()
+	backdrop.color = Color("070e1d")
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(backdrop)
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_theme_constant_override("separation", 4)
 	add_child(root)
+
+	var header_frame := PanelContainer.new()
+	_apply_epic_panel(header_frame, Color("111c32"), Color("edc078"), 4)
+	root.add_child(header_frame)
+	var header := VBoxContainer.new()
+	header.add_theme_constant_override("separation", 0)
+	header_frame.add_child(header)
 	var title := Label.new()
 	title_label = title
-	title.text = "VAULT WARS"
+	title.text = "⚔  VAULT WARS  ⚔"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
-	root.add_child(title)
-	_style_label(title, 26, Color("ffe2a0"))
+	_style_label(title, 30, Color("ffdc95"))
+	header.add_child(title)
+	var banner := HBoxContainer.new()
+	header.add_child(banner)
 	hud = Label.new()
 	hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(hud)
-	_style_label(hud, 22, Color("f8d37c"))
+	hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_label(hud, 20, Color("f8d47e"))
+	banner.add_child(hud)
 	timer_label = Label.new()
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root.add_child(timer_label)
-	_style_label(timer_label, 19, Color("d5e8fa"))
+	_style_label(timer_label, 16, Color("d1eaff"))
+	header.add_child(timer_label)
 	performance_label = Label.new()
 	performance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	performance_label.add_theme_font_size_override("font_size", 12)
-	performance_label.modulate = Color("b7d9d0", 0.75)
-	performance_label.text = "PERFORMANCE: measuring..."
-	root.add_child(performance_label)
+	_style_label(performance_label, 11, Color("87b2c9"))
+	performance_label.modulate.a = 0.75
+	header.add_child(performance_label)
+
+	var battlefield_frame := PanelContainer.new()
+	_apply_epic_panel(battlefield_frame, Color("071728"), Color("98713d"), 3)
+	battlefield_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	battlefield_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	battlefield_frame.size_flags_stretch_ratio = 3.0
+	root.add_child(battlefield_frame)
 	arena = Control.new()
-	arena.custom_minimum_size = Vector2(0, 300)
-	arena.size_flags_stretch_ratio = 2.0
+	arena.custom_minimum_size = Vector2(0, 230)
 	arena.clip_contents = true
+	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	arena.draw.connect(_draw_arena)
-	root.add_child(arena)
 	arena.mouse_filter = Control.MOUSE_FILTER_STOP
 	arena.gui_input.connect(_arena_input)
 	arena.resized.connect(_on_arena_resized)
+	battlefield_frame.add_child(arena)
+
+	# Preserved camera functionality; mobile keeps the entire map in view.
 	camera_hint = Label.new()
-	camera_hint.text = "THREE LANES • TAP A ROAD TO SELECT"
-	camera_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(camera_hint, 15, Color("a9c7d8"))
-	root.add_child(camera_hint)
 	camera_hint.visible = false
+	root.add_child(camera_hint)
 	var camera_controls := HBoxContainer.new()
 	camera_controls_row = camera_controls
-	root.add_child(camera_controls)
 	camera_controls.visible = false
+	root.add_child(camera_controls)
 	for label in ["−", "FIT MAP", "+", "EXPAND"]:
 		var control := Button.new()
 		control.text = label
@@ -207,72 +234,97 @@ func _ready() -> void:
 			control.pressed.connect(_toggle_map_expanded)
 		else:
 			control.pressed.connect(_center_camera)
+
+	var command_frame := PanelContainer.new()
+	command_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_apply_epic_panel(command_frame, Color("10192e"), Color("bc884a"), 7)
+	root.add_child(command_frame)
 	gameplay_panel = VBoxContainer.new()
-	root.add_child(gameplay_panel)
+	gameplay_panel.add_theme_constant_override("separation", 4)
+	command_frame.add_child(gameplay_panel)
 	info = Label.new()
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	info.custom_minimum_size.y = 32
+	info.custom_minimum_size.y = 25
+	_style_label(info, 14, Color("f3d598"))
 	gameplay_panel.add_child(info)
-	_style_label(info, 18, Color("f0e7cf"))
 	race_button = Button.new()
-	race_button.text = "CHOOSE YOUR RACE"
-	race_button.custom_minimum_size.y = 0
 	race_button.visible = false
 	gameplay_panel.add_child(race_button)
-	_style_button(race_button, true)
 	race_button.disabled = true
-	for labels in [["LANE 1", "LANE 2", "LANE 3"], ["RUNNER 75", "CARRIER 140", "SABOTEUR 110"], ["SPIKES 55", "SNARE 75", "TURRET 155"]]:
-		var row := HBoxContainer.new()
-		gameplay_panel.add_child(row)
-		for index in 3:
-			var button := Button.new()
-			button.text = labels[index]
-			button.custom_minimum_size.y = 40
-			button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			row.add_child(button)
-			_style_button(button, controls.size() < 3)
-			controls.append(button)
-			if controls.size() <= 3:
-				button.pressed.connect(_select_lane.bind(index))
-			elif controls.size() <= 6:
-				button.pressed.connect(_buy_unit.bind(index))
-			else:
-				button.pressed.connect(_buy_trap.bind(index))
+
+	var lane_row := HBoxContainer.new()
+	lane_row.add_theme_constant_override("separation", 5)
+	gameplay_panel.add_child(lane_row)
+	for index in 3:
+		var lane_button := Button.new()
+		lane_button.text = "LANE %d" % (index + 1)
+		lane_button.custom_minimum_size.y = 44
+		lane_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lane_button.focus_mode = Control.FOCUS_NONE
+		_style_button(lane_button, true)
+		lane_row.add_child(lane_button)
+		controls.append(lane_button)
+		lane_button.pressed.connect(_select_lane.bind(index))
+
+	var unit_row := HBoxContainer.new()
+	unit_row.add_theme_constant_override("separation", 6)
+	gameplay_panel.add_child(unit_row)
+	for index in 3:
+		var unit_key: String = _character_key(0, index)
+		var unit_button := _epic_card(["RUNNER", "CARRIER", "SABOTEUR"][index],
+			COSTS[index], _preview_frame(_character_atlas(unit_key)), 88)
+		unit_row.add_child(unit_button)
+		controls.append(unit_button)
+		unit_button.pressed.connect(_buy_unit.bind(index))
+
+	var trap_row := HBoxContainer.new()
+	trap_row.add_theme_constant_override("separation", 6)
+	gameplay_panel.add_child(trap_row)
+	for index in 3:
+		var icon_path: String = ["res://assets/ui/spikes.svg", "res://assets/ui/snare.svg", "res://assets/ui/turret.svg"][index]
+		var trap_button := _epic_card(["SPIKES", "SNARE", "TURRET"][index],
+			TRAP_COSTS[index], load(icon_path) as Texture2D, 80)
+		trap_row.add_child(trap_button)
+		controls.append(trap_button)
+		trap_button.pressed.connect(_buy_trap.bind(index))
+
 	guard_button = Button.new()
-	guard_button.text = "HIRE DEFENDER 130"
-	guard_button.custom_minimum_size.y = 40
+	guard_button.text = "⚔  HIRE DEFENDER  ·  130 GOLD"
+	guard_button.custom_minimum_size.y = 43
 	guard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	gameplay_panel.add_child(guard_button)
 	_style_button(guard_button, true)
+	gameplay_panel.add_child(guard_button)
 	guard_button.pressed.connect(_buy_guard)
 	ability_button = Button.new()
-	ability_button.custom_minimum_size.y = 40
+	ability_button.custom_minimum_size.y = 43
 	ability_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_button(ability_button, false)
 	gameplay_panel.add_child(ability_button)
-	_style_button(ability_button, true)
 	ability_button.pressed.connect(_use_race_ability)
+
 	var economy_row := HBoxContainer.new()
+	economy_row.add_theme_constant_override("separation", 5)
 	gameplay_panel.add_child(economy_row)
 	invest_button = Button.new()
-	invest_button.text = "UPGRADE BANK"
 	invest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	invest_button.custom_minimum_size.y = 40
+	invest_button.custom_minimum_size.y = 43
 	_style_button(invest_button, true)
 	economy_row.add_child(invest_button)
 	invest_button.pressed.connect(_upgrade_bank)
 	raid_button = Button.new()
-	raid_button.text = "RAID BOOST"
 	raid_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	raid_button.custom_minimum_size.y = 40
+	raid_button.custom_minimum_size.y = 43
 	_style_button(raid_button, true)
 	economy_row.add_child(raid_button)
 	raid_button.pressed.connect(_buy_raid_boost)
+
 	var start := Button.new()
-	start.text = "START ATTACK"
-	start.custom_minimum_size.y = 46
-	gameplay_panel.add_child(start)
+	start.text = "⚔  UNLEASH THE RAID  ⚔"
+	start.custom_minimum_size.y = 53
+	start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(start, false)
+	gameplay_panel.add_child(start)
 	controls.append(start)
 	start.pressed.connect(_start_pressed)
 	var clock := Timer.new()
@@ -409,6 +461,7 @@ func _choose_faction(index: int) -> void:
 	phase = "PREP"
 	remaining = PREP_TIME
 	message = RACE_DESCRIPTIONS[index]
+	_refresh_unit_icons()
 	selection_layer.queue_free()
 	_refresh()
 
@@ -425,7 +478,7 @@ func _select_lane(index: int) -> void:
 	_refresh()
 
 func _use_race_ability() -> void:
-	if phase != "PREP" or ability_used or gold[0] <= 120:
+	if phase != "PREP" or ability_used or gold[0] < 120:
 		return
 	gold[0] -= 120
 	ability_used = true
@@ -568,7 +621,8 @@ func _buy_trap(kind: int) -> void:
 		return
 	gold[0] -= TRAP_COSTS[kind]
 	_check_vaults()
-	traps[0].append({"lane": lane, "kind": kind, "charges": [3, 2, 999][kind]})
+	traps[0].append({"lane": lane, "kind": kind, "charges": [3, 2, 999][kind],
+		"slot": lane_count, "cooldown": 0.0, "fire_time": 0.0})
 	message = "Trap built on lane %d" % (lane + 1)
 	_refresh()
 
@@ -594,7 +648,8 @@ func _bot_prepare() -> void:
 	if gold[1] >= 55 and traps[1].size() < wave * 2:
 		gold[1] -= 55
 		_check_vaults()
-		traps[1].append({"lane": rng.randi_range(0, 2), "kind": 0, "charges": 3})
+		traps[1].append({"lane": rng.randi_range(0, 2), "kind": 0, "charges": 3,
+			"slot": traps[1].size() % 4, "cooldown": 0.0, "fire_time": 0.0})
 
 func _start_pressed() -> void:
 	if phase == "END":
@@ -670,6 +725,14 @@ func _tick() -> void:
 	_refresh()
 
 func _simulate(dt: float) -> void:
+	for side_traps in traps:
+		for trap in side_traps:
+			trap["cooldown"] = maxf(0.0, float(trap.get("cooldown", 0.0)) - dt)
+			trap["fire_time"] = maxf(0.0, float(trap.get("fire_time", 0.0)) - dt)
+	for bolt in turret_bolts.duplicate():
+		bolt["age"] = float(bolt["age"]) + dt
+		if float(bolt["age"]) >= 0.36:
+			turret_bolts.erase(bolt)
 	for deposit in deposit_actors.duplicate():
 		deposit["age"] = float(deposit["age"]) + dt
 		if float(deposit["age"]) >= 0.75:
@@ -704,7 +767,18 @@ func _simulate(dt: float) -> void:
 					unit["triggered"].append(trap)
 					break
 				if trap["kind"] == 2:
-					unit["health"] -= 18.0 * dt
+					# Each tower is its own animated structure with an individual
+					# reload timer, rather than invisible continuous DPS.
+					if float(trap.get("cooldown", 0.0)) <= 0.0:
+						unit["health"] -= 11.0
+						unit["hit_time"] = 0.2
+						trap["cooldown"] = 0.6
+						trap["fire_time"] = 0.28
+						var muzzle: Vector2 = _trap_position(trap, defender) + Vector2(0, -65)
+						var hit_at: Vector2 = _point(int(unit["lane"]), float(unit["position"]), int(unit["side"])) + Vector2(0, -70)
+						turret_bolts.append({"from": muzzle, "to": hit_at, "age": 0.0, "friendly": defender == 0})
+						if turret_bolts.size() > 45:
+							turret_bolts.pop_front()
 				elif not unit["triggered"].has(trap):
 					unit["triggered"].append(trap)
 					if unit["kind"] == 2 and not unit["disarmed"]:
@@ -790,23 +864,51 @@ func _end_wave() -> void:
 func _refresh() -> void:
 	race_button.text = "RACE: " + RACE_NAMES[selected_race]
 	race_button.disabled = true
-	hud.text = "YOUR GOLD %d  •  ENEMY %d" % [gold[0], gold[1]]
-	timer_label.text = "WAVE %d  |  %s  |  %02d s  |  INTEREST %d%%" % [wave, phase, int(maxf(0.0, ceilf(remaining))), (28 if selected_race == 0 else 18) + bank_level * 4]
-	info.text = "LANE %d  •  %s  •  UNITS %d  •  TRAPS %d" % [lane + 1, message, orders[0].size(), traps[0].size()]
-	for i in range(3, 9):
-		controls[i].disabled = phase != "PREP"
-	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST
-	ability_button.disabled = phase != "PREP" or ability_used or gold[0] <= 120
-	ability_button.text = ("✦ " + ABILITY_NAMES[selected_race] + "  •  120 GOLD") if not ability_used else ("✓ " + ABILITY_NAMES[selected_race] + " ACTIVE")
+	hud.text = "✦ YOUR GOLD %d   ◆   ENEMY %d ✦" % [gold[0], gold[1]]
+	timer_label.text = "WAVE %d   |   %s   |   %02d s   |   INTEREST %d%%" % [
+		wave, "PREPARE" if phase == "PREP" else "BATTLE" if phase == "ATTACK" else phase,
+		int(maxf(0.0, ceilf(remaining))), (28 if selected_race == 0 else 18) + bank_level * 4]
+	var active_friendly: int = 0
+	for unit in units:
+		if int(unit["side"]) == 0:
+			active_friendly += 1
+	var displayed_units: int = active_friendly if phase == "ATTACK" else orders[0].size()
+	info.text = "◆ LANE %d  •  %s  •  UNITS %d  •  TRAPS %d" % [
+		lane + 1, message, displayed_units, traps[0].size()]
+	_refresh_unit_icons()
+	var queued_in_lane: int = 0
+	var traps_in_lane: int = 0
+	var guards_in_lane: int = 0
+	for order in orders[0]:
+		if int(order["lane"]) == lane:
+			queued_in_lane += 1
+	for trap in traps[0]:
+		if int(trap["lane"]) == lane:
+			traps_in_lane += 1
+	for guard in guards:
+		if int(guard["side"]) == 0 and int(guard["lane"]) == lane:
+			guards_in_lane += 1
+	for i in 3:
+		var available_unit: bool = phase == "PREP" and gold[0] >= COSTS[i] and orders[0].size() < 6 and queued_in_lane < 4
+		var unit_card := controls[3 + i]
+		unit_card.disabled = not available_unit
+		unit_card.modulate = Color.WHITE if available_unit else Color(0.67, 0.69, 0.76)
+		var available_trap: bool = phase == "PREP" and gold[0] >= TRAP_COSTS[i] and traps_in_lane < 5
+		var trap_card := controls[6 + i]
+		trap_card.disabled = not available_trap
+		trap_card.modulate = Color.WHITE if available_trap else Color(0.67, 0.69, 0.76)
+	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST or guards_in_lane >= 3
+	ability_button.disabled = phase != "PREP" or ability_used or gold[0] < 120
+	ability_button.text = "✦ %s  •  120 GOLD" % ABILITY_NAMES[selected_race] if not ability_used else "✓ %s ACTIVE" % ABILITY_NAMES[selected_race]
 	invest_button.disabled = phase != "PREP" or bank_level >= 5 or gold[0] < 180 + bank_level * 110
 	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < 120
-	invest_button.text = "BANK LV%d (%d)" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "BANK MAX"
-	raid_button.text = "RAID LV%d (120)" % raid_boost if raid_boost < 3 else "RAID MAX"
+	invest_button.text = "🏛 BANK LV%d  •  %d" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "🏛 BANK MAX"
+	raid_button.text = "⚔ RAID LV%d  •  120" % raid_boost if raid_boost < 3 else "⚔ RAID MAX"
 	controls[9].disabled = phase == "ATTACK"
-	controls[9].text = "PLAY AGAIN" if phase == "END" else "UNLEASH THE RAID" if phase == "PREP" else "BATTLE IN PROGRESS"
+	controls[9].text = "↻  PLAY AGAIN" if phase == "END" else "⚔  UNLEASH THE RAID  ⚔" if phase == "PREP" else "⚔  BATTLE IN PROGRESS  ⚔"
 	for i in 3:
-		controls[i].modulate = Color("ffe29a") if i == lane else Color.WHITE
-		controls[i].text = ("◆ " if i == lane else "") + "LANE %d" % (i + 1)
+		controls[i].text = ("◆  " if i == lane else "") + "LANE %d" % (i + 1)
+		controls[i].modulate = Color("ffe09d") if i == lane else Color("d8e9f8")
 	arena.queue_redraw()
 
 func _point(path: int, progress: float, side: int) -> Vector2:
@@ -842,22 +944,97 @@ func _style_label(label: Label, font_size: int, color: Color) -> void:
 	label.add_theme_constant_override("shadow_offset_x", 2)
 	label.add_theme_constant_override("shadow_offset_y", 3)
 
+func _apply_epic_panel(panel: PanelContainer, bg: Color, outline: Color, margin: int) -> void:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_color = outline
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = margin
+	style.content_margin_right = margin
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
+	panel.add_theme_stylebox_override("panel", style)
+
+func _preview_frame(sheet: Texture2D) -> Texture2D:
+	if sheet == null:
+		return null
+	var preview := AtlasTexture.new()
+	preview.atlas = sheet
+	preview.region = Rect2(0, 0, 128, 128)
+	return preview
+
+func _epic_card(caption: String, price: int, art: Texture2D, minimum_height: float) -> Button:
+	var button := Button.new()
+	button.name = caption
+	button.custom_minimum_size.y = minimum_height
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_NONE
+	_style_button(button, false)
+	var portrait := TextureRect.new()
+	portrait.name = "Artwork"
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait.texture = art
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	button.add_child(portrait)
+	portrait.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	portrait.offset_left = 7
+	portrait.offset_right = -7
+	portrait.offset_top = 2
+	portrait.offset_bottom = minimum_height - 31.0
+	var label := Label.new()
+	label.name = "Caption"
+	label.text = "%s  •  %d" % [caption, price]
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_style_label(label, 14, Color("fff0c7"))
+	button.add_child(label)
+	label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	label.offset_top = -29
+	label.offset_bottom = -2
+	return button
+
+func _refresh_unit_icons() -> void:
+	if last_icon_race == selected_race:
+		return
+	last_icon_race = selected_race
+	for kind in 3:
+		if controls.size() <= kind + 3:
+			return
+		var icon_rect := controls[kind + 3].get_node_or_null("Artwork") as TextureRect
+		if icon_rect != null:
+			icon_rect.texture = _preview_frame(_character_atlas(_character_key(0, kind)))
+
 func _style_button(button: Button, is_lane: bool) -> void:
-	button.add_theme_font_size_override("font_size", 17)
-	button.add_theme_color_override("font_color", Color("fff2d4"))
-	button.add_theme_color_override("font_disabled_color", Color("b1a48c"))
-	for state in ["normal", "hover", "pressed", "disabled"]:
+	button.add_theme_font_size_override("font_size", 17 if is_lane else 19)
+	button.add_theme_color_override("font_color", Color("fff0d4"))
+	button.add_theme_color_override("font_hover_color", Color("fff8db"))
+	button.add_theme_color_override("font_pressed_color", Color("ffffff"))
+	button.add_theme_color_override("font_disabled_color", Color("a2a2aa"))
+	button.add_theme_color_override("font_focus_color", Color("ffffff"))
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
 		var style := StyleBoxFlat.new()
-		style.bg_color = Color("314a60") if is_lane else Color("584235")
-		if state == "pressed":
-			style.bg_color = Color("987041")
-		if state == "disabled":
-			style.bg_color = Color("383b43")
-		style.border_color = Color("e8bb70")
+		style.bg_color = Color("152842") if is_lane else Color("2e1938")
+		if state == "hover":
+			style.bg_color = Color("395979") if is_lane else Color("593057")
+		elif state == "pressed":
+			style.bg_color = Color("86572b")
+		elif state == "disabled":
+			style.bg_color = Color("1e273a")
+		elif state == "focus":
+			style.bg_color = Color("1c3450")
+		style.border_color = Color("f8ca75") if state != "disabled" else Color("716955")
 		style.set_border_width_all(2)
-		style.set_corner_radius_all(12)
-		style.content_margin_left = 3
-		style.content_margin_right = 3
+		style.set_corner_radius_all(9)
+		style.content_margin_left = 4
+		style.content_margin_right = 4
+		style.content_margin_top = 3
+		style.content_margin_bottom = 3
+		if state == "hover" or state == "focus":
+			style.shadow_size = 4
+			style.shadow_color = Color("ffbb55", 0.27)
 		button.add_theme_stylebox_override(state, style)
 
 func _on_arena_resized() -> void:
@@ -976,6 +1153,10 @@ func _directional_sprite_transform(p: Vector2, facing: float, tilt: float = 0.0)
 	var origin := arena.size * 0.5 + camera_offset + _iso_project(p) * zoom
 	return Transform2D(Vector2(c * zoom * direction, sn * zoom * direction), Vector2(-sn * zoom, c * zoom), origin)
 
+func _trap_position(trap: Dictionary, owner: int) -> Vector2:
+	var slot: int = int(trap.get("slot", 0))
+	return _point(int(trap["lane"]), 0.48 + float(slot % 5) * 0.085, 1 - owner)
+
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
@@ -983,6 +1164,10 @@ func _draw_arena() -> void:
 	# Fill the tall phone viewport with a dimmed scenic continuation.
 	# The crisp, fully visible battlefield is drawn above in world coordinates.
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("071421"))
+	# A subtle, scaled scenery continuation fills the otherwise-empty margins
+	# around the fully visible widescreen battlefield on tall mobile displays.
+	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2.ZERO, arena.size),
+		false, Color(0.20, 0.26, 0.35, 0.34))
 	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
 	# The battlefield is now one high-detail painting. Never draw the old
@@ -1004,11 +1189,28 @@ func _draw_arena() -> void:
 		var aura_alpha: float = 0.10 + 0.06 * sin(visual_time * 2.0 + float(side))
 		arena.draw_arc(fort + Vector2(0, -35), 56.0, 0.0, TAU, 40, Color(aura.r, aura.g, aura.b, aura_alpha), 4.0)
 		for trap in traps[side]:
-			var p := _point(trap["lane"], 0.67, 1 - side)
-			p.y += float(traps[side].find(trap) % 3 - 1) * 13.0
-			arena.draw_circle(p + Vector2(0, 5), 12, Color("142c35", 0.6))
-			arena.draw_circle(p, 10, [Color("bdb7a9"), Color("e5ac4e"), Color("a8a0cf")][trap["kind"]])
-			arena.draw_circle(p + Vector2(-3, -3), 3, Color("fff2cb"))
+			var p: Vector2 = _trap_position(trap, side)
+			var trap_kind: int = int(trap["kind"])
+			var icon_texture: Texture2D = turret_texture if trap_kind == 2 else snare_texture if trap_kind == 1 else spikes_texture
+			var shimmer: float = 0.55 + 0.25 * sin(visual_time * 4.0 + float(trap.get("slot", 0)))
+			arena.draw_circle(p + Vector2(0, 7), 29.0, Color("05091d", 0.55))
+			var glow: Color = Color("5bcfff", 0.40 * shimmer) if trap_kind == 2 else Color("b568ff", 0.4 * shimmer) if trap_kind == 1 else Color("ffae60", 0.3 * shimmer)
+			arena.draw_arc(p + Vector2(0, -32), 32.0 + 3.0 * shimmer, 0.0, TAU, 24, glow, 3.0)
+			arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-45, -87), Vector2(90, 90)), false)
+			if trap_kind == 2 and float(trap.get("fire_time", 0.0)) > 0.0:
+				var fire: float = float(trap["fire_time"]) / 0.28
+				arena.draw_circle(p + Vector2(0, -66), 13.0 + 6.0 * (1.0 - fire), Color("9aeaff", fire * 0.8))
+	# Animated turret bolts move between the tower and the target.
+	for bolt in turret_bolts:
+		var t: float = clampf(float(bolt["age"]) / 0.36, 0.0, 1.0)
+		var a: Vector2 = bolt["from"]
+		var b: Vector2 = bolt["to"]
+		var projectile: Vector2 = a.lerp(b, t) + Vector2(0, -38.0 * sin(t * PI))
+		var tail: Vector2 = a.lerp(b, maxf(0.0, t - 0.13)) + Vector2(0, -38.0 * sin(maxf(0.0, t - 0.13) * PI))
+		var shot_color: Color = Color("92eaff", 1.0 - 0.45 * t) if bool(bolt["friendly"]) else Color("ff8ab5", 1.0 - 0.45 * t)
+		arena.draw_line(tail, projectile, shot_color, 5.0)
+		arena.draw_circle(projectile, 6.0, shot_color)
+		arena.draw_circle(projectile, 2.5, Color("ffffff", 0.92))
 	# Draw combatants in depth order, including foot shadows and hit feedback.
 	var actors: Array = []
 	for guard in guards:
