@@ -46,6 +46,9 @@ var visual_time := 0.0
 var goblin_walk_prototype: Texture2D
 # Optional separate, foot-aligned 192px PNG strips: idle/walk/attack/hit/carry/deposit/death.
 var goblin_action_strips: Dictionary = {}
+# Optional 8x6 high-quality special action sheets. Base art remains playable
+# until the validated ZIP has actually been imported into the repository.
+var special_animation_atlases: Dictionary = {}
 const GOBLIN_ACTIONS := ["idle", "walk", "attack", "hit", "death", "deposit", "carry"]
 const GOBLIN_ACTION_FPS := [5.0, 11.0, 12.0, 12.0, 12.0, 12.0, 11.0]
 var menu_music: AudioStreamPlayer
@@ -118,6 +121,12 @@ func _ready() -> void:
 			var strip := load(path) as Texture2D
 			if strip != null and strip.get_height() == 192 and strip.get_width() >= 192 and strip.get_width() % 192 == 0:
 				goblin_action_strips[action] = strip
+	for name in ["goblin_raider", "shadow_wolf", "arcane_mage"]:
+		var special_path: String = "res://assets/epic/animations/%s_special_sheet.png" % name
+		if ResourceLoader.exists(special_path):
+			var special_tex := load(special_path) as Texture2D
+			if special_tex != null and special_tex.get_size() == Vector2(1024, 768):
+				special_animation_atlases[name] = special_tex
 	menu_music = AudioStreamPlayer.new()
 	menu_music.name = "EnchantedMenuScore"
 	menu_music.volume_db = -9.0
@@ -1027,10 +1036,38 @@ func _draw_arena() -> void:
 		var animation_transform := Transform2D(tilt, sprite_scale * camera_zoom)
 		animation_transform.origin = arena.size * 0.5 + camera_offset + _iso_project(p) * camera_zoom
 		arena.draw_set_transform_matrix(animation_transform)
+		# A genuine special sprite replaces the basic pose only for actions it
+		# visually depicts. All other states keep the upgraded six-row atlas.
+		var special_sheet: Texture2D = null
+		var special_row: int = -1
+		if art == sprite_goblin_raider and special_animation_atlases.has("goblin_raider"):
+			special_sheet = special_animation_atlases["goblin_raider"]
+			if animation_row == 2:
+				special_row = 2 # Dual-dagger combo
+			elif moving and (bool(data.get("returning", false)) or float(data.get("speed", 0.0)) > 0.19):
+				special_row = 0 # Sprint
+		elif art == sprite_shadow_wolf and special_animation_atlases.has("shadow_wolf"):
+			special_sheet = special_animation_atlases["shadow_wolf"]
+			if animation_row == 2:
+				special_row = 2 # Frenzy bite
+			elif moving and (bool(data.get("returning", false)) or float(data.get("speed", 0.0)) > 0.19):
+				special_row = 0 # Wolf sprint
+		elif art == sprite_arcane_mage and special_animation_atlases.has("arcane_mage"):
+			special_sheet = special_animation_atlases["arcane_mage"]
+			if animation_row == 2:
+				special_row = 3 # Arcane beam
+			elif moving and (bool(data.get("returning", false)) or float(data.get("speed", 0.0)) > 0.19):
+				special_row = 0 # Mage run
 		var goblin_action: String = GOBLIN_ACTIONS[animation_row]
 		if atlas == atlas_goblin_raider and animation_row == 1 and bool(data.get("returning", false)) and int(data.get("carried", 0)) > 0:
 			goblin_action = "carry"
-		if atlas == atlas_goblin_raider and goblin_action_strips.has(goblin_action):
+		if special_sheet != null and special_row >= 0:
+			var special_frame: int = int(floor(float(data.get("action_time", visual_time)) * 12.0 + frame_offset)) % 8
+			if animation_row == 2:
+				special_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * 8.0 / 0.45), 0, 7)
+			arena.draw_texture_rect_region(special_sheet, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size),
+				Rect2(Vector2(float(special_frame * 128), float(special_row * 128)), Vector2(128, 128)))
+		elif atlas == atlas_goblin_raider and goblin_action_strips.has(goblin_action):
 			var strip: Texture2D = goblin_action_strips[goblin_action]
 			var count: int = strip.get_width() / 192
 			var strip_frame: int = int(floor(float(data.get("action_time", visual_time)) * GOBLIN_ACTION_FPS[animation_row] + frame_offset)) % count
