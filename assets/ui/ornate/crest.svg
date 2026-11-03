@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="970" height="170" viewBox="0 0 970 170"><defs>
+<linearGradient id="metal" x1="0" y1="0" x2=".12" y2="1"><stop stop-color="#fff6c3"/><stop offset=".16" stop-color="#f6bf51"/><stop offset=".38" stop-color="#a86419"/><stop offset=".52" stop-color="#fff4ad"/><stop offset=".72" stop-color="#d18a2b"/><stop offset="1" stop-color="#5b2b11"/></linearGradient>
+<linearGradient id="light" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff7cb"/><stop offset=".2" stop-color="#ffc86d"/><stop offset=".7" stop-color="#aa592c"/><stop offset="1" stop-color="#eac06e"/></linearGradient>
+<linearGradient id="base" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="#501060"/><stop offset=".38" stop-color="#200b45"/><stop offset=".8" stop-color="#090f25"/><stop offset="1" stop-color="#050716"/></linearGradient>
+<radialGradient id="shine"><stop stop-color="#e667ff" stop-opacity=".52"/><stop offset="1" stop-color="#13051a" stop-opacity="0"/></radialGradient>
+<linearGradient id="gem" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f9bbff"/><stop offset=".35" stop-color="#bf5aff"/><stop offset=".68" stop-color="#481c9e"/><stop offset="1" stop-color="#110e4a"/></linearGradient>
+<linearGradient id="lower" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#182d4e"/><stop offset=".25" stop-color="#080e24"/><stop offset="1" stop-color="#020713"/></linearGradient>
+</defs>
+  <path d="M170 42L87 8 110 72 32 36 90 97 16 88 110 126 178 141" fill="url(#metal)" stroke="#ffda71" stroke-width="5"/>
+  <path d="M800 42L883 8 860 72 938 36 880 97 954 88 860 126 792 141" fill="url(#metal)" stroke="#ffda71" stroke-width="5"/>
+  <path d="M176 27H794L830 55V126L785 152H185L142 126V55Z" fill="url(#metal)" stroke="#fff0b2" stroke-width="5"/>
+  <path d="M182 40H785L814 63V115L777 139H193L157 115V63Z" fill="url(#base)" stroke="#8c411e" stroke-width="6"/>
+  <path d="M180 59H788M183 129H782" stroke="#ffe69b" stroke-width="3" opacity=".9"/>
+  <path d="M442 21L485 0L528 21L485 48Z" fill="url(#metal)" stroke="#ffefae" stroke-width="3"/>
+  <path d="M485 5 L498.68 24 L485 43 L471.32 24Z" fill="url(#gem)" stroke="#ffe6b3" stroke-width="1.9000000000000001"/><path d="M485 8L485 40 M474.55 24L495.45 24" stroke="#ffd8ff" stroke-width="1.5" opacity=".8"/>
+  <path d="M240 124Q485 142 728 124" fill="none" stroke="#ffdc69" opacity=".65" stroke-width="2"/>
+  <path d="M225 58l-30 24 30 24M745 58l30 24-30 24" fill="none" stroke="#ffeda8" stroke-width="4"/></svg>
