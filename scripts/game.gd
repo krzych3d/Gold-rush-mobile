@@ -719,7 +719,13 @@ func _tick() -> void:
 	if phase == "SELECT":
 		return
 	visual_time += 0.05
-	arena.queue_redraw()
+	render_elapsed += 0.05
+	# Rendering all 24 transparent 128px sprite regions every simulation step
+	# caused significant UI jank on low-end phones. 12.5 Hz scene redraw is
+	# sufficient for the current 8-frame sprite sheets; simulation stays 20 Hz.
+	if render_elapsed >= 0.08:
+		render_elapsed = 0.0
+		arena.queue_redraw()
 	if phase == "END":
 		return
 	if _check_vaults():
@@ -989,21 +995,24 @@ func _epic_card(caption: String, price: int, art: Texture2D, minimum_height: flo
 	portrait.name = "Artwork"
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	portrait.texture = art
+	# Multiply the intentionally dark Voidborn sheet by a neutral brightness
+	# boost in the command cards, not on battlefield sprites.
+	portrait.modulate = Color(1.7, 1.7, 1.7)
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	button.add_child(portrait)
-	portrait.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	portrait.offset_left = 7
-	portrait.offset_right = -7
-	portrait.offset_top = 2
-	portrait.offset_bottom = -34.0
+	portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	portrait.offset_left = 3
+	portrait.offset_right = -3
+	portrait.offset_top = 3
+	portrait.offset_bottom = -32
 	var label := Label.new()
 	label.name = "Caption"
 	label.text = "%s  •  %d" % [caption, price]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_style_label(label, 14, Color("fff0c7"))
+	_style_label(label, 17, Color("fff0c7"))
 	button.add_child(label)
 	label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	label.offset_top = -29
