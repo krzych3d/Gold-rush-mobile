@@ -66,6 +66,7 @@ var camera_offset := Vector2.ZERO
 var camera_zoom := 1.0
 var overview_mode := true
 var expanded_map := false
+var last_icon_race := -1
 var gameplay_panel: VBoxContainer
 var map_toggle_button: Button
 var camera_controls_row: HBoxContainer
@@ -996,6 +997,9 @@ func _epic_card(caption: String, price: int, art: Texture2D, minimum_height: flo
 	return button
 
 func _refresh_unit_icons() -> void:
+	if last_icon_race == selected_race:
+		return
+	last_icon_race = selected_race
 	for kind in 3:
 		if controls.size() <= kind + 3:
 			return
