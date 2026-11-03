@@ -49,3 +49,10 @@ jobs:
           set -euo pipefail
           ./godot --headless --path . --script res://ci/smoke_animation_gallery.gd 2>&1 | tee gallery.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access" gallery.log; then exit 1; fi
+      - name: Test functional HUD, race icons, purchases and turret animation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_epic_hud.gd 2>&1 | tee hud.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" hud.log; then exit 1; fi
+          grep -q "Epic HUD regression PASSED" hud.log
