@@ -23,6 +23,24 @@ func _run_smoke() -> void:
 			push_error("Every six-row character atlas must be 1024x768")
 			quit(1)
 			return
+	# If the generated art has been imported, verify the six extra actions load
+	# for each of the three applicable characters before producing an APK.
+	for hero_index in [3, 4, 6]:
+		var extra_path: String = viewer.SPECIAL_PATHS[hero_index]
+		if ResourceLoader.exists(extra_path):
+			if not viewer.special_atlases.has(hero_index):
+				push_error("Imported special sheet failed to load: " + extra_path)
+				quit(1)
+				return
+			viewer.selected_unit = hero_index
+			viewer.selected_action = 7
+			viewer._refresh_labels()
+			if viewer._action_count() != 13:
+				push_error("Imported special actions not available: " + extra_path)
+				quit(1)
+				return
+	viewer.selected_unit = 4
+	viewer.selected_action = 0
 	viewer._change_unit(1)
 	viewer._change_action(1)
 	viewer._flip()
