@@ -1,5 +1,6 @@
 extends Control
 
+const AnimationGallery = preload("res://scripts/animation_gallery.gd")
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
 const RACE_DESCRIPTIONS := ["Ironbeards - 28% vault interest, heavy armor and fortifications", "Green Shadows - 18% interest, fast raids and escapes", "Moon Guardians - 18% interest, magic and extra loot", "Astral Assassins - 18% interest, swift strikes and rich hauls"]
@@ -344,6 +345,12 @@ func _show_race_selection() -> void:
 		_style_button(choose, true)
 		details.add_child(choose)
 		choose.pressed.connect(_preview_faction.bind(i))
+	var gallery_button := Button.new()
+	gallery_button.text = "VIEW 7 ANIMATED HEROES"
+	gallery_button.custom_minimum_size.y = 48
+	_style_button(gallery_button, true)
+	column.add_child(gallery_button)
+	gallery_button.pressed.connect(_open_animation_gallery)
 	var footer := Label.new()
 	footer.text = "YOUR LEGEND BEGINS HERE"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -357,6 +364,11 @@ func _show_race_selection() -> void:
 	column.add_child(confirm)
 	confirm.pressed.connect(_confirm_faction)
 	_preview_faction(0)
+
+func _open_animation_gallery() -> void:
+	# Add to the top-level scene, above the faction selection overlay.
+	# The gallery can be closed without changing race or resetting a match.
+	add_child(AnimationGallery.new())
 
 func _preview_faction(index: int) -> void:
 	selected_race = index
@@ -452,10 +464,14 @@ func _buy_guard() -> void:
 func _guard_combat(dt: float) -> void:
 	for guard in guards.duplicate():
 		if float(guard["health"]) <= 0.0:
+			# Defenders use the same non-looping defeat animation as raiders.
+			_record_fallen({"side": guard["side"], "lane": guard["lane"], "kind": 0,
+				"position": guard["position"], "returning": false})
 			guards.erase(guard)
 			continue
 		guard["cooldown"] = maxf(0.0, float(guard["cooldown"]) - dt)
 		guard["attack_time"] = maxf(0.0, float(guard.get("attack_time", 0.0)) - dt)
+		guard["hit_time"] = maxf(0.0, float(guard.get("hit_time", 0.0)) - dt)
 		var gp: Vector2 = _point(int(guard["lane"]), float(guard["position"]), int(guard["side"]))
 		var target: Dictionary = {}
 		var nearest := 135.0
@@ -483,7 +499,13 @@ func _guard_combat(dt: float) -> void:
 				continue
 			var up: Vector2 = _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"]))
 			if gp.distance_to(up) < 48.0:
-				guard["health"] -= (9.0 if int(unit["kind"]) == -1 else 14.0) * dt
+				# One discrete contact strike each 0.65s: the pose now matches damage.
+				# Preserve the previous average damage per second.
+				if float(unit.get("strike_cooldown", 0.0)) <= 0.0:
+					guard["health"] -= (9.0 if int(unit["kind"]) == -1 else 14.0) * 0.65
+					guard["hit_time"] = 0.28
+					unit["attack_time"] = 0.45
+					unit["strike_cooldown"] = 0.65
 
 func _record_fallen(data: Dictionary) -> void:
 	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false))})
@@ -646,6 +668,7 @@ func _simulate(dt: float) -> void:
 		unit["action_time"] = float(unit.get("action_time", 0.0)) + dt
 		unit["hit_time"] = maxf(0.0, float(unit.get("hit_time", 0.0)) - dt)
 		unit["attack_time"] = maxf(0.0, float(unit.get("attack_time", 0.0)) - dt)
+		unit["strike_cooldown"] = maxf(0.0, float(unit.get("strike_cooldown", 0.0)) - dt)
 		if float(unit.get("steal_timer", 0.0)) > 0.0:
 			unit["steal_timer"] = maxf(0.0, float(unit["steal_timer"]) - dt)
 			continue
@@ -1025,14 +1048,11 @@ func _draw_arena() -> void:
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, 42.0 if actor["guard"] else 34.0)
-		# Animated weapon glints and combat trails while raiders are fighting.
+		# All seven character sheets now have their own attack visual language.
 		if phase == "ATTACK" and animation_row == 2:
-			var strike: float = sin(visual_time * 12.0 + float(data["position"]) * 23.0)
-			if strike > 0.72:
-				var fx_color := Color("78ddff", 0.72) if friendly else Color("ff996e", 0.72)
-				var weapon_tip := p + Vector2(18.0 if friendly else -18.0, -20.0)
-				arena.draw_arc(weapon_tip, 14.0, -1.1, 1.3, 14, fx_color, 2.6)
-				arena.draw_circle(weapon_tip, 3.5, fx_color)
+			_draw_attack_effect(p, art, facing, friendly, float(data.get("attack_time", 0.0)))
+		if not actor["guard"] and int(data.get("carried", 0)) > 0:
+			_draw_carried_gold(p, facing, int(data["carried"]))
 	# Deposit gold at the home vault with a dedicated eight-frame coin-release action.
 	for deposit in deposit_actors:
 		var dp: Vector2 = _point(int(deposit["lane"]), 0.0, int(deposit["side"]))
@@ -1060,6 +1080,7 @@ func _draw_arena() -> void:
 		else:
 			arena.draw_texture_rect_region(da, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
+		_draw_deposit_effect(dp, float(deposit["age"]), int(deposit["amount"]))
 	# Play the defeat row once before removing fallen units from the screen.
 	for fallen in fallen_actors:
 		var death_p: Vector2 = _point(int(fallen["lane"]), float(fallen["position"]), int(fallen["side"]))
@@ -1102,6 +1123,56 @@ func _draw_arena() -> void:
 		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))
 	arena.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	# No minimap: the entire battlefield is always visible.
+
+func _draw_attack_effect(p: Vector2, art: Texture2D, facing: float, friendly: bool, remaining_attack: float) -> void:
+	# Lightweight world-space effects; sprite anatomy comes from the actual atlas frames.
+	var progress: float = clampf(1.0 - remaining_attack / 0.45, 0.0, 1.0)
+	var energy: float = sin(progress * PI)
+	if energy <= 0.03:
+		return
+	var tip := p + Vector2(facing * 19.0, -48.0)
+	var faction_color := Color("81dfff", 0.72 * energy) if friendly else Color("ff8b6e", 0.72 * energy)
+	if art == sprite_arcane_mage:
+		arena.draw_arc(tip, 14.0 + 17.0 * progress, 0.0, TAU, 20, Color("c49bff", 0.7 * energy), 2.6)
+		for i in 4:
+			var theta: float = progress * TAU + float(i) * TAU / 4.0
+			arena.draw_circle(tip + Vector2(cos(theta), sin(theta)) * 24.0, 3.0, faction_color)
+	elif art == sprite_elf_ranger:
+		var arrow_base := p + Vector2(facing * 6.0, -52.0)
+		var arrow_head := arrow_base + Vector2(facing * (15.0 + 42.0 * progress), -6.0)
+		arena.draw_line(arrow_base, arrow_head, Color("c9f4b0", energy), 3.0)
+		arena.draw_line(arrow_head, arrow_head + Vector2(-facing * 10.0, -5.0), Color("c9f4b0", energy), 2.0)
+		arena.draw_line(arrow_head, arrow_head + Vector2(-facing * 10.0, 5.0), Color("c9f4b0", energy), 2.0)
+	elif art == sprite_shadow_wolf:
+		for i in 3:
+			var origin := tip + Vector2(0, float(i - 1) * 12.0)
+			arena.draw_arc(origin, 16.0, -0.8 + progress, 1.5 + progress, 12, Color("d2baff", 0.78 * energy), 2.5)
+	elif art == sprite_goblin_saboteur:
+		for i in 5:
+			var drift: float = float(i) * 1.7 + progress * 3.0
+			arena.draw_circle(tip + Vector2(cos(drift) * 14.0, sin(drift) * 12.0), 3.0 + float(i % 2), Color("9dff80", 0.64 * energy))
+	elif art == sprite_dwarf_defender:
+		arena.draw_arc(tip, 20.0, -1.5 + progress, 0.6 + progress * 2.0, 18, Color("ffd48c", 0.85 * energy), 4.0)
+	elif art == sprite_dwarf_carrier:
+		arena.draw_arc(tip, 18.0, -0.5 + progress, 1.1 + progress * 1.8, 16, Color("f7c76a", 0.7 * energy), 3.0)
+	else:
+		arena.draw_arc(tip, 18.0, -1.2 + progress, 1.2 + progress * 1.7, 17, faction_color, 3.3)
+
+func _draw_carried_gold(p: Vector2, facing: float, amount: int) -> void:
+	# Visible payload travels with the carrier, rather than drawing a deposit pose.
+	var coin_p := p + Vector2(-facing * 15.0, -69.0)
+	var glimmer: float = 0.45 + 0.35 * sin(visual_time * 7.0 + p.x)
+	arena.draw_circle(coin_p, 6.0 + minf(float(amount) / 100.0, 3.0), Color("ecae43", 0.9))
+	arena.draw_arc(coin_p, 4.5, 0.0, TAU, 12, Color("fff2bc", glimmer), 1.8)
+
+func _draw_deposit_effect(p: Vector2, age: float, amount: int) -> void:
+	var t: float = clampf(age / 0.75, 0.0, 1.0)
+	var alpha: float = 1.0 - t
+	for i in 5:
+		var angle: float = TAU * float(i) / 5.0 + t * 1.5
+		var spread: float = 8.0 + 32.0 * t
+		var location := p + Vector2(cos(angle) * spread, -64.0 - t * 26.0 + sin(angle) * 10.0)
+		arena.draw_circle(location, 2.8 + minf(float(amount) / 180.0, 2.0), Color("ffd56a", alpha))
 
 func _draw_minimap() -> void:
 	# Fixed screen-space overview, independent from the scrolling battlefield.
