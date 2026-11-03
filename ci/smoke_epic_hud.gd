@@ -18,6 +18,32 @@ func _run() -> void:
 	game.size = Vector2(720, 1280)
 	await process_frame
 	await process_frame
+	# Visual layout regression: catch portrait letterboxing, crushed cards and
+	# the oversized battle container visible in the November screenshots.
+	var expected_stretch = ProjectSettings.get_setting("display/window/stretch/aspect")
+	if expected_stretch != "expand":
+		_fail("Android must use expand aspect to avoid black letterbox bars")
+		return
+	var arena_panel: PanelContainer = game.arena.get_parent() as PanelContainer
+	if arena_panel == null or arena_panel.size.y > 430.0 or arena_panel.size.y < 300.0:
+		_fail("Battle map must occupy a compact natural-aspect landscape strip")
+		return
+	var character_button: Button = game.controls[3]
+	if character_button.size.y < 120.0:
+		_fail("Character portrait too small to read in portrait layout")
+		return
+	var character_icon: TextureRect = character_button.get_node("Artwork") as TextureRect
+	if character_icon.size.y < 75.0:
+		_fail("Sprite cropped too tightly inside the character button")
+		return
+	var game_controls: Control = game.gameplay_panel.get_parent()
+	if game_controls.size.y < 500.0:
+		_fail("Gameplay commands did not occupy the free vertical space")
+		return
+	# Gold + phase HUD, arena, and command area should be fitted inside viewport.
+	if game_controls.get_global_rect().end.y > game.size.y + 2.0:
+		_fail("Main command controls overflow below phone viewport")
+		return
 	if game.controls.size() != 10:
 		_fail("Expected 3 lanes + 3 units + 3 traps + start controls")
 		return
