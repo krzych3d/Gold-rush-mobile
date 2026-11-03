@@ -33,4 +33,31 @@ func _run_smoke() -> void:
 	await process_frame
 	print("Animation studio smoke test: 7 characters, 6+ actions, facing flip OK")
 	viewer.queue_free()
+	# Regression: a real melee hit must trigger the attacking unit's animation.
+	var main_scene := load("res://main.tscn") as PackedScene
+	var game = main_scene.instantiate()
+	root.add_child(game)
+	game.size = Vector2(720, 1280)
+	await process_frame
+	game._choose_faction(1)
+	game._buy_guard()
+	game._begin_attack()
+	var target_unit: Dictionary = {}
+	for unit in game.units:
+		if int(unit["side"]) == 1 and int(unit["lane"]) == 1:
+			target_unit = unit
+			break
+	if target_unit.is_empty():
+		push_error("Unable to spawn enemy for melee regression")
+		quit(1)
+		return
+	# Enemy approaches the allied guard from the opposite end of the lane.
+	target_unit["position"] = 0.81
+	game._guard_combat(0.05)
+	if float(target_unit.get("attack_time", 0.0)) <= 0.0:
+		push_error("Melee damage did not trigger the attacker animation")
+		quit(1)
+		return
+	print("Combat smoke test: melee strike drives sprite animation")
+	game.queue_free()
 	quit(0)
