@@ -1186,7 +1186,7 @@ func _draw_attack_effect(p: Vector2, character_key: String, facing: float, frien
 		return
 	var tip := p + Vector2(facing * 19.0, -48.0)
 	var faction_color := Color("81dfff", 0.72 * energy) if friendly else Color("ff8b6e", 0.72 * energy)
-	if character_key == "arcane_mage" || character_key == "void_weaver":
+	if character_key == "arcane_mage" or character_key == "void_weaver":
 		arena.draw_arc(tip, 14.0 + 17.0 * progress, 0.0, TAU, 20, Color("c49bff", 0.7 * energy), 2.6)
 		for i in 4:
 			var theta: float = progress * TAU + float(i) * TAU / 4.0
@@ -1201,13 +1201,13 @@ func _draw_attack_effect(p: Vector2, character_key: String, facing: float, frien
 		for i in 3:
 			var origin := tip + Vector2(0, float(i - 1) * 12.0)
 			arena.draw_arc(origin, 16.0, -0.8 + progress, 1.5 + progress, 12, Color("d2baff", 0.78 * energy), 2.5)
-	elif character_key == "goblin_saboteur" || character_key == "void_stalker":
+	elif character_key == "goblin_saboteur" or character_key == "void_stalker":
 		for i in 5:
 			var drift: float = float(i) * 1.7 + progress * 3.0
 			arena.draw_circle(tip + Vector2(cos(drift) * 14.0, sin(drift) * 12.0), 3.0 + float(i % 2), Color("9dff80", 0.64 * energy))
-	elif character_key == "dwarf_defender" || character_key == "void_sentinel":
+	elif character_key == "dwarf_defender" or character_key == "void_sentinel":
 		arena.draw_arc(tip, 20.0, -1.5 + progress, 0.6 + progress * 2.0, 18, Color("ffd48c", 0.85 * energy), 4.0)
-	elif character_key == "dwarf_carrier" || character_key == "void_collector":
+	elif character_key == "dwarf_carrier" or character_key == "void_collector":
 		arena.draw_arc(tip, 18.0, -0.5 + progress, 1.1 + progress * 1.8, 16, Color("f7c76a", 0.7 * energy), 3.0)
 	else:
 		arena.draw_arc(tip, 18.0, -1.2 + progress, 1.2 + progress * 1.7, 17, faction_color, 3.3)
