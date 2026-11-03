@@ -1076,7 +1076,7 @@ func _draw_arena() -> void:
 			elif animation_row == 3:
 				strip_frame = clampi(int((0.28 - float(data.get("hit_time", 0.0))) * float(count) / 0.28), 0, count - 1)
 			arena.draw_texture_rect_region(strip, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(strip_frame * 192), 0.0), Vector2(192, 192)))
-		elif goblin_walk_prototype != null and atlas == atlas_goblin_raider and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
+		elif goblin_walk_prototype != null and not special_animation_atlases.has("goblin_raider") and atlas == atlas_goblin_raider and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
 			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12 if animation_row == 1 else 0
 			arena.draw_texture_rect_region(goblin_walk_prototype, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob), art_size), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)))
 		else:
