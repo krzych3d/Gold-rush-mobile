@@ -1,6 +1,7 @@
 extends Control
 
 const AnimationGallery = preload("res://scripts/animation_gallery.gd")
+const OrnateHUD = preload("res://scripts/ornate_hud.gd")
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
 const RACE_DESCRIPTIONS := ["Ironbeards - 28% vault interest, heavy armor and fortifications", "Green Shadows - 18% interest, fast raids and escapes", "Moon Guardians - 18% interest, magic and extra loot", "Astral Assassins - 18% interest, swift strikes and rich hauls"]
@@ -69,6 +70,8 @@ var camera_zoom := 1.0
 var overview_mode := true
 var expanded_map := false
 var last_icon_race := -1
+var last_ornate_lane := -1
+var ornate_ui = OrnateHUD.new()
 var gameplay_panel: VBoxContainer
 var map_toggle_button: Button
 var camera_controls_row: HBoxContainer
@@ -167,7 +170,7 @@ func _ready() -> void:
 	add_child(root)
 
 	var header_frame := PanelContainer.new()
-	_apply_epic_panel(header_frame, Color("111c32"), Color("edc078"), 4)
+	ornate_ui.panel(header_frame, "hud_bar", 42, 14)
 	root.add_child(header_frame)
 	var header := VBoxContainer.new()
 	header.add_theme_constant_override("separation", 0)
@@ -176,10 +179,20 @@ func _ready() -> void:
 	title_label = title
 	title.text = "VAULT WARS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(title, 25, Color("ffdc95"))
-	header.add_child(title)
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_style_label(title, 29, Color("ffdc95"))
+	var title_plaque := PanelContainer.new()
+	title_plaque.name = "IllustratedTitle"
+	title_plaque.custom_minimum_size.y = 68
+	ornate_ui.panel(title_plaque, "crest", 125, 13)
+	header.add_child(title_plaque)
+	title_plaque.add_child(title)
 	var banner := HBoxContainer.new()
-	header.add_child(banner)
+	var gold_plaque := PanelContainer.new()
+	gold_plaque.name = "ResourceArtwork"
+	ornate_ui.panel(gold_plaque, "hud_bar", 45, 12)
+	header.add_child(gold_plaque)
+	gold_plaque.add_child(banner)
 	hud = Label.new()
 	hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -188,7 +201,11 @@ func _ready() -> void:
 	timer_label = Label.new()
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(timer_label, 16, Color("d1eaff"))
-	header.add_child(timer_label)
+	var phase_plaque := PanelContainer.new()
+	phase_plaque.name = "PhaseArtwork"
+	ornate_ui.panel(phase_plaque, "status_bar", 47, 11)
+	header.add_child(phase_plaque)
+	phase_plaque.add_child(timer_label)
 	performance_label = Label.new()
 	performance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(performance_label, 11, Color("87b2c9"))
@@ -252,7 +269,12 @@ func _ready() -> void:
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.custom_minimum_size.y = 25
 	_style_label(info, 14, Color("f3d598"))
-	gameplay_panel.add_child(info)
+	var message_plaque := PanelContainer.new()
+	message_plaque.name = "MessageArtwork"
+	message_plaque.custom_minimum_size.y = 36
+	ornate_ui.panel(message_plaque, "status_bar", 40, 12)
+	gameplay_panel.add_child(message_plaque)
+	message_plaque.add_child(info)
 	race_button = Button.new()
 	race_button.visible = false
 	gameplay_panel.add_child(race_button)
@@ -269,6 +291,7 @@ func _ready() -> void:
 		lane_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		lane_button.focus_mode = Control.FOCUS_NONE
 		_style_button(lane_button, true)
+		ornate_ui.button(lane_button, "lane_blue", "lane_selected", true)
 		lane_row.add_child(lane_button)
 		controls.append(lane_button)
 		lane_button.pressed.connect(_select_lane.bind(index))
@@ -303,6 +326,7 @@ func _ready() -> void:
 	guard_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	guard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(guard_button, true)
+	ornate_ui.button(guard_button, "banner_blue", "banner_gold")
 	gameplay_panel.add_child(guard_button)
 	guard_button.pressed.connect(_buy_guard)
 	ability_button = Button.new()
@@ -310,6 +334,7 @@ func _ready() -> void:
 	ability_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	ability_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(ability_button, false)
+	ornate_ui.button(ability_button, "banner_purple", "banner_gold")
 	gameplay_panel.add_child(ability_button)
 	ability_button.pressed.connect(_use_race_ability)
 
@@ -322,6 +347,7 @@ func _ready() -> void:
 	invest_button.custom_minimum_size.y = 52
 	invest_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_button(invest_button, true)
+	ornate_ui.button(invest_button, "banner_blue", "banner_gold")
 	economy_row.add_child(invest_button)
 	invest_button.pressed.connect(_upgrade_bank)
 	raid_button = Button.new()
@@ -329,6 +355,7 @@ func _ready() -> void:
 	raid_button.custom_minimum_size.y = 52
 	raid_button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_style_button(raid_button, true)
+	ornate_ui.button(raid_button, "banner_blue", "banner_gold")
 	economy_row.add_child(raid_button)
 	raid_button.pressed.connect(_buy_raid_boost)
 
@@ -338,6 +365,7 @@ func _ready() -> void:
 	start.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(start, false)
+	ornate_ui.button(start, "banner_purple", "banner_gold")
 	gameplay_panel.add_child(start)
 	controls.append(start)
 	start.pressed.connect(_start_pressed)
@@ -932,7 +960,13 @@ func _refresh() -> void:
 	controls[9].text = "↻  PLAY AGAIN" if phase == "END" else "⚔  UNLEASH THE RAID  ⚔" if phase == "PREP" else "⚔  BATTLE IN PROGRESS  ⚔"
 	for i in 3:
 		controls[i].text = ("◆  " if i == lane else "") + "LANE %d" % (i + 1)
-		controls[i].modulate = Color("ffe09d") if i == lane else Color("d8e9f8")
+		controls[i].modulate = Color.WHITE
+	if last_ornate_lane != lane:
+		last_ornate_lane = lane
+		for lane_index in 3:
+			ornate_ui.button(controls[lane_index],
+				"lane_selected" if lane_index == lane else "lane_blue",
+				"lane_selected", true)
 	arena.queue_redraw()
 
 func _point(path: int, progress: float, side: int) -> Vector2:
