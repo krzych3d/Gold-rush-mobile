@@ -1,0 +1,88 @@
+name: Import Voidborn and missing animations
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_url:
+        description: "GitHub issue attachment for the Voidborn + missing animations ZIP"
+        required: true
+        type: string
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: read
+  actions: write
+
+concurrency:
+  group: import-voidborn-complete
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.number == 4 &&
+       github.event.comment.user.login == 'krzych3d' &&
+       contains(github.event.comment.body, 'github.com/user-attachments/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Resolve owner-uploaded attachment
+        env:
+          ZIP_INPUT: ${{ inputs.zip_url }}
+          ISSUE_COMMENT: ${{ github.event.comment.body }}
+        run: |
+          python3 - <<'PY'
+          import os, re, urllib.parse
+          url = os.environ.get("ZIP_INPUT", "").strip()
+          if not url:
+              links = re.findall(r'https://github[.]com/user-attachments/(?:files|assets)/[^\s)<>"]+', os.environ.get("ISSUE_COMMENT", ""))
+              if not links:
+                  raise SystemExit("Missing GitHub user-attachment ZIP URL")
+              url = links[-1].rstrip(".,")
+          parsed = urllib.parse.urlsplit(url)
+          if parsed.scheme != "https" or parsed.hostname != "github.com" or not parsed.path.startswith("/user-attachments/"):
+              raise SystemExit("Only GitHub-hosted user attachments are accepted")
+          if parsed.username or parsed.password or parsed.query or parsed.fragment:
+              raise SystemExit("Unexpected URL parameters")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write("ATLAS_ZIP_URL=" + url + "\n")
+          PY
+      - name: Download, checksum and validate 384 animation frames
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error --retry 2 --max-time 90 --max-filesize 30000000 "$ATLAS_ZIP_URL" --output /tmp/voidborn-atlases.zip
+          python3 -m pip install --quiet --disable-pip-version-check Pillow==11.3.0
+          python3 ci/import_voidborn_animations.py /tmp/voidborn-atlases.zip
+      - name: Commit all eight validated PNG atlases
+        id: commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/epic/animations/*_sheet.png
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No new art: already up to date"
+          else
+            git commit -m "Import Voidborn and four missing class animation atlases"
+            git push origin HEAD:main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Validate Godot and build Android APK with imported sprites
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Pushes by GITHUB_TOKEN do not normally fire 'push' workflows.
+          # Explicit workflow_dispatch does, producing a NEW APK from these assets.
+          gh workflow run godot-ci.yml --ref main
+          gh workflow run android-debug.yml --ref main
+          echo "Started Godot validation and Android debug APK export on main"
