@@ -81,6 +81,36 @@ for the corresponding characters. This is **actual frame-by-frame artwork**,
 not stretching a static sprite. Further frame-level anatomy and foot-contact
 QA should be done on an Android phone after import.
 
+## Voidborn animation coverage and directional fixes
+
+The animation library includes **11 playable sprite roles** across four factions
+(seven source characters + four Voidborn variants). Every runner, carrier,
+saboteur and defender uses a frame-by-frame atlas for idle, walk, attack,
+hit, death and gold activity; the body faces the actual travel direction
+including the trip back to the home vault.
+
+**Voidborn:** Sentinel (defender), Stalker (raider), Collector (carrier),
+Weaver (saboteur). The Voidborn variants are spectral visual remasters of
+existing animated anatomy, not false claims of brand-new hand-drawn rigs.
+Their new PNGs are optional until imported; temporary fallback atlases
+keep previous builds working.
+
+**More special moves:** Dwarf Defender, Dwarf Carrier, Elf Ranger and
+Goblin Saboteur now have six optional bonus sequences each, completing
+special-action coverage for all seven original source characters.
+
+**Import the extra eight animation atlases:**
+1. Download `vault-wars-voidborn-all-characters.zip` from the ChatGPT conversation.
+2. Open [Voidborn animation import issue #4](https://github.com/krzych3d/Gold-rush-mobile/issues/4).
+3. Attach the unmodified ZIP to a **new comment** and submit it.
+4. [The owner-only import workflow](.github/workflows/import-voidborn-complete.yml)
+   verifies eight files and all 384 frames, commits them to `main` and **explicitly
+   starts both the Godot test and Android APK workflows**, even though bot-authored
+   commits alone do not trigger GitHub push workflows.
+
+The import uses no paid generation API. To inspect your characters, use
+the Animation Studio **VOIDBORN** selector and previous/next character buttons.
+
 ## Next visual milestones
 1. Replace flat/duplicate frames in any sprite atlas with distinct, aligned poses.
 2. Finish a consistent Goblin Raider action set (Idle, Walk, Run, Attack,
