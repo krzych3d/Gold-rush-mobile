@@ -4,7 +4,8 @@ extends Control
 
 const UNIT_NAMES := [
 	"DWARF DEFENDER", "DWARF CARRIER", "ELF RANGER", "ARCANE MAGE",
-	"GOBLIN RAIDER", "GOBLIN SABOTEUR", "SHADOW WOLF"
+	"GOBLIN RAIDER", "GOBLIN SABOTEUR", "SHADOW WOLF",
+	"VOID SENTINEL", "VOID STALKER", "VOID COLLECTOR", "VOID WEAVER"
 ]
 const SHEET_PATHS := [
 	"res://assets/epic/animations/dwarf_defender_sheet.png",
@@ -13,7 +14,11 @@ const SHEET_PATHS := [
 	"res://assets/epic/animations/arcane_mage_sheet.png",
 	"res://assets/epic/animations/goblin_raider_sheet.png",
 	"res://assets/epic/animations/goblin_saboteur_sheet.png",
-	"res://assets/epic/animations/shadow_wolf_sheet.png"
+	"res://assets/epic/animations/shadow_wolf_sheet.png",
+	"res://assets/epic/animations/void_sentinel_sheet.png",
+	"res://assets/epic/animations/void_stalker_sheet.png",
+	"res://assets/epic/animations/void_collector_sheet.png",
+	"res://assets/epic/animations/void_weaver_sheet.png"
 ]
 const ACTION_NAMES := ["IDLE", "WALK", "ATTACK", "HIT", "DEATH", "DEPOSIT", "CARRY"]
 const ACTION_ROWS := [0, 1, 2, 3, 4, 5, 1]
@@ -21,13 +26,21 @@ const ACTION_FPS := [5.0, 10.0, 11.0, 10.0, 11.0, 10.0, 10.0]
 const GOBLIN_FRAMES := [8, 12, 12, 8, 16, 12, 12]
 # Supplemental action atlases are optional; they appear after importing the PNG ZIP.
 const SPECIAL_PATHS := {
+	0: "res://assets/epic/animations/dwarf_defender_special_sheet.png",
+	1: "res://assets/epic/animations/dwarf_carrier_special_sheet.png",
+	2: "res://assets/epic/animations/elf_ranger_special_sheet.png",
 	3: "res://assets/epic/animations/arcane_mage_special_sheet.png",
 	4: "res://assets/epic/animations/goblin_raider_special_sheet.png",
+	5: "res://assets/epic/animations/goblin_saboteur_special_sheet.png",
 	6: "res://assets/epic/animations/shadow_wolf_special_sheet.png"
 }
 const SPECIAL_NAMES := {
+	0: ["RUN", "SHIELD CHARGE", "HAMMER STRIKE", "BLOCK", "EARTHQUAKE", "BATTLE CRY"],
+	1: ["RUN", "PICK UP GOLD", "CARRY GOLD", "ROLL", "GOLD THROW", "CELEBRATE"],
+	2: ["RUN", "LEAP", "POWER SHOT", "DODGE", "ARROW VOLLEY", "BLOOM"],
 	3: ["RUN", "TELEPORT", "SHIELD", "BEAM", "RUNE", "VICTORY"],
 	4: ["SPRINT", "LEAP", "COMBO", "DODGE", "TAUNT", "STEALTH"],
+	5: ["SNEAK", "BOMB", "EXPLOSION", "ROLL", "SMOKE", "TAUNT"],
 	6: ["SPRINT", "POUNCE", "FRENZY", "SHADOW DASH", "HOWL", "SPAWN"]
 }
 
@@ -47,8 +60,14 @@ var special_atlases: Dictionary = {}
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	for path in SHEET_PATHS:
-		atlases.append(load(path) as Texture2D)
+	for index in SHEET_PATHS.size():
+		var source_path: String = SHEET_PATHS[index]
+		if ResourceLoader.exists(source_path):
+			atlases.append(load(source_path) as Texture2D)
+		else:
+			# Temporary playable fallbacks until the owner's PNG ZIP is imported.
+			var fallback_index: int = {7: 0, 8: 5, 9: 1, 10: 3}.get(index, 0)
+			atlases.append(load(SHEET_PATHS[fallback_index]) as Texture2D)
 	for hero_index in SPECIAL_PATHS.keys():
 		var special_path: String = SPECIAL_PATHS[hero_index]
 		if ResourceLoader.exists(special_path):
@@ -94,8 +113,13 @@ func _ready() -> void:
 	_decorate(unit_label, 19, Color("f5e3bd"))
 	unit_controls.add_child(unit_label)
 	_add_button(unit_controls, "HERO ▶", _change_unit.bind(1))
+	var factions := HBoxContainer.new()
+	factions.add_theme_constant_override("separation", 4)
+	layout.add_child(factions)
+	for index in 4:
+		_add_button(factions, ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"][index], _select_faction_preview.bind(index))
 	preview = Control.new()
-	preview.custom_minimum_size = Vector2(0, 320)
+	preview.custom_minimum_size = Vector2(0, 250)
 	preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	preview.draw.connect(_draw_preview)
 	layout.add_child(preview)
@@ -117,7 +141,7 @@ func _ready() -> void:
 	_add_button(direction_controls, "FLIP DIRECTION", _flip)
 	_add_button(direction_controls, "CLOSE", _close)
 	var footnote := Label.new()
-	footnote.text = "Compare real frames. An unanimated source sheet needs new art, not fake movement."
+	footnote.text = "11 animated character roles. Base actions for every role, plus special sequences where available."
 	footnote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	footnote.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_decorate(footnote, 13, Color("b4cadf"))
@@ -137,6 +161,13 @@ func _add_button(parent: HBoxContainer, caption: String, handler: Callable) -> v
 	button.add_theme_font_size_override("font_size", 15)
 	parent.add_child(button)
 	button.pressed.connect(handler)
+
+func _select_faction_preview(faction: int) -> void:
+	# Direct entry points for every faction, especially the previously missing Voidborn.
+	selected_unit = [0, 4, 2, 7][clampi(faction, 0, 3)]
+	selected_action = 0
+	elapsed = 0.0
+	_refresh_labels()
 
 func _change_unit(direction: int) -> void:
 	selected_unit = posmod(selected_unit + direction, UNIT_NAMES.size())
