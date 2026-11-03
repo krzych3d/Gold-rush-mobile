@@ -50,6 +50,37 @@ identify which rows still need better PNG artwork.
 - Open the latest successful **Android debug APK** workflow, then download
   the `gold-rush-debug-apk` artifact. Debug signing is not production signing.
 
+## Cinematic animation pack (10 generated sheets / 480 frames)
+
+New generated high-detail RGBA animation sheets are distributed as a reviewed ZIP
+(`vault-wars-epic-animations.zip`, about 11.6 MB), not as static mockups. All
+ten 8×6 sheets use 1024×768 PNGs (128px cells).
+
+**Automatic GitHub import:**
+1. Download the ZIP from the ChatGPT conversation.
+2. Open [the sprite import issue](https://github.com/krzych3d/Gold-rush-mobile/issues/2).
+3. Drag the unmodified ZIP into a **new issue comment** and submit.
+4. The restricted [Import 10 epic animation sheets](.github/workflows/import-epic-animations.yml)
+   workflow will validate the ZIP (all ten files, hashes, alpha and 48 frames),
+   replace the seven original base sheets, commit three additional special sheets,
+   and trigger Godot/Android CI on main.
+
+The workflow can also be run manually with a GitHub user-attachment HTTPS URL.
+Only the repository owner can trigger the automatic issue-comment import.
+Do **not** rename files in the ZIP or alter the SHA-256 manifest.
+
+The seven base atlases cover idle/walk/attack/hit/death/loot.
+Three supplemental atlases add six animations per character:
+- Goblin Raider: sprint, leap, dual-dagger combo, dodge, taunt, stealth.
+- Shadow Wolf: sprint, pounce, frenzy, shadow dash, howl, spawn.
+- Arcane Mage: run, teleport, shield, beam, rune, victory.
+
+The in-game Animation Studio automatically adds these states when the assets
+are installed. During battles, premium sprint/combo/beam frames take priority
+for the corresponding characters. This is **actual frame-by-frame artwork**,
+not stretching a static sprite. Further frame-level anatomy and foot-contact
+QA should be done on an Android phone after import.
+
 ## Next visual milestones
 1. Replace flat/duplicate frames in any sprite atlas with distinct, aligned poses.
 2. Finish a consistent Goblin Raider action set (Idle, Walk, Run, Attack,
