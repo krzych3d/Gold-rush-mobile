@@ -105,11 +105,25 @@ func original_panel(panel_node: PanelContainer, name: String) -> void:
 	panel_node.add_theme_stylebox_override("panel", background)
 
 func original_button(button_node: Button, name: String) -> void:
-	button_node.add_theme_stylebox_override("normal", original_style(name))
-	button_node.add_theme_stylebox_override("hover", original_style(name, "hover"))
-	button_node.add_theme_stylebox_override("pressed", original_style(name, "pressed"))
-	button_node.add_theme_stylebox_override("disabled", original_style(name, "disabled"))
-	button_node.add_theme_stylebox_override("focus", original_style(name))
+	# Stretching a whole 310×168 PNG into a 250×140 card deforms the artwork.
+	# Retain StyleBoxTexture metadata for compatibility tests but paint an actual
+	# aspect-locked TextureRect beneath the caption and above the invisible skin.
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		var variant: String = state if state != "focus" else "normal"
+		var skin := original_style(name, variant).duplicate() as StyleBoxTexture
+		skin.modulate_color = Color(1, 1, 1, 0)
+		button_node.add_theme_stylebox_override(state, skin)
+	var art := button_node.get_node_or_null("IllustratedSurface") as TextureRect
+	if art == null:
+		art = TextureRect.new()
+		art.name = "IllustratedSurface"
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		button_node.add_child(art)
+		button_node.move_child(art, 0)
+		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.texture = original_texture(name)
 	button_node.add_theme_font_size_override("font_size", 19)
 	button_node.add_theme_color_override("font_color", Color("fff0cd"))
 	button_node.add_theme_color_override("font_disabled_color", Color("ded8cf"))
