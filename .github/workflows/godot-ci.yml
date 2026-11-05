@@ -8,6 +8,7 @@ on:
       - '**/*.tscn'
       - '**/*.tres'
       - 'assets/epic/animations/**'
+      - 'assets/ui/direct/**'
       - 'project.godot'
       - '.github/workflows/godot-ci.yml'
   pull_request:
@@ -56,3 +57,10 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_epic_hud.gd 2>&1 | tee hud.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" hud.log; then exit 1; fi
           grep -q "Epic HUD regression PASSED" hud.log
+      - name: Test real illustrated PNG UI and interactive controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_original_hud.gd 2>&1 | tee realhud.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" realhud.log; then exit 1; fi
+          grep -q "Original illustrated HUD smoke PASSED" realhud.log

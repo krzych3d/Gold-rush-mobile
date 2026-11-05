@@ -11,6 +11,7 @@ on:
       - '**/*.tscn'
       - '**/*.tres'
       - 'assets/epic/animations/**'
+      - 'assets/ui/direct/**'
       - '.github/workflows/android-debug.yml'
 
 permissions:
