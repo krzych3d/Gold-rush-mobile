@@ -2,6 +2,7 @@ extends Control
 
 const AnimationGallery = preload("res://scripts/animation_gallery.gd")
 const OrnateHUD = preload("res://scripts/ornate_hud.gd")
+const CinematicOutcome = preload("res://scripts/cinematic_outcome.gd")
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
 const RACE_ART_PREFIX := ["dwarf", "goblin", "elf", ""]
@@ -76,6 +77,12 @@ var ornate_ui = OrnateHUD.new()
 var original_png_ui := false
 var last_original_raid_skin := ""
 var gameplay_panel: VBoxContainer
+var command_frame: PanelContainer
+var battlefield_frame: PanelContainer
+var main_menu_button: Button
+var map_mode_button: Button
+var menu_confirmation: Control
+var result_overlay: Control
 var map_toggle_button: Button
 var camera_controls_row: HBoxContainer
 # True 2:1 diamond projection: world X/Y become screen diagonal axes.
@@ -194,7 +201,7 @@ func _ready() -> void:
 	if original_png_ui:
 		ornate_ui.original_panel(title_plaque, "title")
 		title.text = "" # Title is engraved in the genuine PNG
-		title_plaque.custom_minimum_size.y = 92
+		title_plaque.custom_minimum_size.y = 82
 	var banner := HBoxContainer.new()
 	var gold_plaque := PanelContainer.new()
 	gold_plaque.name = "ResourceArtwork"
@@ -203,7 +210,7 @@ func _ready() -> void:
 	gold_plaque.add_child(banner)
 	if original_png_ui:
 		ornate_ui.original_panel(gold_plaque, "gold_bar")
-		gold_plaque.custom_minimum_size.y = 42
+		gold_plaque.custom_minimum_size.y = 37
 	hud = Label.new()
 	hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -219,22 +226,40 @@ func _ready() -> void:
 	phase_plaque.add_child(timer_label)
 	if original_png_ui:
 		ornate_ui.original_panel(phase_plaque, "phase_bar")
-		phase_plaque.custom_minimum_size.y = 37
+		phase_plaque.custom_minimum_size.y = 34
 	performance_label = Label.new()
 	performance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(performance_label, 11, Color("87b2c9"))
-	performance_label.modulate.a = 0.75
-	header.add_child(performance_label)
+	performance_label.modulate.a = 0.70
+	var title_actions := HBoxContainer.new()
+	title_actions.add_theme_constant_override("separation", 5)
+	header.add_child(title_actions)
+	performance_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_actions.add_child(performance_label)
+	main_menu_button = Button.new()
+	main_menu_button.name = "MainMenuToggle"
+	main_menu_button.text = "☰ MENU"
+	main_menu_button.custom_minimum_size = Vector2(110, 36)
+	ornate_ui.button(main_menu_button, "lane_blue", "lane_selected", true)
+	title_actions.add_child(main_menu_button)
+	main_menu_button.pressed.connect(_request_main_menu)
+	map_mode_button = Button.new()
+	map_mode_button.name = "MapViewToggle"
+	map_mode_button.text = "⛶ MAP"
+	map_mode_button.custom_minimum_size = Vector2(100, 36)
+	ornate_ui.button(map_mode_button, "lane_blue", "lane_selected", true)
+	title_actions.add_child(map_mode_button)
+	map_mode_button.pressed.connect(_toggle_map_expanded)
 
-	var battlefield_frame := PanelContainer.new()
+	battlefield_frame = PanelContainer.new()
 	_apply_epic_panel(battlefield_frame, Color("071728"), Color("98713d"), 3)
 	battlefield_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Keep the map panel close to its original 2400:1060 landscape ratio.
 	battlefield_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	battlefield_frame.custom_minimum_size.y = 352
+	battlefield_frame.custom_minimum_size.y = 405
 	root.add_child(battlefield_frame)
 	arena = Control.new()
-	arena.custom_minimum_size = Vector2(0, 342)
+	arena.custom_minimum_size = Vector2(0, 395)
 	arena.clip_contents = true
 	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -269,7 +294,7 @@ func _ready() -> void:
 		else:
 			control.pressed.connect(_center_camera)
 
-	var command_frame := PanelContainer.new()
+	command_frame = PanelContainer.new()
 	command_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	command_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_apply_epic_panel(command_frame, Color("10192e"), Color("bc884a"), 2)
@@ -903,7 +928,96 @@ func _check_vaults() -> bool:
 	else:
 		message = "DEFEAT! YOUR VAULT IS EMPTY"
 	victory_reason = message
+	call_deferred("_show_cinematic_result")
 	return true
+
+func _show_cinematic_result() -> void:
+	if phase != "END" or result_overlay != null or not is_inside_tree():
+		return
+	if menu_music != null:
+		menu_music.stop()
+	result_overlay = CinematicOutcome.new()
+	add_child(result_overlay)
+	result_overlay.play_again_requested.connect(_restart_match)
+	result_overlay.main_menu_requested.connect(_return_to_main_menu)
+	result_overlay.present(gold[1] <= 0 and gold[0] > 0,
+		gold[0] <= 0 and gold[1] <= 0, victory_reason, wave, gold[0], gold[1])
+
+func _restart_match() -> void:
+	get_tree().reload_current_scene()
+
+func _return_to_main_menu() -> void:
+	# A fresh scene opens the existing four-race selection screen.
+	get_tree().reload_current_scene()
+
+func _request_main_menu() -> void:
+	if phase == "SELECT":
+		return
+	if phase == "END":
+		_return_to_main_menu()
+		return
+	if menu_confirmation != null:
+		return
+	menu_confirmation = ColorRect.new()
+	menu_confirmation.name = "LeaveMatchConfirmation"
+	menu_confirmation.color = Color(0.02, 0.02, 0.08, 0.90)
+	menu_confirmation.mouse_filter = Control.MOUSE_FILTER_STOP
+	menu_confirmation.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	menu_confirmation.z_index = 110
+	add_child(menu_confirmation)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	menu_confirmation.add_child(center)
+	var frame := PanelContainer.new()
+	var skin := StyleBoxFlat.new()
+	skin.bg_color = Color("10172e")
+	skin.border_color = Color("f6c878")
+	skin.set_border_width_all(3)
+	skin.set_corner_radius_all(16)
+	skin.set_content_margin_all(22)
+	frame.add_theme_stylebox_override("panel", skin)
+	center.add_child(frame)
+	var choices := VBoxContainer.new()
+	choices.custom_minimum_size.x = 460
+	choices.add_theme_constant_override("separation", 15)
+	frame.add_child(choices)
+	var warning := Label.new()
+	warning.text = "LEAVE THE BATTLE?"
+	warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(warning, 29, Color("ffe2a2"))
+	choices.add_child(warning)
+	var detail := Label.new()
+	detail.text = "Current match progress will be lost."
+	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(detail, 18, Color("ddd0ed"))
+	choices.add_child(detail)
+	var stay := Button.new()
+	stay.name = "StayInBattle"
+	stay.text = "CONTINUE BATTLE"
+	stay.custom_minimum_size.y = 65
+	ornate_ui.button(stay, "banner_blue", "banner_gold")
+	choices.add_child(stay)
+	stay.pressed.connect(_dismiss_menu_confirmation)
+	var leave := Button.new()
+	leave.name = "ConfirmMainMenu"
+	leave.text = "RETURN TO MAIN MENU"
+	leave.custom_minimum_size.y = 65
+	ornate_ui.button(leave, "banner_purple", "banner_gold")
+	choices.add_child(leave)
+	leave.pressed.connect(_return_to_main_menu)
+
+func _dismiss_menu_confirmation() -> void:
+	if menu_confirmation != null:
+		menu_confirmation.queue_free()
+		menu_confirmation = null
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if menu_confirmation != null:
+			_dismiss_menu_confirmation()
+		else:
+			_request_main_menu()
+		get_viewport().set_input_as_handled()
 
 func _end_wave() -> void:
 	if phase != "ATTACK":
@@ -1283,8 +1397,10 @@ func _center_camera() -> void:
 
 func _toggle_map_expanded() -> void:
 	expanded_map = not expanded_map
-	gameplay_panel.visible = not expanded_map
-	map_toggle_button.text = "CONTROLS" if expanded_map else "EXPAND"
+	command_frame.visible = not expanded_map
+	battlefield_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL if expanded_map else Control.SIZE_SHRINK_CENTER
+	map_mode_button.text = "▤ CONTROLS" if expanded_map else "⛶ MAP"
+	# Keep the entire world visible in tactical overview.
 	call_deferred("_fit_map")
 
 func _change_zoom(delta: float) -> void:
