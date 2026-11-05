@@ -1,0 +1,23 @@
+name: Validate faction illustration pack importer
+on:
+  pull_request:
+    paths:
+      - 'ci/import_faction_illustrations.py'
+      - 'ci/test_faction_importer.py'
+      - '.github/workflows/validate-faction-pack.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install PNG validation dependency
+        run: python -m pip install --quiet Pillow==11.3.0
+      - name: Check 30-card importer, wrong ZIP detection and SHA mismatch
+        run: python ci/test_faction_importer.py
