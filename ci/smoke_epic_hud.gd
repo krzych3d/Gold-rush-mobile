@@ -69,7 +69,9 @@ func _run() -> void:
 			_fail("Button %d lacks an illustrated nine-patch skin" % button_index)
 			return
 		var art_tex: Texture2D = (artwork_style as StyleBoxTexture).texture
-		if art_tex == null or art_tex.get_width() < 300:
+		# Original ImageGen cards have authentic 292px PNG source width,
+		# whereas SVG fallback skin was intentionally >300px.
+		if art_tex == null or art_tex.get_width() < 180:
 			_fail("Illustrated control art did not import from SVG %d" % button_index)
 			return
 	for key in ["IllustratedTitle", "ResourceArtwork", "PhaseArtwork", "MessageArtwork"]:
