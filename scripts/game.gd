@@ -1270,7 +1270,7 @@ func _refresh() -> void:
 		ability_button.text = ""
 	invest_button.disabled = phase != "PREP" or bank_level >= 5 or gold[0] < 180 + bank_level * 110
 	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < 120
-	invest_button.text = "🏛 BANK LV%d  •  %d" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "🏛 BANK MAX"
+	invest_button.text = "🏛 BANK LV%d  •  %d" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "🏛 BANK LV5 • MAX"
 	raid_button.text = "⚔ RAID LV%d  •  120" % raid_boost if raid_boost < 3 else "⚔ RAID MAX"
 	if original_png_ui:
 		var bank_text := invest_button.get_node_or_null("OriginalDynamicText") as Label
