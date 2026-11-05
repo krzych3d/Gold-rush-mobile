@@ -62,3 +62,54 @@ func button(button_node: Button, normal: String, pushed: String = "", lane: bool
 	button_node.add_theme_constant_override("shadow_offset_x", 2)
 	button_node.add_theme_constant_override("shadow_offset_y", 2)
 	button_node.add_theme_font_size_override("font_size", 18 if lane else 20)
+
+# Real cropped PNGs from the original ImageGen artwork, not redrawn SVG lookalikes.
+# These are optional until their checked ZIP is imported by GitHub Actions.
+const DIRECT_DIR := "res://assets/ui/direct/"
+var direct_styles: Dictionary = {}
+
+func has_original_art() -> bool:
+	return ResourceLoader.exists(DIRECT_DIR + "title.png") and ResourceLoader.exists(DIRECT_DIR + "runner.png")
+
+func original_texture(name: String) -> Texture2D:
+	var path: String = DIRECT_DIR + name + ".png"
+	return load(path) as Texture2D if ResourceLoader.exists(path) else null
+
+func original_style(name: String, variant: String = "normal") -> StyleBoxTexture:
+	var key: String = name + ":" + variant
+	if direct_styles.has(key):
+		return direct_styles[key]
+	var frame := StyleBoxTexture.new()
+	frame.texture = original_texture(name)
+	# The source graphic already has illustrated borders and inset faces.
+	# Stretch the complete card, never repeat a corner nine times.
+	frame.texture_margin_left = 0
+	frame.texture_margin_right = 0
+	frame.texture_margin_top = 0
+	frame.texture_margin_bottom = 0
+	frame.content_margin_left = 0
+	frame.content_margin_right = 0
+	frame.content_margin_top = 0
+	frame.content_margin_bottom = 0
+	if variant == "hover":
+		frame.modulate_color = Color(1.13, 1.11, 1.15)
+	elif variant == "pressed":
+		frame.modulate_color = Color(1.2, 1.12, 1.22)
+	elif variant == "disabled":
+		frame.modulate_color = Color(0.88, 0.88, 0.95)
+	direct_styles[key] = frame
+	return frame
+
+func original_panel(panel_node: PanelContainer, name: String) -> void:
+	var background := original_style(name)
+	panel_node.add_theme_stylebox_override("panel", background)
+
+func original_button(button_node: Button, name: String) -> void:
+	button_node.add_theme_stylebox_override("normal", original_style(name))
+	button_node.add_theme_stylebox_override("hover", original_style(name, "hover"))
+	button_node.add_theme_stylebox_override("pressed", original_style(name, "pressed"))
+	button_node.add_theme_stylebox_override("disabled", original_style(name, "disabled"))
+	button_node.add_theme_stylebox_override("focus", original_style(name))
+	button_node.add_theme_font_size_override("font_size", 19)
+	button_node.add_theme_color_override("font_color", Color("fff0cd"))
+	button_node.add_theme_color_override("font_disabled_color", Color("ded8cf"))
