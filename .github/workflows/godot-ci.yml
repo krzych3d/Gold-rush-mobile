@@ -8,6 +8,7 @@ on:
       - '**/*.tscn'
       - '**/*.tres'
       - 'assets/epic/animations/**'
+      - 'assets/ui/direct/**'
       - 'project.godot'
       - '.github/workflows/godot-ci.yml'
   pull_request:
