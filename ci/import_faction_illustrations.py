@@ -26,8 +26,31 @@ def import_pack(raw_zip: bytes) -> list[str]:
     with zipfile.ZipFile(io.BytesIO(raw_zip)) as archive:
         entries = {item.filename: item for item in archive.infolist()
                    if not item.is_dir()}
-        if set(entries) != EXPECTED | {"manifest.json"}:
-            raise ValueError("Expected exactly 30 PNG cards and manifest, no extras")
+        # Keep the strict whitelist: the previously uploaded 27-file
+        # original-HUD archive belongs to a different workflow (issue #9).
+        # It is not the race-specific 30-PNG archive for issue #11.
+        expected_entries = EXPECTED | {"manifest.json"}
+        actual_entries = set(entries)
+        if actual_entries != expected_entries:
+            missing = sorted(expected_entries - actual_entries)
+            unexpected = sorted(actual_entries - expected_entries)
+            png_count = sum(name.lower().endswith(".png") for name in actual_entries)
+            old_hud_markers = {"title.png", "gold_bar.png", "attack_prep.png", "runner_full.png"}
+            if old_hud_markers & actual_entries:
+                raise ValueError(
+                    f"WRONG ZIP FOR ISSUE #11: uploaded original illustrated HUD "
+                    f"({png_count} PNGs), not the three-faction menu pack "
+                    f"(30 PNGs). Download vault-wars-three-faction-illustrated-ui.zip "
+                    f"from ChatGPT and attach that ZIP in a NEW issue #11 comment. "
+                    f"Missing faction files: {missing[:8]}; "
+                    f"Unexpected old HUD files: {unexpected[:8]}"
+                )
+            raise ValueError(
+                f"Invalid faction menu ZIP: expected 30 named PNGs and manifest.json; "
+                f"found {png_count} PNGs. "
+                f"Missing: {missing[:12]}. Unexpected: {unexpected[:12]}. "
+                f"Required ZIP: vault-wars-three-faction-illustrated-ui.zip"
+            )
         if sum(info.file_size for info in entries.values()) > MAX_DECODED:
             raise ValueError("Uncompressed image data exceeds 48 MiB")
         manifest = json.loads(archive.read("manifest.json"))
