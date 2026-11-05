@@ -4,6 +4,7 @@ const AnimationGallery = preload("res://scripts/animation_gallery.gd")
 const OrnateHUD = preload("res://scripts/ornate_hud.gd")
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
+const RACE_ART_PREFIX := ["dwarf", "goblin", "elf", ""]
 const RACE_DESCRIPTIONS := ["Ironbeards - 28% vault interest, heavy armor and fortifications", "Green Shadows - 18% interest, fast raids and escapes", "Moon Guardians - 18% interest, magic and extra loot", "Astral Assassins - 18% interest, swift strikes and rich hauls"]
 const RACE_COLORS := [Color("d7a85c"), Color("78c978"), Color("a6dfff"), Color("ba8aff")]
 const PREP_TIME := 30.0
@@ -169,7 +170,7 @@ func _ready() -> void:
 	add_child(backdrop)
 	var root := VBoxContainer.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.add_theme_constant_override("separation", 4)
+	root.add_theme_constant_override("separation", 2)
 	add_child(root)
 
 	var header_frame := PanelContainer.new()
@@ -230,10 +231,10 @@ func _ready() -> void:
 	battlefield_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Keep the map panel close to its original 2400:1060 landscape ratio.
 	battlefield_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	battlefield_frame.custom_minimum_size.y = 335
+	battlefield_frame.custom_minimum_size.y = 352
 	root.add_child(battlefield_frame)
 	arena = Control.new()
-	arena.custom_minimum_size = Vector2(0, 325)
+	arena.custom_minimum_size = Vector2(0, 342)
 	arena.clip_contents = true
 	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -271,10 +272,10 @@ func _ready() -> void:
 	var command_frame := PanelContainer.new()
 	command_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	command_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_apply_epic_panel(command_frame, Color("10192e"), Color("bc884a"), 5)
+	_apply_epic_panel(command_frame, Color("10192e"), Color("bc884a"), 2)
 	root.add_child(command_frame)
 	gameplay_panel = VBoxContainer.new()
-	gameplay_panel.add_theme_constant_override("separation", 6)
+	gameplay_panel.add_theme_constant_override("separation", 2)
 	gameplay_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	command_frame.add_child(gameplay_panel)
 	info = Label.new()
@@ -296,7 +297,7 @@ func _ready() -> void:
 	race_button.disabled = true
 
 	var lane_row := HBoxContainer.new()
-	lane_row.add_theme_constant_override("separation", 5)
+	lane_row.add_theme_constant_override("separation", 2)
 	gameplay_panel.add_child(lane_row)
 	for index in 3:
 		var lane_button := Button.new()
@@ -312,7 +313,7 @@ func _ready() -> void:
 		lane_button.pressed.connect(_select_lane.bind(index))
 
 	var unit_row := HBoxContainer.new()
-	unit_row.add_theme_constant_override("separation", 6)
+	unit_row.add_theme_constant_override("separation", 2)
 	unit_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gameplay_panel.add_child(unit_row)
 	for index in 3:
@@ -324,7 +325,7 @@ func _ready() -> void:
 		unit_button.pressed.connect(_buy_unit.bind(index))
 
 	var trap_row := HBoxContainer.new()
-	trap_row.add_theme_constant_override("separation", 6)
+	trap_row.add_theme_constant_override("separation", 2)
 	trap_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gameplay_panel.add_child(trap_row)
 	for index in 3:
@@ -354,7 +355,7 @@ func _ready() -> void:
 	ability_button.pressed.connect(_use_race_ability)
 
 	var economy_row := HBoxContainer.new()
-	economy_row.add_theme_constant_override("separation", 5)
+	economy_row.add_theme_constant_override("separation", 2)
 	economy_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gameplay_panel.add_child(economy_row)
 	invest_button = Button.new()
@@ -969,7 +970,7 @@ func _refresh() -> void:
 	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST or guards_in_lane >= 3
 	ability_button.disabled = phase != "PREP" or ability_used or gold[0] < 120
 	ability_button.text = "✦ %s  •  120 GOLD" % ABILITY_NAMES[selected_race] if not ability_used else "✓ %s ACTIVE" % ABILITY_NAMES[selected_race]
-	if original_png_ui and selected_race == 3:
+	if original_png_ui and _race_has_illustrated_asset("ability"):
 		ability_button.text = ""
 	invest_button.disabled = phase != "PREP" or bank_level >= 5 or gold[0] < 180 + bank_level * 110
 	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < 120
@@ -1153,41 +1154,66 @@ func _original_economy_label(button_node: Button) -> Label:
 	button_node.add_child(overlay)
 	return overlay
 
+func _race_art_name(name: String) -> String:
+	# Voidborn uses the previously imported original cards. The other three
+	# races use the exact generated high-detail cards in the optional PNG pack.
+	if selected_race == 3:
+		return "ability_void" if name == "ability" else name
+	return RACE_ART_PREFIX[selected_race] + "_" + name
+
+func _race_has_illustrated_asset(name: String) -> bool:
+	return ornate_ui.original_texture(_race_art_name(name)) != null
+
 func _install_original_png_buttons() -> void:
-	# All controls remain Button nodes. Only their *skins* are new;
-	# the purchase, lane, economy, race ability, battle and replay signals
-	# remain connected to their existing tested game methods.
-	for i in 3:
-		ornate_ui.original_button(controls[6 + i], ["spikes", "snare", "turret"][i])
-		_set_premium_card_overlay(controls[6 + i], false)
-	ornate_ui.original_button(guard_button, "defender")
-	guard_button.text = ""
-	ornate_ui.original_button(invest_button, "bank")
-	ornate_ui.original_button(raid_button, "raid")
+	# One consistent, fully clickable, premium UI system for all four factions.
+	# Faction art changes with selected_race; Godot buttons remain wired to
+	# game logic, real prices, and touch hitboxes.
 	_original_economy_label(invest_button)
 	_original_economy_label(raid_button)
-	invest_button.text = ""
-	raid_button.text = ""
+	_update_original_faction_art()
+	_update_original_raid_skin(true)
+
+func _update_original_faction_art() -> void:
 	_update_original_character_art()
 	_update_original_ability_skin()
-	_update_original_raid_skin(true)
+	for i in 3:
+		var trap_name: String = ["spikes", "snare", "turret"][i]
+		var premium_name: String = _race_art_name(trap_name)
+		ornate_ui.original_button(controls[6 + i],
+			premium_name if ornate_ui.original_texture(premium_name) != null else trap_name)
+		_set_premium_card_overlay(controls[6 + i], false)
+	var defender_key: String = _race_art_name("defender")
+	ornate_ui.original_button(guard_button,
+		defender_key if ornate_ui.original_texture(defender_key) != null else "defender")
+	guard_button.text = ""
+	for node_info in [[invest_button, "bank"], [raid_button, "raid"]]:
+		var node: Button = node_info[0] as Button
+		var name: String = node_info[1]
+		var proposed: String = _race_art_name(name)
+		ornate_ui.original_button(node,
+			proposed if ornate_ui.original_texture(proposed) != null else name)
+	invest_button.text = ""
+	raid_button.text = ""
 
 func _update_original_character_art() -> void:
 	for i in 3:
+		var card_name: String = ["runner", "carrier", "saboteur"][i]
+		var premium_name: String = _race_art_name(card_name)
 		var button_node: Button = controls[3 + i]
-		if selected_race == 3:
-			# For Voidborn the direct image matches the generated character
-			# illustration. For other races retain their actual race portrait,
-			# never mislabel an elf/goblin as a Voidborn assassin.
-			ornate_ui.original_button(button_node, ["runner", "carrier", "saboteur"][i])
+		if ornate_ui.original_texture(premium_name) != null:
+			ornate_ui.original_button(button_node, premium_name)
 			_set_premium_card_overlay(button_node, false)
 		else:
+			# Only until the next PNG package is imported. Never show a
+			# Voidborn illustration for a goblin, dwarf or elf.
 			ornate_ui.button(button_node, "card_hero", "card_hero")
 			_set_premium_card_overlay(button_node, true)
 
 func _update_original_ability_skin() -> void:
-	if selected_race == 3:
-		ornate_ui.original_button(ability_button, "ability_void")
+	var premium_name: String = _race_art_name("ability")
+	if ornate_ui.original_texture(premium_name) != null:
+		ornate_ui.original_button(ability_button, premium_name)
+		ability_button.text = ""
 	else:
 		ornate_ui.button(ability_button, "banner_purple", "banner_gold")
 
@@ -1203,8 +1229,7 @@ func _refresh_unit_icons() -> void:
 		return
 	last_icon_race = selected_race
 	if original_png_ui:
-		_update_original_character_art()
-		_update_original_ability_skin()
+		_update_original_faction_art()
 	for kind in 3:
 		if controls.size() <= kind + 3:
 			return

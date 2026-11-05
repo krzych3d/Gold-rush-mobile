@@ -41,17 +41,31 @@ func _test() -> void:
 		if game.controls[9].text != "":
 			_fatal("Native CTA label overlaps baked illustrated CTA lettering")
 			return
-		# Choosing another race must never show an unrelated Voidborn hero portrait.
-		game.selected_race = 0
-		game._refresh_unit_icons()
-		if not (game.controls[3].get_node("Artwork") as TextureRect).visible:
-			_fatal("Non-Voidborn character artwork not restored")
-			return
+		# Every faction must display its own characters whenever the matching
+		# illustration PNG exists. Never substitute a Voidborn assassin.
+		for race in range(4):
+			game.selected_race = race
+			game._refresh_unit_icons()
+			for index in 3:
+				var hero_name: String = ["runner", "carrier", "saboteur"][index]
+				var wanted_name: String = game._race_art_name(hero_name)
+				var has_premium: bool = game.ornate_ui.original_texture(wanted_name) != null
+				var hero_button: Button = game.controls[3 + index]
+				var live_atlas: TextureRect = hero_button.get_node("Artwork") as TextureRect
+				var hero_bg: StyleBoxTexture = hero_button.get_theme_stylebox("normal") as StyleBoxTexture
+				if live_atlas.visible == has_premium:
+					_fatal("Wrong portrait overlay for faction %d, role %s" % [race, hero_name])
+					return
+				if has_premium and (hero_bg == null or hero_bg.texture != game.ornate_ui.original_texture(wanted_name)):
+					_fatal("Faction %d is not using its own original PNG for %s" % [race, hero_name])
+					return
+			var ability_name: String = game._race_art_name("ability")
+			if game.ornate_ui.original_texture(ability_name) != null:
+				if game.ability_button.get_theme_stylebox("normal").texture != game.ornate_ui.original_texture(ability_name):
+					_fatal("Faction ability art does not match active race")
+					return
 		game.selected_race = 3
 		game._refresh_unit_icons()
-		if (game.controls[3].get_node("Artwork") as TextureRect).visible:
-			_fatal("Original PNG artwork did not return when Voidborn was selected")
-			return
 		print("Premium PNG HUD: all original illustrations, prices and faction switching verified")
 	else:
 		print("Premium PNG HUD not yet imported: non-breaking fallback verified")
