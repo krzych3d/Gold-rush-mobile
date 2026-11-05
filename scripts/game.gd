@@ -3,6 +3,13 @@ extends Control
 const AnimationGallery = preload("res://scripts/animation_gallery.gd")
 const OrnateHUD = preload("res://scripts/ornate_hud.gd")
 const CinematicOutcome = preload("res://scripts/cinematic_outcome.gd")
+const VAULT_TIER_ART = [
+	preload("res://assets/world/vault_tier_1.svg"),
+	preload("res://assets/world/vault_tier_2.svg"),
+	preload("res://assets/world/vault_tier_3.svg"),
+	preload("res://assets/world/vault_tier_4.svg"),
+	preload("res://assets/world/vault_tier_5.svg")
+]
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
 const RACE_ART_PREFIX := ["dwarf", "goblin", "elf", ""]
@@ -83,6 +90,8 @@ var main_menu_button: Button
 var map_mode_button: Button
 var menu_confirmation: Control
 var result_overlay: Control
+var main_menu_overlay: Control
+var help_overlay: Control
 var map_toggle_button: Button
 var camera_controls_row: HBoxContainer
 # True 2:1 diamond projection: world X/Y become screen diagonal axes.
@@ -256,10 +265,10 @@ func _ready() -> void:
 	battlefield_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# Keep the map panel close to its original 2400:1060 landscape ratio.
 	battlefield_frame.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	battlefield_frame.custom_minimum_size.y = 405
+	battlefield_frame.custom_minimum_size.y = 432
 	root.add_child(battlefield_frame)
 	arena = Control.new()
-	arena.custom_minimum_size = Vector2(0, 395)
+	arena.custom_minimum_size = Vector2(0, 422)
 	arena.clip_contents = true
 	arena.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	arena.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -419,7 +428,174 @@ func _ready() -> void:
 	if original_png_ui:
 		_install_original_png_buttons()
 	_refresh()
+	_show_main_menu()
+
+func _show_main_menu() -> void:
+	if main_menu_overlay != null:
+		return
+	main_menu_overlay = ColorRect.new()
+	main_menu_overlay.name = "VaultWarsMainMenu"
+	main_menu_overlay.color = Color("060d23")
+	main_menu_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	main_menu_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	main_menu_overlay.z_index = 90
+	add_child(main_menu_overlay)
+	var scenery := TextureRect.new()
+	scenery.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scenery.texture = epic_battlefield_texture
+	scenery.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	scenery.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	scenery.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scenery.modulate = Color(0.50, 0.59, 0.84, 0.46)
+	main_menu_overlay.add_child(scenery)
+	var shaded := ColorRect.new()
+	shaded.color = Color("06081f", 0.60)
+	shaded.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shaded.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	main_menu_overlay.add_child(shaded)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for edge in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + edge, 28)
+	margin.add_theme_constant_override("margin_top", 44)
+	margin.add_theme_constant_override("margin_bottom", 28)
+	main_menu_overlay.add_child(margin)
+	var layout := VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 14)
+	margin.add_child(layout)
+	var logo := TextureRect.new()
+	logo.name = "MainMenuLogo"
+	logo.texture = ornate_ui.original_texture("title")
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.custom_minimum_size.y = 150
+	layout.add_child(logo)
+	var motto := Label.new()
+	motto.text = "FOUR RACES  •  THREE LANES  •  ONE VAULT"
+	motto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(motto, 20, Color("ffdf99"))
+	layout.add_child(motto)
+	var feature := TextureRect.new()
+	feature.name = "MainMenuScenery"
+	feature.texture = epic_battlefield_texture
+	feature.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	feature.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	feature.custom_minimum_size.y = 330
+	feature.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	layout.add_child(feature)
+	var chosen := Label.new()
+	chosen.text = "BUILD YOUR FORTRESS.  RAID THEIR GOLD."
+	chosen.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(chosen, 23, Color("e9d1a7"))
+	layout.add_child(chosen)
+	var start := Button.new()
+	start.name = "StartGame"
+	start.text = "⚔  START GAME  ⚔"
+	start.custom_minimum_size.y = 90
+	ornate_ui.button(start, "banner_purple", "banner_gold")
+	layout.add_child(start)
+	start.pressed.connect(_open_race_selection)
+	var how := Button.new()
+	how.name = "HowToPlay"
+	how.text = "📜  HOW TO PLAY"
+	how.custom_minimum_size.y = 74
+	ornate_ui.button(how, "banner_blue", "banner_gold")
+	layout.add_child(how)
+	how.pressed.connect(_show_how_to_play)
+	var studio := Button.new()
+	studio.name = "OpenAnimationStudio"
+	studio.text = "✦  ANIMATION STUDIO"
+	studio.custom_minimum_size.y = 68
+	ornate_ui.button(studio, "banner_blue", "banner_gold")
+	layout.add_child(studio)
+	studio.pressed.connect(_open_animation_gallery)
+
+func _open_race_selection() -> void:
+	if main_menu_overlay != null:
+		main_menu_overlay.queue_free()
+		main_menu_overlay = null
+	if help_overlay != null:
+		help_overlay.queue_free()
+		help_overlay = null
 	_show_race_selection()
+
+func _show_how_to_play() -> void:
+	if help_overlay != null:
+		return
+	help_overlay = ColorRect.new()
+	help_overlay.name = "HowToPlayOverlay"
+	help_overlay.color = Color("060a19", 0.98)
+	help_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	help_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	help_overlay.z_index = 95
+	add_child(help_overlay)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_top", 25)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	help_overlay.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	margin.add_child(column)
+	var title := Label.new()
+	title.text = "⚔   VAULT WARS — HOW TO PLAY   ⚔"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_label(title, 26, Color("ffe099"))
+	column.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(scroll)
+	var chapters := VBoxContainer.new()
+	chapters.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chapters.add_theme_constant_override("separation", 12)
+	scroll.add_child(chapters)
+	var sections: Array = [
+		["YOUR GOLD IS YOUR HEALTH", "You start with 1000 gold. Every purchase removes gold from your vault. If your vault reaches zero, you lose. Protect what you save."],
+		["PREPARE — 30 SECONDS", "Select one of three lanes. Buy runners (75), carriers (140), saboteurs (110), traps, turrets or defenders. You can upgrade your bank or raid troops."],
+		["ATTACK — 60 SECONDS", "Free waves attack automatically alongside the units you hire. Raiders steal gold and must return safely to deposit their loot. Watch enemy troops and towers."],
+		["BUILD YOUR VAULT", "BANK LV0–5: each upgrade increases your interest by 4 percentage points per wave and visibly upgrades your home vault's architecture. Save to earn more."],
+		["YOUR DEFENSES", "SPIKES hurt enemies, SNARES slow them, TURRETS fire animated projectiles. HIRE DEFENDER stations a protector on the selected lane."],
+		["RACES & SPECIAL ABILITIES", "DWARVES: 28% base interest, stronger defenders. GOBLINS: faster raiders. ELVES: bonus loot and magic. VOIDBORN: swift raids and evasion. Abilities cost 120 gold."],
+		["WIN OR LOSE", "Empty the enemy vault to win. If your own vault hits zero, you lose. Victory and defeat lead to a cinematic results screen; return to the main menu anytime."]
+	]
+	for section in sections:
+		var panel := PanelContainer.new()
+		ornate_ui.panel(panel, "hud_bar", 34, 12)
+		chapters.add_child(panel)
+		var contents := VBoxContainer.new()
+		contents.add_theme_constant_override("separation", 7)
+		panel.add_child(contents)
+		var heading := Label.new()
+		heading.text = section[0]
+		_style_label(heading, 21, Color("ffda89"))
+		contents.add_child(heading)
+		var copy := Label.new()
+		copy.text = section[1]
+		copy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_style_label(copy, 17, Color("e7def5"))
+		contents.add_child(copy)
+	var back := Button.new()
+	back.name = "BackToMainMenu"
+	back.text = "←  MAIN MENU"
+	back.custom_minimum_size.y = 66
+	ornate_ui.button(back, "banner_blue", "banner_gold")
+	column.add_child(back)
+	back.pressed.connect(_close_how_to_play)
+	var start := Button.new()
+	start.name = "BeginFromHowTo"
+	start.text = "⚔  START GAME"
+	start.custom_minimum_size.y = 75
+	ornate_ui.button(start, "banner_purple", "banner_gold")
+	column.add_child(start)
+	start.pressed.connect(_open_race_selection)
+
+func _close_how_to_play() -> void:
+	if help_overlay != null:
+		help_overlay.queue_free()
+		help_overlay = null
 
 func _show_race_selection() -> void:
 	selection_layer = ColorRect.new()
@@ -547,7 +723,12 @@ func _choose_faction(index: int) -> void:
 	remaining = PREP_TIME
 	message = RACE_DESCRIPTIONS[index]
 	_refresh_unit_icons()
-	selection_layer.queue_free()
+	if selection_layer != null:
+		selection_layer.queue_free()
+		selection_layer = null
+	if main_menu_overlay != null:
+		main_menu_overlay.queue_free()
+		main_menu_overlay = null
 	_refresh()
 
 func _change_race() -> void:
@@ -589,7 +770,8 @@ func _upgrade_bank() -> void:
 	gold[0] -= cost
 	_check_vaults()
 	bank_level += 1
-	message = "BANK LEVEL %d! +4%% interest each wave." % bank_level
+	message = "BANK LEVEL %d! The vault is upgraded; +4%% interest per wave." % bank_level
+	arena.queue_redraw()
 	_refresh()
 
 func _buy_raid_boost() -> void:
@@ -1254,17 +1436,28 @@ func _set_premium_card_overlay(button_node: Button, show_legacy_art: bool) -> vo
 			child.visible = show_legacy_art
 
 func _original_economy_label(button_node: Button) -> Label:
+	# Covers old baked LV0 lettering in the image so it never overlaps the
+	# live bank/raid level and price.
+	var mask := ColorRect.new()
+	mask.name = "DynamicPriceMask"
+	mask.color = Color("091529", 0.97)
+	mask.anchor_left = 0.40
+	mask.anchor_right = 0.985
+	mask.anchor_top = 0.16
+	mask.anchor_bottom = 0.86
+	mask.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button_node.add_child(mask)
 	var overlay := Label.new()
 	overlay.name = "OriginalDynamicText"
-	overlay.anchor_left = 0.48
+	overlay.anchor_left = 0.41
 	overlay.anchor_right = 0.97
-	overlay.anchor_top = 0.12
-	overlay.anchor_bottom = 0.88
+	overlay.anchor_top = 0.19
+	overlay.anchor_bottom = 0.83
 	overlay.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	overlay.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	overlay.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_style_label(overlay, 17, Color("ffe7a7"))
+	_style_label(overlay, 18, Color("ffe7a7"))
 	button_node.add_child(overlay)
 	return overlay
 
@@ -1531,6 +1724,19 @@ func _draw_arena() -> void:
 		var aura := Color("8ad7ff") if side == 0 else Color("ff8a73")
 		var aura_alpha: float = 0.10 + 0.06 * sin(visual_time * 2.0 + float(side))
 		arena.draw_arc(fort + Vector2(0, -35), 56.0, 0.0, TAU, 40, Color(aura.r, aura.g, aura.b, aura_alpha), 4.0)
+		if side == 0 and bank_level > 0:
+			# These five genuinely different architectural drawings replace
+			# the static LV0 castle as the player upgrades the vault.
+			var bank_art: Texture2D = VAULT_TIER_ART[clampi(bank_level - 1, 0, 4)]
+			var bank_pulse: float = 0.82 + 0.10 * sin(visual_time * 2.5)
+			arena.draw_circle(fort + Vector2(0, -67), 108.0, Color("5ce2ff", 0.18 * bank_pulse))
+			arena.draw_texture_rect(bank_art,
+				Rect2(fort + Vector2(-105, -208), Vector2(210, 210)),
+				false, Color(1, 1, 1, 0.98))
+			for crystal in bank_level:
+				var angle: float = float(crystal) * TAU / float(bank_level) + visual_time * 0.25
+				var shard: Vector2 = fort + Vector2(cos(angle) * 93.0, -93.0 + sin(angle) * 30.0)
+				arena.draw_circle(shard, 5.0, Color("bff9ff", bank_pulse))
 		for trap in traps[side]:
 			var p: Vector2 = _trap_position(trap, side)
 			var trap_kind: int = int(trap["kind"])

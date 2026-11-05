@@ -25,7 +25,7 @@ func _run() -> void:
 		_fail("Android must use expand aspect to avoid black letterbox bars")
 		return
 	var arena_panel: PanelContainer = game.arena.get_parent() as PanelContainer
-	if arena_panel == null or arena_panel.size.y > 430.0 or arena_panel.size.y < 300.0:
+	if arena_panel == null or arena_panel.size.y > 475.0 or arena_panel.size.y < 405.0:
 		_fail("Battle map must occupy a compact natural-aspect landscape strip")
 		return
 	var character_button: Button = game.controls[3]
@@ -37,7 +37,7 @@ func _run() -> void:
 		_fail("Sprite cropped too tightly inside the character button")
 		return
 	var game_controls: Control = game.gameplay_panel.get_parent()
-	if game_controls.size.y < 500.0:
+	if game_controls.size.y < 470.0:
 		_fail("Gameplay commands did not occupy the free vertical space")
 		return
 	# Gold + phase HUD, arena, and command area should be fitted inside viewport.

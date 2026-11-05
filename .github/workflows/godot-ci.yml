@@ -65,3 +65,10 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_original_hud.gd 2>&1 | tee realhud.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" realhud.log; then exit 1; fi
           grep -q "Original illustrated HUD smoke PASSED" realhud.log
+      - name: Test cinematic navigation, vault upgrades and original result music
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_cinematic_ui.gd 2>&1 | tee cinematic.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" cinematic.log; then exit 1; fi
+          grep -q "Cinematic UI smoke PASSED" cinematic.log
