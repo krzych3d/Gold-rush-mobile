@@ -72,6 +72,8 @@ var expanded_map := false
 var last_icon_race := -1
 var last_ornate_lane := -1
 var ornate_ui = OrnateHUD.new()
+var original_png_ui := false
+var last_original_raid_skin := ""
 var gameplay_panel: VBoxContainer
 var map_toggle_button: Button
 var camera_controls_row: HBoxContainer
@@ -157,6 +159,7 @@ func _ready() -> void:
 			score.loop_mode = AudioStreamWAV.LOOP_FORWARD
 			menu_music.stream = score
 			menu_music.play()
+	original_png_ui = ornate_ui.has_original_art()
 	# Functional native Godot HUD. The full-screen concept painting is a style
 	# reference only: every control below is a real button with a real handler.
 	var backdrop := ColorRect.new()
@@ -187,12 +190,19 @@ func _ready() -> void:
 	ornate_ui.panel(title_plaque, "crest", 125, 13)
 	header.add_child(title_plaque)
 	title_plaque.add_child(title)
+	if original_png_ui:
+		ornate_ui.original_panel(title_plaque, "title")
+		title.text = "" # Title is engraved in the genuine PNG
+		title_plaque.custom_minimum_size.y = 92
 	var banner := HBoxContainer.new()
 	var gold_plaque := PanelContainer.new()
 	gold_plaque.name = "ResourceArtwork"
 	ornate_ui.panel(gold_plaque, "hud_bar", 45, 12)
 	header.add_child(gold_plaque)
 	gold_plaque.add_child(banner)
+	if original_png_ui:
+		ornate_ui.original_panel(gold_plaque, "gold_bar")
+		gold_plaque.custom_minimum_size.y = 42
 	hud = Label.new()
 	hud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -206,6 +216,9 @@ func _ready() -> void:
 	ornate_ui.panel(phase_plaque, "status_bar", 47, 11)
 	header.add_child(phase_plaque)
 	phase_plaque.add_child(timer_label)
+	if original_png_ui:
+		ornate_ui.original_panel(phase_plaque, "phase_bar")
+		phase_plaque.custom_minimum_size.y = 37
 	performance_label = Label.new()
 	performance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(performance_label, 11, Color("87b2c9"))
@@ -275,6 +288,8 @@ func _ready() -> void:
 	ornate_ui.panel(message_plaque, "status_bar", 40, 12)
 	gameplay_panel.add_child(message_plaque)
 	message_plaque.add_child(info)
+	if original_png_ui:
+		ornate_ui.original_panel(message_plaque, "message_bar")
 	race_button = Button.new()
 	race_button.visible = false
 	gameplay_panel.add_child(race_button)
@@ -375,6 +390,8 @@ func _ready() -> void:
 	add_child(clock)
 	clock.start()
 	_generate_terrain_details()
+	if original_png_ui:
+		_install_original_png_buttons()
 	_refresh()
 	_show_race_selection()
 
@@ -952,21 +969,38 @@ func _refresh() -> void:
 	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST or guards_in_lane >= 3
 	ability_button.disabled = phase != "PREP" or ability_used or gold[0] < 120
 	ability_button.text = "✦ %s  •  120 GOLD" % ABILITY_NAMES[selected_race] if not ability_used else "✓ %s ACTIVE" % ABILITY_NAMES[selected_race]
+	if original_png_ui and selected_race == 3:
+		ability_button.text = ""
 	invest_button.disabled = phase != "PREP" or bank_level >= 5 or gold[0] < 180 + bank_level * 110
 	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < 120
 	invest_button.text = "🏛 BANK LV%d  •  %d" % [bank_level, 180 + bank_level * 110] if bank_level < 5 else "🏛 BANK MAX"
 	raid_button.text = "⚔ RAID LV%d  •  120" % raid_boost if raid_boost < 3 else "⚔ RAID MAX"
+	if original_png_ui:
+		var bank_text := invest_button.get_node_or_null("OriginalDynamicText") as Label
+		var raid_text := raid_button.get_node_or_null("OriginalDynamicText") as Label
+		if bank_text != null:
+			bank_text.text = invest_button.text
+		if raid_text != null:
+			raid_text.text = raid_button.text
+		invest_button.text = ""
+		raid_button.text = ""
 	controls[9].disabled = phase == "ATTACK"
 	controls[9].text = "↻  PLAY AGAIN" if phase == "END" else "⚔  UNLEASH THE RAID  ⚔" if phase == "PREP" else "⚔  BATTLE IN PROGRESS  ⚔"
+	if original_png_ui:
+		_update_original_raid_skin()
 	for i in 3:
 		controls[i].text = ("◆  " if i == lane else "") + "LANE %d" % (i + 1)
 		controls[i].modulate = Color.WHITE
 	if last_ornate_lane != lane:
 		last_ornate_lane = lane
 		for lane_index in 3:
-			ornate_ui.button(controls[lane_index],
-				"lane_selected" if lane_index == lane else "lane_blue",
-				"lane_selected", true)
+			if original_png_ui:
+				ornate_ui.original_button(controls[lane_index],
+					"lane_gold" if lane_index == lane else "lane_blue_%d" % (lane_index + 1))
+			else:
+				ornate_ui.button(controls[lane_index],
+					"lane_selected" if lane_index == lane else "lane_blue",
+					"lane_selected", true)
 	arena.queue_redraw()
 
 func _point(path: int, progress: float, side: int) -> Vector2:
@@ -1098,10 +1132,79 @@ func _epic_card(caption: String, price: int, art: Texture2D, minimum_height: flo
 	coin.offset_bottom = -5
 	return button
 
+func _set_premium_card_overlay(button_node: Button, show_legacy_art: bool) -> void:
+	for name in ["ArtGlow", "Artwork", "Caption", "Price", "GoldCoin"]:
+		var child := button_node.get_node_or_null(name) as CanvasItem
+		if child != null:
+			child.visible = show_legacy_art
+
+func _original_economy_label(button_node: Button) -> Label:
+	var overlay := Label.new()
+	overlay.name = "OriginalDynamicText"
+	overlay.anchor_left = 0.48
+	overlay.anchor_right = 0.97
+	overlay.anchor_top = 0.12
+	overlay.anchor_bottom = 0.88
+	overlay.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	overlay.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	overlay.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_style_label(overlay, 17, Color("ffe7a7"))
+	button_node.add_child(overlay)
+	return overlay
+
+func _install_original_png_buttons() -> void:
+	# All controls remain Button nodes. Only their *skins* are new;
+	# the purchase, lane, economy, race ability, battle and replay signals
+	# remain connected to their existing tested game methods.
+	for i in 3:
+		ornate_ui.original_button(controls[6 + i], ["spikes", "snare", "turret"][i])
+		_set_premium_card_overlay(controls[6 + i], false)
+	ornate_ui.original_button(guard_button, "defender")
+	guard_button.text = ""
+	ornate_ui.original_button(invest_button, "bank")
+	ornate_ui.original_button(raid_button, "raid")
+	_original_economy_label(invest_button)
+	_original_economy_label(raid_button)
+	invest_button.text = ""
+	raid_button.text = ""
+	_update_original_character_art()
+	_update_original_ability_skin()
+	_update_original_raid_skin(true)
+
+func _update_original_character_art() -> void:
+	for i in 3:
+		var button_node: Button = controls[3 + i]
+		if selected_race == 3:
+			# For Voidborn the direct image matches the generated character
+			# illustration. For other races retain their actual race portrait,
+			# never mislabel an elf/goblin as a Voidborn assassin.
+			ornate_ui.original_button(button_node, ["runner", "carrier", "saboteur"][i])
+			_set_premium_card_overlay(button_node, false)
+		else:
+			ornate_ui.button(button_node, "card_hero", "card_hero")
+			_set_premium_card_overlay(button_node, true)
+
+func _update_original_ability_skin() -> void:
+	if selected_race == 3:
+		ornate_ui.original_button(ability_button, "ability_void")
+	else:
+		ornate_ui.button(ability_button, "banner_purple", "banner_gold")
+
+func _update_original_raid_skin(force: bool = false) -> void:
+	var name: String = "attack_again" if phase == "END" else "attack_prep" if phase == "PREP" else "attack_busy"
+	if name != last_original_raid_skin or force:
+		last_original_raid_skin = name
+		ornate_ui.original_button(controls[9], name)
+	controls[9].text = ""
+
 func _refresh_unit_icons() -> void:
 	if last_icon_race == selected_race:
 		return
 	last_icon_race = selected_race
+	if original_png_ui:
+		_update_original_character_art()
+		_update_original_ability_skin()
 	for kind in 3:
 		if controls.size() <= kind + 3:
 			return
