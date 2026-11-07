@@ -7,8 +7,7 @@ on:
       - '**/*.gd'
       - '**/*.tscn'
       - '**/*.tres'
-      - 'assets/epic/animations/**'
-      - 'assets/ui/direct/**'
+      - 'assets/**'
       - 'project.godot'
       - '.github/workflows/godot-ci.yml'
   pull_request:
@@ -16,8 +15,7 @@ on:
       - '**/*.gd'
       - '**/*.tscn'
       - '**/*.tres'
-      - 'assets/epic/animations/**'
-      - 'assets/ui/direct/**'
+      - 'assets/**'
       - 'project.godot'
       - '.github/workflows/godot-ci.yml'
 permissions:
@@ -72,3 +70,10 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_cinematic_ui.gd 2>&1 | tee cinematic.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" cinematic.log; then exit 1; fi
           grep -q "Cinematic UI smoke PASSED" cinematic.log
+      - name: Test lobby, reference guide and mobile presentation profiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_lobby_codex.gd 2>&1 | tee lobby.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" lobby.log; then exit 1; fi
+          grep -q "Lobby and codex PASSED" lobby.log

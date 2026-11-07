@@ -3,6 +3,9 @@ extends Control
 const AnimationGallery = preload("res://scripts/animation_gallery.gd")
 const OrnateHUD = preload("res://scripts/ornate_hud.gd")
 const CinematicOutcome = preload("res://scripts/cinematic_outcome.gd")
+const LobbyScreen = preload("res://scripts/lobby_screen.gd")
+const MobileSettings = preload("res://scripts/mobile_settings.gd")
+const Catalog = preload("res://scripts/game_catalog.gd")
 const VAULT_TIER_ART = [
 	preload("res://assets/world/vault_tier_1.svg"),
 	preload("res://assets/world/vault_tier_2.svg"),
@@ -13,7 +16,7 @@ const VAULT_TIER_ART = [
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
 const RACE_ART_PREFIX := ["dwarf", "goblin", "elf", ""]
-const RACE_DESCRIPTIONS := ["Ironbeards - 28% vault interest, heavy armor and fortifications", "Green Shadows - 18% interest, fast raids and escapes", "Moon Guardians - 18% interest, magic and extra loot", "Astral Assassins - 18% interest, swift strikes and rich hauls"]
+const RACE_DESCRIPTIONS := ["Krasnoludy: 28% odsetek i +25% PŻ najeźdźców", "Gobliny: 18% odsetek i +20% tempa najeźdźców", "Elfy: 18% odsetek, +10% PŻ i +10 złota pojemności", "Voidborn: 18% odsetek, +10% tempa i +15 złota pojemności"]
 const RACE_COLORS := [Color("d7a85c"), Color("78c978"), Color("a6dfff"), Color("ba8aff")]
 const PREP_TIME := 30.0
 const ATTACK_TIME := 60.0
@@ -24,6 +27,16 @@ const SPEED := [0.21, 0.105, 0.15]
 const TRAP_COSTS := [55, 75, 155]
 const GUARD_COST := 130
 const GUARD_HP := 190.0
+const ABILITY_COST := 120
+const RAID_COST := 120
+const BANK_BASE_COST := 180
+const BANK_STEP_COST := 110
+const TRAP_DAMAGE := [40.0, 25.0, 11.0]
+const TRAP_CHARGES := [3, 2, 999]
+
+var presentation = MobileSettings.new()
+var codex_overlay: Control
+var settings_overlay: Control
 
 var selected_race := 0
 var wave := 1
@@ -72,7 +85,7 @@ var render_elapsed := 0.0
 var ui_elapsed := 0.0
 var title_label: Label
 var race_button: Button
-var selection_layer: ColorRect
+var selection_layer: Control
 var faction_cards: Array[PanelContainer] = []
 var camera_offset := Vector2.ZERO
 var camera_zoom := 1.0
@@ -145,6 +158,8 @@ var banner_texture: Texture2D = preload("res://assets/world/war_banner.svg")
 
 func _ready() -> void:
 	rng.randomize()
+	# Android Back is routed through our overlays rather than quitting the app.
+	get_tree().quit_on_go_back = false
 	# Optional test atlas: keep the shipping animation when the file is absent.
 	if ResourceLoader.exists("res://assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png"):
 		goblin_walk_prototype = load("res://assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png") as Texture2D
@@ -169,6 +184,7 @@ func _ready() -> void:
 	menu_music = AudioStreamPlayer.new()
 	menu_music.name = "EnchantedMenuScore"
 	menu_music.volume_db = -9.0
+	menu_music.stream_paused = not presentation.music_enabled
 	add_child(menu_music)
 	if ResourceLoader.exists("res://assets/audio/enchanted_vault_theme.wav"):
 		var score := load("res://assets/audio/enchanted_vault_theme.wav") as AudioStreamWAV
@@ -237,6 +253,7 @@ func _ready() -> void:
 		ornate_ui.original_panel(phase_plaque, "phase_bar")
 		phase_plaque.custom_minimum_size.y = 34
 	performance_label = Label.new()
+	performance_label.visible = presentation.show_fps
 	performance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(performance_label, 11, Color("87b2c9"))
 	performance_label.modulate.a = 0.70
@@ -428,87 +445,19 @@ func _ready() -> void:
 	if original_png_ui:
 		_install_original_png_buttons()
 	_refresh()
+	_apply_presentation()
 	_show_main_menu()
 
 func _show_main_menu() -> void:
 	if main_menu_overlay != null:
+		main_menu_overlay.show()
 		return
-	main_menu_overlay = ColorRect.new()
+	main_menu_overlay = LobbyScreen.new()
 	main_menu_overlay.name = "VaultWarsMainMenu"
-	main_menu_overlay.color = Color("060d23")
-	main_menu_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	main_menu_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	main_menu_overlay.game = self
+	main_menu_overlay.mode = "home"
 	main_menu_overlay.z_index = 90
 	add_child(main_menu_overlay)
-	var scenery := TextureRect.new()
-	scenery.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	scenery.texture = epic_battlefield_texture
-	scenery.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	scenery.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	scenery.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	scenery.modulate = Color(0.50, 0.59, 0.84, 0.46)
-	main_menu_overlay.add_child(scenery)
-	var shaded := ColorRect.new()
-	shaded.color = Color("06081f", 0.60)
-	shaded.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	shaded.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	main_menu_overlay.add_child(shaded)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for edge in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + edge, 28)
-	margin.add_theme_constant_override("margin_top", 44)
-	margin.add_theme_constant_override("margin_bottom", 28)
-	main_menu_overlay.add_child(margin)
-	var layout := VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 14)
-	margin.add_child(layout)
-	var logo := TextureRect.new()
-	logo.name = "MainMenuLogo"
-	logo.texture = ornate_ui.original_texture("title")
-	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	logo.custom_minimum_size.y = 150
-	layout.add_child(logo)
-	var motto := Label.new()
-	motto.text = "FOUR RACES  •  THREE LANES  •  ONE VAULT"
-	motto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(motto, 20, Color("ffdf99"))
-	layout.add_child(motto)
-	var feature := TextureRect.new()
-	feature.name = "MainMenuScenery"
-	feature.texture = epic_battlefield_texture
-	feature.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	feature.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	feature.custom_minimum_size.y = 330
-	feature.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	layout.add_child(feature)
-	var chosen := Label.new()
-	chosen.text = "BUILD YOUR FORTRESS.  RAID THEIR GOLD."
-	chosen.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(chosen, 23, Color("e9d1a7"))
-	layout.add_child(chosen)
-	var start := Button.new()
-	start.name = "StartGame"
-	start.text = "⚔  START GAME  ⚔"
-	start.custom_minimum_size.y = 90
-	ornate_ui.button(start, "banner_purple", "banner_gold")
-	layout.add_child(start)
-	start.pressed.connect(_open_race_selection)
-	var how := Button.new()
-	how.name = "HowToPlay"
-	how.text = "📜  HOW TO PLAY"
-	how.custom_minimum_size.y = 74
-	ornate_ui.button(how, "banner_blue", "banner_gold")
-	layout.add_child(how)
-	how.pressed.connect(_show_how_to_play)
-	var studio := Button.new()
-	studio.name = "OpenAnimationStudio"
-	studio.text = "✦  ANIMATION STUDIO"
-	studio.custom_minimum_size.y = 68
-	ornate_ui.button(studio, "banner_blue", "banner_gold")
-	layout.add_child(studio)
-	studio.pressed.connect(_open_animation_gallery)
 
 func _open_race_selection() -> void:
 	if main_menu_overlay != null:
@@ -519,9 +468,93 @@ func _open_race_selection() -> void:
 		help_overlay = null
 	_show_race_selection()
 
+func _back_from_race_selection() -> void:
+	if selection_layer != null:
+		selection_layer.queue_free()
+		selection_layer = null
+	_show_main_menu()
+
+func _hide_lobby() -> void:
+	for screen in [main_menu_overlay, selection_layer, help_overlay]:
+		if is_instance_valid(screen):
+			screen.hide()
+
+func _restore_lobby() -> void:
+	if help_overlay != null:
+		help_overlay.show()
+	elif selection_layer != null:
+		selection_layer.show()
+	elif main_menu_overlay != null:
+		main_menu_overlay.show()
+
+func _show_codex(entry_id: String = "runner") -> void:
+	if codex_overlay != null:
+		return
+	_hide_lobby()
+	codex_overlay = LobbyScreen.new()
+	codex_overlay.name = "GameCodex"
+	codex_overlay.game = self
+	codex_overlay.mode = "codex"
+	codex_overlay.focus_entry = entry_id
+	codex_overlay.z_index = 96
+	add_child(codex_overlay)
+
+func _close_codex() -> void:
+	if codex_overlay != null:
+		codex_overlay.queue_free()
+		codex_overlay = null
+	_restore_lobby()
+
+func _show_settings() -> void:
+	if settings_overlay != null:
+		return
+	_hide_lobby()
+	settings_overlay = LobbyScreen.new()
+	settings_overlay.name = "MobileSettings"
+	settings_overlay.game = self
+	settings_overlay.mode = "settings"
+	settings_overlay.z_index = 96
+	add_child(settings_overlay)
+
+func _close_settings() -> void:
+	if settings_overlay != null:
+		settings_overlay.queue_free()
+		settings_overlay = null
+	_restore_lobby()
+
+func _apply_presentation(persist: bool = false) -> void:
+	presentation.apply_frame_limit()
+	if is_instance_valid(performance_label):
+		performance_label.visible = presentation.show_fps
+	if is_instance_valid(menu_music):
+		menu_music.stream_paused = not presentation.music_enabled
+	# Hidden previews are paused too, so returning from settings preserves comfort.
+	for screen in [main_menu_overlay, selection_layer]:
+		if is_instance_valid(screen):
+			var preview = screen.live_preview
+			if is_instance_valid(preview):
+				preview.playing = not presentation.reduced_motion
+	if persist:
+		presentation.save()
+
+func _process(delta: float) -> void:
+	if phase == "SELECT" or phase == "END":
+		return
+	visual_time += delta
+	render_elapsed += delta
+	if render_elapsed >= 1.0 / presentation.battlefield_fps():
+		render_elapsed = 0.0
+		arena.queue_redraw()
+	presentation.observe_fps(delta, Engine.get_frames_per_second())
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_navigate_back()
+
 func _show_how_to_play() -> void:
 	if help_overlay != null:
 		return
+	_hide_lobby()
 	help_overlay = ColorRect.new()
 	help_overlay.name = "HowToPlayOverlay"
 	help_overlay.color = Color("060a19", 0.98)
@@ -540,7 +573,7 @@ func _show_how_to_play() -> void:
 	column.add_theme_constant_override("separation", 8)
 	margin.add_child(column)
 	var title := Label.new()
-	title.text = "⚔   VAULT WARS — HOW TO PLAY   ⚔"
+	title.text = "VAULT WARS • JAK GRAĆ"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_style_label(title, 26, Color("ffe099"))
 	column.add_child(title)
@@ -553,13 +586,13 @@ func _show_how_to_play() -> void:
 	chapters.add_theme_constant_override("separation", 12)
 	scroll.add_child(chapters)
 	var sections: Array = [
-		["YOUR GOLD IS YOUR HEALTH", "You start with 1000 gold. Every purchase removes gold from your vault. If your vault reaches zero, you lose. Protect what you save."],
-		["PREPARE — 30 SECONDS", "Select one of three lanes. Buy runners (75), carriers (140), saboteurs (110), traps, turrets or defenders. You can upgrade your bank or raid troops."],
-		["ATTACK — 60 SECONDS", "Free waves attack automatically alongside the units you hire. Raiders steal gold and must return safely to deposit their loot. Watch enemy troops and towers."],
-		["BUILD YOUR VAULT", "BANK LV0–5: each upgrade increases your interest by 4 percentage points per wave and visibly upgrades your home vault's architecture. Save to earn more."],
-		["YOUR DEFENSES", "SPIKES hurt enemies, SNARES slow them, TURRETS fire animated projectiles. HIRE DEFENDER stations a protector on the selected lane."],
-		["RACES & SPECIAL ABILITIES", "DWARVES: 28% base interest, stronger defenders. GOBLINS: faster raiders. ELVES: bonus loot and magic. VOIDBORN: swift raids and evasion. Abilities cost 120 gold."],
-		["WIN OR LOSE", "Empty the enemy vault to win. If your own vault hits zero, you lose. Victory and defeat lead to a cinematic results screen; return to the main menu anytime."]
+		["ZŁOTO JEST TWOIM ŻYCIEM", "Zaczynasz z 1000 złota. Każdy zakup zabiera monety ze skarbca. Gdy twój skarbiec osiągnie zero, przegrywasz od razu. Zachowuj rezerwę."],
+		["PRZYGOTOWANIE • 30 SEKUND", "Wybierz jedną z trzech alejek. Kup zwiadowców (75), tragarzy (140), sabotażystów (110), obronę lub ulepszenia. Szczegóły i podglądy znajdziesz w Księdze gry."],
+		["ATAK • DO 60 SEKUND", "Darmowa fala rusza razem z kupionymi jednostkami. Najeźdźca kradnie złoto i musi wrócić do twojego skarbca, aby je dostarczyć. Łup niedostarczony przed końcem fali wraca do obrabowanej strony."],
+		["ROZWIJAJ SKARBIEC", "Poziomy skarbca 1–5 zmieniają wygląd budynku i dodają po 4 punkty procentowe odsetek po fali. Odsetki liczą się od pozostałego złota; minimalna wypłata to 20."],
+		["BROŃ SWOICH ALEJEK", "Kolce zadają obrażenia. Sidła zadają obrażenia i zatrzymują przeciwnika na 2,5 s. Wieżyczki strzelają co 0,6 s. Obrońca pilnuje wybranej alejki."],
+		["RASY I ZDOLNOŚCI", "Krasnoludy: wyższe odsetki i PŻ najeźdźców. Gobliny: szybkość. Elfy: PŻ i łup. Voidborn: szybkość i łup. Zdolność kosztuje 120 złota, raz na falę podczas przygotowań. Iron Wall wzmacnia już zatrudnionych obrońców."],
+		["ZWYCIĘSTWO", "Opróżnij skarbiec przeciwnika. Każda wydana moneta zmniejsza też twoje życie. Mecz trwa do wyzerowania skarbca; nie ma limitu pięciu fal."]
 	]
 	for section in sections:
 		var panel := PanelContainer.new()
@@ -579,14 +612,14 @@ func _show_how_to_play() -> void:
 		contents.add_child(copy)
 	var back := Button.new()
 	back.name = "BackToMainMenu"
-	back.text = "←  MAIN MENU"
+	back.text = "←  WRÓĆ DO MENU"
 	back.custom_minimum_size.y = 66
 	ornate_ui.button(back, "banner_blue", "banner_gold")
 	column.add_child(back)
 	back.pressed.connect(_close_how_to_play)
 	var start := Button.new()
 	start.name = "BeginFromHowTo"
-	start.text = "⚔  START GAME"
+	start.text = "ROZPOCZNIJ GRĘ"
 	start.custom_minimum_size.y = 75
 	ornate_ui.button(start, "banner_purple", "banner_gold")
 	column.add_child(start)
@@ -596,123 +629,34 @@ func _close_how_to_play() -> void:
 	if help_overlay != null:
 		help_overlay.queue_free()
 		help_overlay = null
+	_restore_lobby()
 
 func _show_race_selection() -> void:
-	selection_layer = ColorRect.new()
-	selection_layer.color = Color("0a1020")
-	faction_cards.clear()
-	selection_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if selection_layer != null:
+		return
+	phase = "SELECT"
+	selection_layer = LobbyScreen.new()
+	selection_layer.name = "RaceSelection"
+	selection_layer.game = self
+	selection_layer.mode = "race"
+	selection_layer.z_index = 91
 	add_child(selection_layer)
-	var background := TextureRect.new()
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	background.texture = load("res://assets/factions/enchanted_menu.svg")
-	background.modulate = Color(0.78, 0.83, 0.94, 0.9)
-	selection_layer.add_child(background)
-	var margin := MarginContainer.new()
-	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_right", 12)
-	margin.add_theme_constant_override("margin_top", 14)
-	margin.add_theme_constant_override("margin_bottom", 12)
-	selection_layer.add_child(margin)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 7)
-	margin.add_child(column)
-	var title := Label.new()
-	title.text = "GOLD RUSH"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(title, 43, Color("ffd579"))
-	column.add_child(title)
-	var subtitle := Label.new()
-	subtitle.text = "VAULT WARS  •  CHOOSE YOUR RACE"
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(subtitle, 20, Color("e8d3a8"))
-	column.add_child(subtitle)
-	var cards := VBoxContainer.new()
-	cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cards.add_theme_constant_override("separation", 7)
-	column.add_child(cards)
-	for i in 4:
-		var card := PanelContainer.new()
-		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		var frame := StyleBoxFlat.new()
-		frame.bg_color = Color("0b1426", 0.94)
-		frame.border_color = RACE_COLORS[i]
-		frame.set_border_width_all(2)
-		frame.set_corner_radius_all(8)
-		frame.set_content_margin_all(2)
-		card.add_theme_stylebox_override("panel", frame)
-		cards.add_child(card)
-		faction_cards.append(card)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 9)
-		card.add_child(row)
-		var portrait := TextureRect.new()
-		portrait.custom_minimum_size = Vector2(195, 150)
-		portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		portrait.size_flags_stretch_ratio = 1.0
-		portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		var epic_portrait_path: String = "res://assets/epic/portraits/%s.jpg" % str(RACE_NAMES[i]).to_lower()
-		portrait.texture = load(epic_portrait_path) if ResourceLoader.exists(epic_portrait_path) else load("res://assets/factions/" + RACE_NAMES[i].to_lower() + "_epic.svg")
-		row.add_child(portrait)
-		var details := VBoxContainer.new()
-		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		details.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_child(details)
-		var name_label := Label.new()
-		name_label.text = RACE_NAMES[i]
-		_style_label(name_label, 25, RACE_COLORS[i])
-		details.add_child(name_label)
-		var description := Label.new()
-		description.text = RACE_DESCRIPTIONS[i]
-		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_style_label(description, 15, Color("d9e1ec"))
-		details.add_child(description)
-		var choose := Button.new()
-		choose.text = "CHOOSE"
-		choose.custom_minimum_size.y = 44
-		_style_button(choose, true)
-		details.add_child(choose)
-		choose.pressed.connect(_preview_faction.bind(i))
-	var gallery_button := Button.new()
-	gallery_button.text = "VIEW 7 ANIMATED HEROES"
-	gallery_button.custom_minimum_size.y = 48
-	_style_button(gallery_button, true)
-	column.add_child(gallery_button)
-	gallery_button.pressed.connect(_open_animation_gallery)
-	var footer := Label.new()
-	footer.text = "YOUR LEGEND BEGINS HERE"
-	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_style_label(footer, 16, Color("d8c49a"))
-	column.add_child(footer)
-	var confirm := Button.new()
-	confirm.name = "ConfirmFaction"
-	confirm.text = "PLAY BATTLE"
-	confirm.custom_minimum_size.y = 66
-	_style_button(confirm, false)
-	column.add_child(confirm)
-	confirm.pressed.connect(_confirm_faction)
-	_preview_faction(0)
 
 func _open_animation_gallery() -> void:
 	# Add to the top-level scene, above the faction selection overlay.
 	# The gallery can be closed without changing race or resetting a match.
-	add_child(AnimationGallery.new())
+	if get_node_or_null("AnimationStudio") != null:
+		return
+	_hide_lobby()
+	var studio := AnimationGallery.new()
+	studio.name = "AnimationStudio"
+	studio.tree_exited.connect(_restore_lobby)
+	add_child(studio)
 
 func _preview_faction(index: int) -> void:
 	selected_race = index
-	for i in faction_cards.size():
-		var style := faction_cards[i].get_theme_stylebox("panel") as StyleBoxFlat
-		if style != null:
-			style.border_color = Color("fff2c2") if i == index else RACE_COLORS[i].darkened(0.42)
-			style.set_border_width_all(5 if i == index else 2)
-	var confirm := selection_layer.find_child("ConfirmFaction", true, false) as Button
-	if confirm != null:
-		confirm.text = "PLAY AS " + RACE_NAMES[index]
-		confirm.add_theme_color_override("font_color", RACE_COLORS[index])
+	if selection_layer != null:
+		selection_layer.select_race(index)
 
 func _confirm_faction() -> void:
 	_choose_faction(selected_race)
@@ -729,6 +673,12 @@ func _choose_faction(index: int) -> void:
 	if main_menu_overlay != null:
 		main_menu_overlay.queue_free()
 		main_menu_overlay = null
+	for overlay in [codex_overlay, settings_overlay, help_overlay]:
+		if is_instance_valid(overlay):
+			overlay.queue_free()
+	codex_overlay = null
+	settings_overlay = null
+	help_overlay = null
 	_refresh()
 
 func _change_race() -> void:
@@ -744,9 +694,10 @@ func _select_lane(index: int) -> void:
 	_refresh()
 
 func _use_race_ability() -> void:
-	if phase != "PREP" or ability_used or gold[0] < 120:
+	if phase != "PREP" or ability_used or gold[0] < ABILITY_COST:
 		return
-	gold[0] -= 120
+	gold[0] -= ABILITY_COST
+	_check_vaults()
 	ability_used = true
 	match selected_race:
 		0:
@@ -764,7 +715,7 @@ func _use_race_ability() -> void:
 	_refresh()
 
 func _upgrade_bank() -> void:
-	var cost: int = 180 + bank_level * 110
+	var cost: int = BANK_BASE_COST + bank_level * BANK_STEP_COST
 	if phase != "PREP" or bank_level >= 5 or gold[0] < cost:
 		return
 	gold[0] -= cost
@@ -775,9 +726,9 @@ func _upgrade_bank() -> void:
 	_refresh()
 
 func _buy_raid_boost() -> void:
-	if phase != "PREP" or gold[0] < 120 or raid_boost >= 3:
+	if phase != "PREP" or gold[0] < RAID_COST or raid_boost >= 3:
 		return
-	gold[0] -= 120
+	gold[0] -= RAID_COST
 	_check_vaults()
 	raid_boost += 1
 	message = "Raid training %d/3: faster, stronger thieves." % raid_boost
@@ -888,7 +839,7 @@ func _buy_trap(kind: int) -> void:
 		return
 	gold[0] -= TRAP_COSTS[kind]
 	_check_vaults()
-	traps[0].append({"lane": lane, "kind": kind, "charges": [3, 2, 999][kind],
+	traps[0].append({"lane": lane, "kind": kind, "charges": TRAP_CHARGES[kind],
 		"slot": lane_count, "cooldown": 0.0, "fire_time": 0.0})
 	message = "Trap built on lane %d" % (lane + 1)
 	_refresh()
@@ -938,30 +889,38 @@ func _begin_attack() -> void:
 	message = "Attack phase! Steal gold and return home."
 	_refresh()
 
-func _spawn(side: int, path: int, kind: int, offset: float) -> void:
+func raider_stats(kind: int, race: int, with_ability: bool, training: int) -> Dictionary:
 	var unit_health: float = 60.0 if kind == -1 else HP[kind]
 	var unit_speed: float = 0.145 if kind == -1 else SPEED[kind]
 	var unit_capacity: int = 25 if kind == -1 else LOOTS[kind]
-	if side == 0 and ability_used:
-		match selected_race:
+	if with_ability:
+		match race:
 			1: unit_speed *= 1.35
 			2: unit_capacity += 35
 			3: unit_speed *= 1.18
-	if side == 0:
-		match selected_race:
-			0:
-				unit_health *= 1.25
-			1:
-				unit_speed *= 1.2
-			2:
-				unit_health *= 1.1
-				unit_capacity += 10
-			3:
-				unit_speed *= 1.1
-				unit_capacity += 15
-	if side == 0:
-		unit_health *= 1.0 + float(raid_boost) * 0.12
-		unit_speed *= 1.0 + float(raid_boost) * 0.08
+	match race:
+		0: unit_health *= 1.25
+		1: unit_speed *= 1.2
+		2:
+			unit_health *= 1.1
+			unit_capacity += 10
+		3:
+			unit_speed *= 1.1
+			unit_capacity += 15
+	unit_health *= 1.0 + float(training) * 0.12
+	unit_speed *= 1.0 + float(training) * 0.08
+	return {"health": unit_health, "speed": unit_speed, "capacity": unit_capacity}
+
+func interest_rate(race: int, level: int) -> float:
+	return (0.28 if race == 0 else 0.18) + float(level) * 0.04
+
+func _spawn(side: int, path: int, kind: int, offset: float) -> void:
+	# A negative race selects the unmodified bot stats. The guide calls this
+	# same calculator without changing selection, gold or simulation state.
+	var stats: Dictionary = raider_stats(kind, selected_race if side == 0 else -1, side == 0 and ability_used, raid_boost if side == 0 else 0)
+	var unit_health: float = stats["health"]
+	var unit_speed: float = stats["speed"]
+	var unit_capacity: int = stats["capacity"]
 	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
@@ -971,13 +930,6 @@ func _tick() -> void:
 		performance_label.text = "FPS %d  |  SCRIPT %.1f ms  |  UNITS %d" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, units.size() + guards.size()]
 	if phase == "SELECT":
 		return
-	visual_time += 0.05
-	render_elapsed += 0.05
-	# Animate up to 20 frames per second; on lower-end Android screens the
-	# fixed simulation clock remains independent of painting the battlefield.
-	if render_elapsed >= 0.049:
-		render_elapsed = 0.0
-		arena.queue_redraw()
 	if phase == "END":
 		return
 	if _check_vaults():
@@ -1047,7 +999,7 @@ func _simulate(dt: float) -> void:
 					# Each tower is its own animated structure with an individual
 					# reload timer, rather than invisible continuous DPS.
 					if float(trap.get("cooldown", 0.0)) <= 0.0:
-						unit["health"] -= 11.0
+						unit["health"] -= TRAP_DAMAGE[2]
 						unit["hit_time"] = 0.2
 						trap["cooldown"] = 0.6
 						trap["fire_time"] = 0.28
@@ -1062,7 +1014,7 @@ func _simulate(dt: float) -> void:
 						unit["disarmed"] = true
 						trap["charges"] = 0
 					else:
-						unit["health"] -= 40.0 if trap["kind"] == 0 else 25.0
+						unit["health"] -= TRAP_DAMAGE[int(trap["kind"])]
 						unit["hit_time"] = 0.28
 						if trap["kind"] == 1:
 							unit["stunned"] = 2.5
@@ -1119,6 +1071,9 @@ func _show_cinematic_result() -> void:
 	if menu_music != null:
 		menu_music.stop()
 	result_overlay = CinematicOutcome.new()
+	result_overlay.reduced_motion = presentation.reduced_motion
+	result_overlay.effect_count = 8 if presentation.effective_quality == "battery" else 46
+	result_overlay.music_enabled = presentation.music_enabled
 	add_child(result_overlay)
 	result_overlay.play_again_requested.connect(_restart_match)
 	result_overlay.main_menu_requested.connect(_return_to_main_menu)
@@ -1195,11 +1150,25 @@ func _dismiss_menu_confirmation() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		if menu_confirmation != null:
-			_dismiss_menu_confirmation()
-		else:
-			_request_main_menu()
+		_navigate_back()
 		get_viewport().set_input_as_handled()
+
+func _navigate_back() -> void:
+	var studio := get_node_or_null("AnimationStudio")
+	if studio != null:
+		studio.queue_free()
+	elif codex_overlay != null:
+		_close_codex()
+	elif settings_overlay != null:
+		_close_settings()
+	elif help_overlay != null:
+		_close_how_to_play()
+	elif selection_layer != null:
+		_back_from_race_selection()
+	elif menu_confirmation != null:
+		_dismiss_menu_confirmation()
+	else:
+		_request_main_menu()
 
 func _end_wave() -> void:
 	if phase != "ATTACK":
@@ -1216,8 +1185,7 @@ func _end_wave() -> void:
 	for side in 2:
 		var rate: float = 0.18
 		if side == 0:
-			rate = 0.28 if selected_race == 0 else 0.18
-			rate += float(bank_level) * 0.04
+			rate = interest_rate(selected_race, bank_level)
 		var payout: int = maxi(20, int(floor(float(gold[side]) * rate)))
 		interest_last[side] = payout
 		gold[side] += payout
@@ -1648,7 +1616,11 @@ func _character_key(side: int, kind: int, is_guard: bool = false) -> String:
 		if is_guard:
 			return "goblin_raider"
 		return ["goblin_raider", "shadow_wolf", "goblin_saboteur"][role]
-	match selected_race:
+	return _character_key_for_race(selected_race, kind, is_guard)
+
+func _character_key_for_race(race: int, kind: int, is_guard: bool = false) -> String:
+	var role: int = clampi(kind, 0, 2)
+	match race:
 		0:
 			return "dwarf_defender" if is_guard or role == 0 else "dwarf_carrier" if role == 1 else "arcane_mage"
 		1:
@@ -1711,7 +1683,7 @@ func _draw_arena() -> void:
 	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2(-1200, -530), Vector2(2400, 1060)), false)
 	# Mobile: use a few inexpensive ambient highlights instead of dozens of
 	# per-frame animated primitives across the entire battlefield.
-	for i in 6:
+	for i in presentation.ambient_count():
 		var water_y: float = -380.0 + float(i) * 150.0
 		var water_pos := Vector2(sin(water_y * 0.008) * 36.0, water_y)
 		var shimmer: float = 0.14 + 0.10 * sin(visual_time * 1.5 + float(i))
@@ -1922,7 +1894,7 @@ func _draw_arena() -> void:
 			var angle: float = TAU * float(k) / 6.0 + visual_time
 			var direction := Vector2(cos(angle), sin(angle))
 			arena.draw_line(p + Vector2(0, -29) + direction * 7.0, p + Vector2(0, -29) + direction * (10.0 + (1.0 - life) * 23.0), Color(color.r, color.g, color.b, life), 2.5)
-	for i in 9:
+	for i in presentation.ambient_count():
 		var gx := center.x + sin(float(i) * 5.12 + visual_time * 0.7) * w * 0.65
 		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
 		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))

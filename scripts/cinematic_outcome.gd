@@ -12,6 +12,9 @@ var backdrop: ColorRect
 var centerpiece: VBoxContainer
 var score_player: AudioStreamPlayer
 var is_victory := false
+var reduced_motion := false
+var effect_count := 46
+var music_enabled := true
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -23,7 +26,7 @@ func _ready() -> void:
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	confetti = CPUParticles2D.new()
-	confetti.amount = 46
+	confetti.amount = effect_count
 	confetti.lifetime = 2.3
 	confetti.one_shot = false
 	confetti.explosiveness = 0.0
@@ -65,7 +68,7 @@ func present(victory: bool, draw: bool, reason: String, wave: int, our_gold: int
 	var gold: Color = Color("ffd47e") if victory else Color("e7a1bb")
 	var highlight: Color = Color("b57bff") if victory else Color("a04065")
 	confetti.color = Color("ffe190") if victory else Color("aa92df")
-	confetti.emitting = true
+	confetti.emitting = not reduced_motion
 	var shadow_frame := PanelContainer.new()
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.06, 0.07, 0.19, 0.97)
@@ -133,15 +136,17 @@ func present(victory: bool, draw: bool, reason: String, wave: int, our_gold: int
 	inside.add_child(menu)
 	menu.pressed.connect(func() -> void: main_menu_requested.emit())
 	centerpiece.pivot_offset = Vector2(centerpiece.size.x * 0.5, centerpiece.size.y * 0.5)
-	centerpiece.scale = Vector2(0.70, 0.70)
+	centerpiece.scale = Vector2.ONE if reduced_motion else Vector2(0.70, 0.70)
 	centerpiece.modulate.a = 0.0
 	var entrance := create_tween()
 	entrance.set_parallel(true)
 	entrance.tween_property(backdrop, "color", Color(0.02, 0.01, 0.08, 0.87), 0.7)
 	entrance.tween_property(centerpiece, "modulate:a", 1.0, 0.85)
-	entrance.tween_property(centerpiece, "scale", Vector2.ONE, 0.75).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	var pulse := create_tween().set_loops()
-	pulse.tween_property(headline, "modulate", highlight, 1.35)
-	pulse.tween_property(headline, "modulate", Color.WHITE, 1.35)
-	score_player.stream = OutcomeMusic.render(victory, draw)
-	score_player.play()
+	if not reduced_motion:
+		entrance.tween_property(centerpiece, "scale", Vector2.ONE, 0.75).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		var pulse := create_tween().set_loops()
+		pulse.tween_property(headline, "modulate", highlight, 1.35)
+		pulse.tween_property(headline, "modulate", Color.WHITE, 1.35)
+	if music_enabled:
+		score_player.stream = OutcomeMusic.render(victory, draw)
+		score_player.play()

@@ -2,6 +2,38 @@
 
 Mobile-first Godot **4.2.2** fantasy lane strategy prototype (portrait).
 
+## Illustrated lobby and game reference
+
+**ROZPOCZNIJ GRĘ → choose one of four races → confirm → preparation.**
+The Polish lobby has illustrated race portraits, an animated character showcase,
+role previews, a rules screen and a searchable **Księga gry**. Its 21 entries cover
+four races, the free wave, three hired raiders, guards, three defenses, bank
+levels 0–5, raid training, all four abilities and core rules. Each entry has art,
+a live preview, costs, stats, usage advice and limits. Unit stats are calculated
+by the same function used to spawn actual battle units. Browsing the guide does
+not spend gold, change the selected match race or advance a battle.
+
+**Presentation settings:** Automatic, Battery (30 FPS cap), Balanced and High
+(60 FPS caps). Battlefield repaint budgets are independently limited to 12/20/30
+FPS; preview budgets use the same limits. Rules still run at the existing 20 Hz.
+Automatic starts conservatively on CPUs with at most four logical cores and
+reduces effects after three consecutive four-second samples below 25 FPS.
+Settings are saved locally. Reduced motion pauses previews until explicitly
+played and removes result-screen particles and motion effects. Music and the
+battle FPS counter can also be toggled. Hidden lobby previews do not animate.
+
+Android exports include **ARMv7 and ARM64**, using the existing GL Compatibility
+renderer. This expands binary support; it is not a claim that every Android
+phone has suitable graphics hardware or will achieve the frame cap.
+
+The existing sprite artwork is reused, with genuine atlas frame playback.
+Trap previews are explanatory diagrams. The lobby does not add new hand-drawn
+animation anatomy or turn the prototype into a completed AAA game.
+
+Validate with Godot 4.2.2:
+`godot --headless --path . --script res://ci/smoke_lobby_codex.gd`
+The normal Godot pipeline and APK export both run this integration check.
+
 ## Playable today
 - Choose one of four factions: Dwarves, Goblins, Elves or Voidborn.
 - Compete against the bot in three lanes. Deploy raiders, carriers and saboteurs; protect your vault with guards and traps.
@@ -11,7 +43,7 @@ Mobile-first Godot **4.2.2** fantasy lane strategy prototype (portrait).
 - Seven character types use the real sprite atlases in `assets/epic/animations/`.
 
 ## NEW: Animation Studio
-Before choosing your race, tap **VIEW 7 ANIMATED HEROES**.
+From the main menu, tap **Animacje** to open the existing developer animation viewer.
 
 The studio lets you inspect each of the seven existing characters:
 - Dwarf Defender, Dwarf Carrier, Elf Ranger, Arcane Mage,

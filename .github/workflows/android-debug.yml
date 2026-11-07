@@ -10,8 +10,7 @@ on:
       - '**/*.gd'
       - '**/*.tscn'
       - '**/*.tres'
-      - 'assets/epic/animations/**'
-      - 'assets/ui/direct/**'
+      - 'assets/**'
       - '.github/workflows/android-debug.yml'
 
 permissions:
@@ -93,6 +92,10 @@ jobs:
             echo "::error::Startup smoke test failed."
             exit 1
           fi
+          echo "Checking lobby, guide and race navigation before packaging..."
+          ./godot --headless --path . --script res://ci/smoke_lobby_codex.gd 2>&1 | tee lobby.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" lobby.log; then exit 1; fi
+          grep -q "Lobby and codex PASSED" lobby.log
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           echo "Export templates:"
           ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
@@ -123,6 +126,7 @@ jobs:
             import.log
             smoke.log
             configure.log
+            lobby.log
             export.log
           retention-days: 3
           if-no-files-found: ignore
