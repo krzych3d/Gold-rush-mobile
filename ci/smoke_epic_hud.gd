@@ -14,8 +14,13 @@ func _run() -> void:
 		_fail("Cannot load main game scene")
 		return
 	var game = main_scene.instantiate()
+	game.presentation.language = "pl"
 	root.add_child(game)
 	game.size = Vector2(720, 1280)
+	await process_frame
+	await process_frame
+	game._choose_faction(0)
+	game.battle_shell.set_drawer_open(true, false)
 	await process_frame
 	await process_frame
 	# Visual layout regression: catch portrait letterboxing, crushed cards and
@@ -25,8 +30,8 @@ func _run() -> void:
 		_fail("Android must use expand aspect to avoid black letterbox bars")
 		return
 	var arena_panel: PanelContainer = game.arena.get_parent() as PanelContainer
-	if arena_panel == null or arena_panel.size.y > 475.0 or arena_panel.size.y < 405.0:
-		_fail("Battle map must occupy a compact natural-aspect landscape strip")
+	if arena_panel == null or arena_panel.size.y < game.size.y - 2.0:
+		_fail("Full-screen battle must fill the available phone canvas")
 		return
 	var character_button: Button = game.controls[3]
 	if character_button.size.y < 120.0:

@@ -1,4 +1,6 @@
 extends Control
+const L10n = preload("res://scripts/localization.gd")
+const Epic = preload("res://scripts/epic_theme.gd")
 ## One lightweight live preview. Uses the same atlases as the battlefield.
 ## Trap diagrams explain mechanics; they never run or purchase actual game units.
 var game
@@ -76,19 +78,19 @@ func _update_pose() -> void:
 
 func _caption() -> String:
 	if not playing:
-		return "Podgląd wstrzymany"
+		return L10n.t("Podgląd wstrzymany")
 	if action >= 0:
-		return ["Spoczynek", "Ruch", "Atak", "Trafienie", "Upadek", "Oddanie złota"][action]
+		return [L10n.t("Spoczynek"), L10n.t("Ruch"), L10n.t("Atak"), L10n.t("Trafienie"), L10n.t("Upadek"), L10n.t("Oddanie złota")][action]
 	match preview_mode:
-		"spikes": return "Kolce • 40 obrażeń • 3 ładunki"
-		"snare": return "Sidła • zatrzymanie na 2,5 s"
-		"turret": return "Wieżyczka • strzał co 0,6 s"
-		"bank": return "Rozwój skarbca • poziom %d / 5" % (1 + int(elapsed / 2.0) % 5)
-		"raid": return "Trening • więcej PŻ i szybszy ruch"
-		"defender": return "Obrońca • pilnuje swojej alejki"
-		"ability": return str(game.ABILITY_NAMES[race])
-		"race": return "Poznaj styl swojej rasy"
-	return "Wyprawa po złoto" if fmod(elapsed, 7.0) < 3.5 else "Powrót z łupem"
+		"spikes": return L10n.t("Kolce • 40 obrażeń • 3 ładunki")
+		"snare": return L10n.t("Sidła • zatrzymanie na 2,5 s")
+		"turret": return L10n.t("Wieżyczka • strzał co 0,6 s")
+		"bank": return L10n.t("Rozwój skarbca • poziom %d / 5") % (1 + int(elapsed / 2.0) % 5)
+		"raid": return L10n.t("Trening • więcej PŻ i szybszy ruch")
+		"defender": return L10n.t("Obrońca • pilnuje swojej alejki")
+		"ability": return L10n.t(str(game.ABILITY_NAMES[race]))
+		"race": return L10n.t("Poznaj styl swojej rasy")
+	return L10n.t("Wyprawa po złoto") if fmod(elapsed, 7.0) < 3.5 else L10n.t("Powrót z łupem")
 
 func _draw_actor(at: Vector2, scale_factor: float = 1.0, actor_row: int = -1) -> void:
 	if atlas == null:
@@ -151,12 +153,8 @@ func _draw() -> void:
 	var width: float = font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size).x
 	draw_string(font, Vector2((size.x - width) * 0.5, size.y - 12.0), caption, HORIZONTAL_ALIGNMENT_LEFT, -1, text_size, Color("e3d8bc"))
 
-var cached_style: StyleBoxFlat
-func _stage_style(tint: Color) -> StyleBoxFlat:
+var cached_style: StyleBoxTexture
+func _stage_style(_tint: Color) -> StyleBoxTexture:
 	if cached_style == null:
-		cached_style = StyleBoxFlat.new()
-		cached_style.bg_color = Color("0b1825")
-		cached_style.set_corner_radius_all(14)
-		cached_style.set_border_width_all(1)
-	cached_style.border_color = Color(tint, 0.3)
+		cached_style = Epic.panel(0)
 	return cached_style

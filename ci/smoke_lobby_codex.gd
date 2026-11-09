@@ -15,6 +15,7 @@ func _require(value: bool, reason: String) -> bool:
 func _run() -> void:
 	root.size = Vector2i(720, 1280)
 	game = load("res://main.tscn").instantiate()
+	game.presentation.language = "pl"
 	root.add_child(game)
 	await process_frame
 	if not _require(not quit_on_go_back, "Android Back still exits instead of navigating"):
@@ -23,6 +24,25 @@ func _run() -> void:
 	var start: Button = game.main_menu_overlay.find_child("StartGame", true, false)
 	if not _require(start.text == "ROZPOCZNIJ GRĘ", "Missing Polish primary start action"):
 		return
+	if not _require(game.main_menu_overlay.footer.find_children("*", "Button", true, false).size() == 3, "Home must have just play, guide and settings"):
+		return
+	if not _require(game.main_menu_overlay.find_child("HomeLivePreview", true, false) == null and game.main_menu_overlay.find_child("ScreenScroll", true, false) == null, "Home regressed into a scrolling character dashboard"):
+		return
+	var scenery: TextureRect = game.main_menu_overlay.find_child("MainMenuScenery", true, false)
+	if not _require(scenery.texture != null and scenery.texture.resource_path.ends_with("epic_vault_menu.png"), "Cinematic artwork missing from actual home screen"):
+		return
+	if not _require(start.get_theme_stylebox("normal") is StyleBoxTexture, "Play action lost its illustrated metal skin"):
+		return
+	for dimensions in [Vector2i(540, 960), Vector2i(720, 1280), Vector2i(720, 1560), Vector2i(1080, 1920)]:
+		root.size = dimensions
+		game.size = Vector2(dimensions)
+		await process_frame
+		await process_frame
+		var bounds: Rect2 = start.get_global_rect()
+		if not _require(bounds.end.y <= dimensions.y and bounds.position.y > dimensions.y * 0.72 and bounds.end.x <= dimensions.x and bounds.size.y >= 80, "Home actions overflow or cover character faces at " + str(dimensions)):
+			return
+	root.size = Vector2i(720, 1280)
+	game.size = Vector2(720, 1280)
 	# All reference stats must agree with actual units, including boosts/abilities.
 	for race in 4:
 		var entries: Array[Dictionary] = Catalog.entries(game, race)
@@ -48,16 +68,10 @@ func _run() -> void:
 	game.ability_used = false
 	game.raid_boost = 0
 	var before_gold: Array = game.gold.duplicate()
-	var hidden_preview = game.main_menu_overlay.live_preview
 	game.main_menu_overlay.find_child("OpenCodex", true, false).pressed.emit()
 	await process_frame
 	var codex = game.codex_overlay
 	if not _require(codex != null and not game.main_menu_overlay.visible, "Guide must hide underlying animated lobby"):
-		return
-	var elapsed: float = hidden_preview.elapsed
-	await process_frame
-	await process_frame
-	if not _require(hidden_preview.elapsed == elapsed, "Hidden lobby kept animating behind guide"):
 		return
 	for index in codex.filtered_entries.size():
 		codex._select_entry(index)
@@ -112,18 +126,22 @@ func _run() -> void:
 	game.presentation.reduced_motion = true
 	game._apply_presentation()
 	game._close_settings()
-	if not _require(not game.main_menu_overlay.live_preview.playing, "Reduced motion must pause automatic previews"):
-		return
 	game.main_menu_overlay.find_child("StartGame", true, false).pressed.emit()
 	await process_frame
 	if not _require(game.selection_layer != null and game.phase == "SELECT", "Start must open selection before battle"):
 		return
 	for race in 4:
 		game.selection_layer.select_race(race)
-		for role in 4:
-			game.selection_layer._pick_role(role)
-			if not _require(game.selection_layer.live_preview.atlas != null and not game.selection_layer.live_preview.playing, "Missing race/role or reduced-motion preview"):
+		if not _require(game.selection_layer.live_preview == null, "Race selection should defer animation controls to the guide"):
+			return
+		game.selection_layer._inspect_race()
+		var reference = game.codex_overlay
+		for role_id in ["runner", "carrier", "saboteur", "defender"]:
+			reference.focus_entry = role_id
+			reference._filter_entries()
+			if not _require(reference.live_preview.atlas != null and not reference.live_preview.playing, "Guide is missing role or reduced-motion preview"):
 				return
+		game._close_codex()
 	game._navigate_back()
 	if not _require(game.selection_layer == null and game.main_menu_overlay != null, "Cannot return from race selection"):
 		return
@@ -162,7 +180,7 @@ func _run() -> void:
 	game._use_race_ability()
 	if not _require(game.phase == "END", "Ability spending can leave zero vault in an active match"):
 		return
-	print("Lobby and codex PASSED: 21 entries, 4 races × 4 roles, shared stats, search, navigation, 3 portrait sizes, mobile profiles")
+	print("Lobby and codex PASSED: 21 entries, 4 races × 4 roles, shared stats, search, navigation, 4 portrait sizes, simplified cinematic home, mobile profiles")
 	game.queue_free()
 	await process_frame
 	quit(0)

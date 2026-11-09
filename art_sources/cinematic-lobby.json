@@ -1,0 +1,43 @@
+{
+  "generation": "ImageGen original fantasy artwork; native labels remain editable and localized",
+  "assets": [
+    {
+      "path": "assets/ui/lobby/epic_vault_menu.png",
+      "sha256": "60c1d90004468ee948c3c9eb3f566946aa17868355805c3737543c62888557c0"
+    },
+    {
+      "path": "assets/ui/lobby/vault_wars_wordmark.png",
+      "sha256": "a43ca4ae1d048a85bd3192156bcf3e6edcb568a2553000e02bc661382d04b4db"
+    },
+    {
+      "path": "assets/ui/lobby/epic_button.png",
+      "sha256": "2fc12117724c90a404a69291fd93faafb825b9d2683b897d2a601b97286be140"
+    },
+    {
+      "path": "assets/ui/lobby/hero_dwarves.jpg",
+      "sha256": "e703983cc5d10db24797e6f2b618893dbcddb76d5f7e64c7e41ea82383858c92"
+    },
+    {
+      "path": "assets/ui/lobby/hero_elves.jpg",
+      "sha256": "76e80b8771a12512a4bf85350d85f75614a3d73f475203b5bb5610134ac6d25d"
+    },
+    {
+      "path": "assets/ui/lobby/hero_goblins.jpg",
+      "sha256": "97e1dc06dde8dc7609fa9be42994c04d92dd4d388f8e92fc94807788ef2e89c6"
+    },
+    {
+      "path": "assets/ui/lobby/hero_voidborn.jpg",
+      "sha256": "61a52891287d82ad4415b97339dc94f671dfd58a2cf81b0a70a7f749cc8804d3"
+    }
+  ],
+  "button_source": {
+    "bounds": [
+      32,
+      60,
+      2140,
+      582
+    ],
+    "sizing": "trim transparent atlas padding and downsample for mobile; preserve original alpha",
+    "use": "three undistorted end/face regions and separate central crystal"
+  }
+}

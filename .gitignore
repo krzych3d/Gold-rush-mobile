@@ -3,3 +3,7 @@
 export.cfg
 *.apk
 *.aab
+
+*.import
+__pycache__/
+build/

@@ -1,0 +1,1099 @@
+{
+  "assets": {
+    "assets/epic/animations/Obraz ChatGPT 2 lis 2026, 22_37_21.png": {
+      "bytes": 183813,
+      "git_blob_sha1": "a8b7f4dc3cc279712dd91fd16f4eacfc84950940",
+      "sha256": "47ba54c294ab5ab9ca115130968f9e8e7358e138f4b02de40554ad3e40e8ad14",
+      "size": [
+        2304,
+        192
+      ]
+    },
+    "assets/epic/animations/arcane_mage_sheet.png": {
+      "bytes": 1142682,
+      "git_blob_sha1": "b4f7fc73bbfefd4869a8f050fd07f3e70d33e736",
+      "sha256": "35e660a64c697d2faa6f0a65c165080852649bd66fb89d2dcb8928913795a4b7",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/arcane_mage_special_sheet.png": {
+      "bytes": 1689592,
+      "git_blob_sha1": "018d20e3d99feac10247f891ac74e2614ecb959b",
+      "sha256": "32d178f0e587943c751e9f38e1e36e98a9cf1e1bd091f520849f78a84fc04945",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/dwarf_carrier_sheet.png": {
+      "bytes": 1066233,
+      "git_blob_sha1": "55faffcd6438a22f2b73615dcb4dbc9e9fcbb448",
+      "sha256": "e5284e0cd730858fb867a64c8656fb4e40ce504b30fecc71f050d236a8ac66c8",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/dwarf_carrier_special_sheet.png": {
+      "bytes": 1729999,
+      "git_blob_sha1": "121988cec033ccea70ff05d80395a6394f225680",
+      "sha256": "9d35e458edea425c38a05af8f359756d2b26dbee6eca571624ab7c3d20659cb9",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/dwarf_defender_sheet.png": {
+      "bytes": 1232469,
+      "git_blob_sha1": "ab47a5548ef93d89f70fdcc3cdb6738adc143aeb",
+      "sha256": "b554272b36235712342a19e4cfebd006bde4af5191c7d4e6be0b1439e053886c",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/dwarf_defender_special_sheet.png": {
+      "bytes": 1763357,
+      "git_blob_sha1": "0d6476a623bb2dcc20e230440f2f9e5011621d19",
+      "sha256": "8386964b9b4ab8e32235fba36bff894eb44e0fb1025e2b7c1eb5107694b55c5d",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/elf_ranger_sheet.png": {
+      "bytes": 1058428,
+      "git_blob_sha1": "460639c57731014410f948debf3e05fc85cce884",
+      "sha256": "25cfd3bf3ed77518a24b2630097baa946bde0bcbc4f34d3ff75dcf8166ee4f6a",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/elf_ranger_special_sheet.png": {
+      "bytes": 1641935,
+      "git_blob_sha1": "3587dc4aeaacda6c2691e717a45341d68f8fc083",
+      "sha256": "b74c03f7b0e58d0559887e7537e3ce80a49a049655201d5cf15d50f2817b44d8",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/goblin_raider_sheet.png": {
+      "bytes": 1112035,
+      "git_blob_sha1": "3cc76412532af56c88fa3e4d8fc96aeeb3ed1026",
+      "sha256": "13b05f6f3f162616c43f60b49d4368df611c3f7eaebfdc888e5742ed2346f99e",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/goblin_raider_special_sheet.png": {
+      "bytes": 1415373,
+      "git_blob_sha1": "91d6d669bb7b39545d4e66df511a805553beb2ac",
+      "sha256": "ca69ab319db5212dc18d7f3ce3d20e5f5047f2e888bdced95229551cf2ef6874",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/goblin_saboteur_sheet.png": {
+      "bytes": 926611,
+      "git_blob_sha1": "a1d918749aa3cd1b22d9c176264630e739c280a6",
+      "sha256": "8b8bf834ed58132214b9b91e4794915700a0f86602a928d5d2fbf8a8e80cc967",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/goblin_saboteur_special_sheet.png": {
+      "bytes": 1225458,
+      "git_blob_sha1": "59e026ec5adbe8d26fb3dcce038f7a5daae49499",
+      "sha256": "5dca70e129bcc329789105cc4a2d5f504121856ba862eb2d415c263133d71e6d",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/shadow_wolf_sheet.png": {
+      "bytes": 992519,
+      "git_blob_sha1": "c4f9749db292b2a19467da73d9af9c1e21a6ee04",
+      "sha256": "07351deb12a61290d0e1bb6fa3ea82d685ce51ba45882f3e66e0d7ebf72d27da",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/shadow_wolf_special_sheet.png": {
+      "bytes": 990786,
+      "git_blob_sha1": "e61fbcaef0773334c5b921b34dbb010a84edc1d5",
+      "sha256": "6a661b9b7f152bddeb08530c5a60c74b864e32c320c3ab4b6acf8c5bce0b4af3",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/void_collector_sheet.png": {
+      "bytes": 987155,
+      "git_blob_sha1": "754a7b56620e72c966f000e71dede7f715723e09",
+      "sha256": "01741cb7b40e0bdb75539a18b7bac90289683ee7eaa868405666d7af705506f2",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/void_sentinel_sheet.png": {
+      "bytes": 1099368,
+      "git_blob_sha1": "41649d42fb2dd9f0fd72ff6efe96a2f3485fc502",
+      "sha256": "e866784e31815fc75d9e1392512d048000a1934cc3c9bcf7258289cf5f887b68",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/void_stalker_sheet.png": {
+      "bytes": 887549,
+      "git_blob_sha1": "31f348aded69c67a29a76462974d56b07b87deeb",
+      "sha256": "6b11fb63b332e56dda6cca9bdea35de5d4f8c118d8a9f22ba06d6ec4fd52a2b7",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/animations/void_weaver_sheet.png": {
+      "bytes": 1049477,
+      "git_blob_sha1": "4801fc7439027604668d3a13435c5a64d19798a6",
+      "sha256": "a47b9ff0ef16e83b1877da4a9d98fb2b2487d48f59dfafbb0f82439cfecec5a6",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/portraits/dwarves.jpg": {
+      "bytes": 55924,
+      "git_blob_sha1": "7a2e9ed305d4456bba813902aacaf798f5dc1c65",
+      "sha256": "748e278f01f734f47a003be1236d1e1135e1970f997daaca56de0f6a38be4a7e"
+    },
+    "assets/epic/portraits/elves.jpg": {
+      "bytes": 54496,
+      "git_blob_sha1": "2fa1cfc30958f8a2af3018fefc6446244eb5fd5d",
+      "sha256": "1004cc71187aa4d66ff0ae7c61d16a3e021f5af23f19afb7edcdbc124c9c1a0a"
+    },
+    "assets/epic/portraits/goblins.jpg": {
+      "bytes": 53096,
+      "git_blob_sha1": "0072e90d780ea31c14aa3b6bb1b29bbf6f571435",
+      "sha256": "3c250116bd9a8b7b060b374529476346285bd18f8174447f9082c6ffed506352"
+    },
+    "assets/epic/portraits/voidborn.jpg": {
+      "bytes": 45901,
+      "git_blob_sha1": "ff9d9fa796f07f6fc29fe235714efd3ef74b1f79",
+      "sha256": "0fa5f789a47e8de7a6659e1a52879b77ecfa2e8560f3b955249d2bc86a3e5fac"
+    },
+    "assets/epic/units/arcane_mage.png": {
+      "bytes": 26367,
+      "git_blob_sha1": "144244f67258dd1a4f4ff457bc6c8906c146ad62",
+      "sha256": "37599a68a51a676388f9eb23591232bf13814b66a723fa8247eea7b65b96f78a",
+      "size": [
+        98,
+        102
+      ]
+    },
+    "assets/epic/units/dwarf_carrier.png": {
+      "bytes": 28726,
+      "git_blob_sha1": "a11b1bdef54c7923387159cb52bf3f14fa1c92e5",
+      "sha256": "e881b2033f803573d89eb31c8900cba42ee0d033654c3bd875b0fbf20247abe3",
+      "size": [
+        109,
+        99
+      ]
+    },
+    "assets/epic/units/dwarf_defender.png": {
+      "bytes": 20508,
+      "git_blob_sha1": "d983c5dd2a1cae7bea487e9084bc40d569ea5557",
+      "sha256": "cbcfe992cb989f886ad8527e4b7827281982dceb4376f39506c8ffc103cd6ddd",
+      "size": [
+        110,
+        67
+      ]
+    },
+    "assets/epic/units/elf_ranger.png": {
+      "bytes": 38658,
+      "git_blob_sha1": "34c15de8f003a0d6191bac0e6d8ece899b2131eb",
+      "sha256": "6d785f54091b081b6e9e643a9a7e4620474b324ab057af1b0e8823f441ba9239",
+      "size": [
+        131,
+        112
+      ]
+    },
+    "assets/epic/units/goblin_raider.png": {
+      "bytes": 16714,
+      "git_blob_sha1": "5e086563fdc67b467dc43a3a52aff2e4d85b2b53",
+      "sha256": "c9d34575e88dcc2aa2b221b7f76d120f2345b68c1b9188a1295e5100779f633d",
+      "size": [
+        81,
+        76
+      ]
+    },
+    "assets/epic/units/goblin_saboteur.png": {
+      "bytes": 17934,
+      "git_blob_sha1": "bfb067da1ff912afd0cca5650a2481aa24e2a1c4",
+      "sha256": "54ab582c3345af943aaf6425e5e08ff237f964252a7fc5a65d91b3e397e2e1ef",
+      "size": [
+        104,
+        70
+      ]
+    },
+    "assets/epic/units/shadow_wolf.png": {
+      "bytes": 34282,
+      "git_blob_sha1": "388206b675fbe742368c57f3c9870a0ea7f1e652",
+      "sha256": "2685aabdda96a77d2e9aa45f65fc73fc96c16365b7055e56f70e1c999af29990",
+      "size": [
+        165,
+        80
+      ]
+    },
+    "assets/epic/world/battlefield.jpg": {
+      "bytes": 315100,
+      "git_blob_sha1": "39cef8acba6dbb3b67b1731c92dd91eb9018c2c9",
+      "sha256": "ee7898e936da13f26dae675e156619bd45e49c28e2bd8d16e95737e67a1bb1c7"
+    },
+    "assets/epic/world/battlefield_clean.jpg": {
+      "bytes": 650767,
+      "git_blob_sha1": "e9da707150c1cd92f8ee7f32058817347dee8107",
+      "sha256": "fedd3e5e71a86696346a1d44734f81f1f0fc99db656e2f9d65da8e747962e6da"
+    },
+    "assets/epic/world/battlefield_v2.jpg": {
+      "bytes": 598491,
+      "git_blob_sha1": "18137aba5c39cd84d0daf19af5bf2778791ab3f0",
+      "sha256": "3f3bb74ad5f6863200bc642c10420b79829be6909c978e0815773a2f3f88257f"
+    },
+    "assets/factions/dwarves.svg": {
+      "bytes": 3651,
+      "git_blob_sha1": "73ab42de14df17ce3d07b2c94c44c142c7494711",
+      "sha256": "a410d6074eb8fb6042a5350a9a79338935799b9aaf5daa0668df8dc1d106a497"
+    },
+    "assets/factions/dwarves_epic.svg": {
+      "bytes": 2255,
+      "git_blob_sha1": "9ae6515f27c3d5c76393ee60f8c3fb844b29e432",
+      "sha256": "a349ada9cd9baaf7a79635c62e3f45c0132d0d27d1bfdb482021f668915d4133"
+    },
+    "assets/factions/elves.svg": {
+      "bytes": 3632,
+      "git_blob_sha1": "19c74e79ca73786891a08591b38f4c91ba5752ce",
+      "sha256": "24a2aa64cffb9eeab612f0eaf87eef7516a409f98f14cabc6db07e953bd3e2be"
+    },
+    "assets/factions/elves_epic.svg": {
+      "bytes": 2270,
+      "git_blob_sha1": "5c4f71c675672b43444b261dfbe5bb6be208aea2",
+      "sha256": "b009ccc6b33016c08dd516d32f2a8a9248f9ab5ae40bb95ed610506fec3e9b0d"
+    },
+    "assets/factions/enchanted_menu.svg": {
+      "bytes": 2405,
+      "git_blob_sha1": "d46937a7e5414ed53ca3b0e7d2292034397e8c44",
+      "sha256": "463f6a83e07891116b134b91f083fc1cff22b2a0e4456b36dec8b6e7a3ebd334"
+    },
+    "assets/factions/goblins.svg": {
+      "bytes": 3608,
+      "git_blob_sha1": "60a504ce7bcd4b7b48c21e31c3e24705149b3215",
+      "sha256": "d20e1b3e2af9ea8f35217611cd4cc1bd966dbc505fa190c63bd063f8831c6cd7"
+    },
+    "assets/factions/goblins_epic.svg": {
+      "bytes": 2267,
+      "git_blob_sha1": "e2be4154494610a19761b1a7b114d965af4028a9",
+      "sha256": "7aeb5571ae47a97f20f6b8789cf7a745eedb234c0639a673a809dcb147ff914f"
+    },
+    "assets/factions/voidborn.svg": {
+      "bytes": 3577,
+      "git_blob_sha1": "f55aac9d841fb6d1023cb28d2ef07fdb7a793e39",
+      "sha256": "87c744c4b3ae8860bc63afa00d47fd6a67e10affce0ae7c966926193869fb12e"
+    },
+    "assets/factions/voidborn_epic.svg": {
+      "bytes": 2251,
+      "git_blob_sha1": "7e3f9b3153e57c5dd9ff81fa87d669bdaac307e1",
+      "sha256": "a543b8f39e3caf28be80233f94b3cc36c44ea368b4b4d09833d287faa9f31e9d"
+    },
+    "assets/fonts/Cinzel.ttf": {
+      "bytes": 77288,
+      "git_blob_sha1": "4457102c703d9d638ebbb864c48c2f5e439593fa",
+      "sha256": "ab21c7c8d9a76f0e899a9d79ca339e0b76d80fed9df2f4479e9399ab282149a9"
+    },
+    "assets/ui/direct/ability_void.png": {
+      "bytes": 274678,
+      "git_blob_sha1": "a94454d4456e5b04e72c27a35f46a3c1a5d3dee5",
+      "sha256": "5f77df6b0ef4e199d4c06d7984705c38e04f8f1a06b6ffe2735556ffb0491805",
+      "size": [
+        1320,
+        136
+      ]
+    },
+    "assets/ui/direct/attack_again.png": {
+      "bytes": 258541,
+      "git_blob_sha1": "37c5b9d79292a018de13d80b926b42c60289bc7f",
+      "sha256": "7c22a398bded4169222ee334c6604688526614702c85bcc840517e015c16309e",
+      "size": [
+        1318,
+        171
+      ]
+    },
+    "assets/ui/direct/attack_busy.png": {
+      "bytes": 334088,
+      "git_blob_sha1": "b609408a043b7283973c280665beb3a3301a4a8b",
+      "sha256": "c5547ae8b774b3bb74b83008deb2f790585574586acfe7662b30c7b205d000bb",
+      "size": [
+        1320,
+        185
+      ]
+    },
+    "assets/ui/direct/attack_prep.png": {
+      "bytes": 489297,
+      "git_blob_sha1": "3a2e14cf0b7616745328aadcfac150d86d15ec87",
+      "sha256": "17ea6334a80eb24daa513527f794481a02cf890a6938a105d7bf93986fe57cd8",
+      "size": [
+        1382,
+        214
+      ]
+    },
+    "assets/ui/direct/bank.png": {
+      "bytes": 208721,
+      "git_blob_sha1": "f12502604bf2f51a4bced3648de6e3cfb38e6f0a",
+      "sha256": "6e81a89d4077351990582d8d8ee2661b1be9e6c70c9207d6b6fe1853136959af",
+      "size": [
+        692,
+        283
+      ]
+    },
+    "assets/ui/direct/carrier.png": {
+      "bytes": 131874,
+      "git_blob_sha1": "5904d83c1d1022fb9d1faa79be89ba7ea53f91cb",
+      "sha256": "899b0242366c6f04235e3bbbce9f587ac7ca5955e9b87d55d5cffb4565141917",
+      "size": [
+        292,
+        203
+      ]
+    },
+    "assets/ui/direct/carrier_full.png": {
+      "bytes": 676487,
+      "git_blob_sha1": "99fe9187c77d196132276dbd016cceb0ff277436",
+      "sha256": "81ea3276aa0f95c7a77405ebfe29759ee47825ba2b653f1d167a9b372253b00a",
+      "size": [
+        454,
+        760
+      ]
+    },
+    "assets/ui/direct/defender.png": {
+      "bytes": 296168,
+      "git_blob_sha1": "0fd6f59f9095dc3f9ac9e3e9982b81e83eba9866",
+      "sha256": "9ca01f7e201e47244583aba976883a2e75ac6e791d54ed2d7c120accb2666cb9",
+      "size": [
+        1317,
+        142
+      ]
+    },
+    "assets/ui/direct/dwarf_ability.png": {
+      "bytes": 183234,
+      "git_blob_sha1": "307c66829b7b6c5a3223a9b8b190494140bd1d29",
+      "sha256": "65b0318d3ae7df65f5365cb0400a8a534df6dd4e84ad36d9acfd71cd1ef0a1f6",
+      "size": [
+        923,
+        102
+      ]
+    },
+    "assets/ui/direct/dwarf_bank.png": {
+      "bytes": 101325,
+      "git_blob_sha1": "11169c6e68cf42cb084a666f08a44b9ed0c0f48e",
+      "sha256": "d0f5a6e676fbc6b46b94ae5cdc28480587ed4d672029ceaba9bccddbb3568ffb",
+      "size": [
+        459,
+        113
+      ]
+    },
+    "assets/ui/direct/dwarf_carrier.png": {
+      "bytes": 183866,
+      "git_blob_sha1": "8e0e32b9809f7f3d69d798e52c3ce49d96a32e8f",
+      "sha256": "284a6c1d707396770e5b686a2fa43e135efa7443e67328f291a2b3cfb4d37e88",
+      "size": [
+        313,
+        246
+      ]
+    },
+    "assets/ui/direct/dwarf_defender.png": {
+      "bytes": 193857,
+      "git_blob_sha1": "7437f7f37d73d491dddfd38a8659b6e329561af3",
+      "sha256": "2939b4aa75e03cbd83aa85805534a5932dbfebbddaf1d5e70cf64249d1dadca6",
+      "size": [
+        924,
+        107
+      ]
+    },
+    "assets/ui/direct/dwarf_raid.png": {
+      "bytes": 102426,
+      "git_blob_sha1": "41f5752b2793da2001320817c291877cc112ae2e",
+      "sha256": "11b64771edb8c0cec0928541426a038d1d7d2ff568ed8477cbd5826d6e830418",
+      "size": [
+        467,
+        113
+      ]
+    },
+    "assets/ui/direct/dwarf_runner.png": {
+      "bytes": 178918,
+      "git_blob_sha1": "82e9c95545fe38e28aabf299dbd882b21f3aeb8c",
+      "sha256": "856b46e128f063bb531246da88411b95cfcaecbdd50af8ceade92c3b8ee5ee7c",
+      "size": [
+        310,
+        246
+      ]
+    },
+    "assets/ui/direct/dwarf_saboteur.png": {
+      "bytes": 181938,
+      "git_blob_sha1": "fc59ea5e4b7d5077ee0274e7e8b3e67a9eff32e2",
+      "sha256": "f92a5b9d1ba0305d9d1c1223216383d5eaf3d10f44e3c86b1d4499271ab1f72d",
+      "size": [
+        312,
+        246
+      ]
+    },
+    "assets/ui/direct/dwarf_snare.png": {
+      "bytes": 124882,
+      "git_blob_sha1": "9cf3548e8b7c7af282c741ef9771213209ababf3",
+      "sha256": "f3ed0ab2e8739c06021b86042cc63104ade101abe1de8e7c96939ba5a1282865",
+      "size": [
+        312,
+        174
+      ]
+    },
+    "assets/ui/direct/dwarf_spikes.png": {
+      "bytes": 123156,
+      "git_blob_sha1": "530de230af570c8dfaca63419f744fe71731225b",
+      "sha256": "64c6be6b309aa7717b8996577b769e0753bd8fe25429f2353c3de432120f3088",
+      "size": [
+        309,
+        174
+      ]
+    },
+    "assets/ui/direct/dwarf_turret.png": {
+      "bytes": 123369,
+      "git_blob_sha1": "b47c907f06e8a6eec7fb0fe07a64cac831fd9889",
+      "sha256": "ef0e8faff8b5473aa6a5f4b1e6e418bb9f57235c7f8be23322573b9c4f706242",
+      "size": [
+        311,
+        174
+      ]
+    },
+    "assets/ui/direct/elf_ability.png": {
+      "bytes": 89952,
+      "git_blob_sha1": "c1d4783e6220e6eba601591e2f9d8cbe1e713fff",
+      "sha256": "0324ceec11b8efc04b4705e7bbf0badb0fa67f9a9895fcbca9a38a857d88c30a",
+      "size": [
+        923,
+        102
+      ]
+    },
+    "assets/ui/direct/elf_bank.png": {
+      "bytes": 101325,
+      "git_blob_sha1": "11169c6e68cf42cb084a666f08a44b9ed0c0f48e",
+      "sha256": "d0f5a6e676fbc6b46b94ae5cdc28480587ed4d672029ceaba9bccddbb3568ffb",
+      "size": [
+        459,
+        113
+      ]
+    },
+    "assets/ui/direct/elf_carrier.png": {
+      "bytes": 110872,
+      "git_blob_sha1": "4d0b22c27f4d2236ca4d8b46aa081d7b223b0d31",
+      "sha256": "e060757f116c73348f3e7436af010fa155e2db4cafaed2e0070a693d54707966",
+      "size": [
+        313,
+        246
+      ]
+    },
+    "assets/ui/direct/elf_defender.png": {
+      "bytes": 193857,
+      "git_blob_sha1": "7437f7f37d73d491dddfd38a8659b6e329561af3",
+      "sha256": "2939b4aa75e03cbd83aa85805534a5932dbfebbddaf1d5e70cf64249d1dadca6",
+      "size": [
+        924,
+        107
+      ]
+    },
+    "assets/ui/direct/elf_raid.png": {
+      "bytes": 102426,
+      "git_blob_sha1": "41f5752b2793da2001320817c291877cc112ae2e",
+      "sha256": "11b64771edb8c0cec0928541426a038d1d7d2ff568ed8477cbd5826d6e830418",
+      "size": [
+        467,
+        113
+      ]
+    },
+    "assets/ui/direct/elf_runner.png": {
+      "bytes": 111891,
+      "git_blob_sha1": "ceec2c2666b8d9bfefc67c59060cf70606256fb4",
+      "sha256": "4d7ac70398d0ac7aed1e9b90c9a3ff25394cbe4d8a6ee92ac9289901a3f93d2b",
+      "size": [
+        310,
+        246
+      ]
+    },
+    "assets/ui/direct/elf_saboteur.png": {
+      "bytes": 108725,
+      "git_blob_sha1": "ab7b2e274690be1946c67d5876d9b391487dab4c",
+      "sha256": "2e48041fd4a23912c5bb927f431ef06b6653fdf08cc72b2fdc633a17b9771a4b",
+      "size": [
+        312,
+        246
+      ]
+    },
+    "assets/ui/direct/elf_snare.png": {
+      "bytes": 124882,
+      "git_blob_sha1": "9cf3548e8b7c7af282c741ef9771213209ababf3",
+      "sha256": "f3ed0ab2e8739c06021b86042cc63104ade101abe1de8e7c96939ba5a1282865",
+      "size": [
+        312,
+        174
+      ]
+    },
+    "assets/ui/direct/elf_spikes.png": {
+      "bytes": 123156,
+      "git_blob_sha1": "530de230af570c8dfaca63419f744fe71731225b",
+      "sha256": "64c6be6b309aa7717b8996577b769e0753bd8fe25429f2353c3de432120f3088",
+      "size": [
+        309,
+        174
+      ]
+    },
+    "assets/ui/direct/elf_turret.png": {
+      "bytes": 123369,
+      "git_blob_sha1": "b47c907f06e8a6eec7fb0fe07a64cac831fd9889",
+      "sha256": "ef0e8faff8b5473aa6a5f4b1e6e418bb9f57235c7f8be23322573b9c4f706242",
+      "size": [
+        311,
+        174
+      ]
+    },
+    "assets/ui/direct/goblin_ability.png": {
+      "bytes": 181800,
+      "git_blob_sha1": "e2c5bf6d396cc7724a2ceb307467bdb7fd0a7271",
+      "sha256": "8225b4faf61bcb310a9854854a85ffa4c17a81ddf8cf7a491b2ac225c18f3841",
+      "size": [
+        923,
+        102
+      ]
+    },
+    "assets/ui/direct/goblin_bank.png": {
+      "bytes": 96556,
+      "git_blob_sha1": "6bc95dbcae48b5331eeb16f36573d97899915c72",
+      "sha256": "62c2942a1a153576fa5886aea417d17bc5c2cfc7daa0466d538ff31a8a161d80",
+      "size": [
+        459,
+        113
+      ]
+    },
+    "assets/ui/direct/goblin_carrier.png": {
+      "bytes": 180221,
+      "git_blob_sha1": "4b5020409ea852b26f52b9dfb2029af252467e0b",
+      "sha256": "19dfeab274e414765eb19d827925d9f4f40e837dda9c8a3dbfa18999f2da1f30",
+      "size": [
+        313,
+        246
+      ]
+    },
+    "assets/ui/direct/goblin_defender.png": {
+      "bytes": 181650,
+      "git_blob_sha1": "b10b5dce954f78411d92edc92e793ce134a6e9b4",
+      "sha256": "547019a27cf04ba2ee978e8e939a991dbf78897c5db67f8b8449e8f308f56f83",
+      "size": [
+        924,
+        107
+      ]
+    },
+    "assets/ui/direct/goblin_raid.png": {
+      "bytes": 95823,
+      "git_blob_sha1": "78151c84080d807201d45fa3fbf310fafed05c5a",
+      "sha256": "9740c0a5c970897a326e3a5a3a014a84a5c96fd6b6cc6807cbe875bda1d2f81a",
+      "size": [
+        467,
+        113
+      ]
+    },
+    "assets/ui/direct/goblin_runner.png": {
+      "bytes": 177301,
+      "git_blob_sha1": "a9bf6ba4a43284b2c1eadf8a77a46c350f18f037",
+      "sha256": "62495f4001cfbf17f2ef3624f5021a28bf88c20811e1ef7d7c1c69ab18340d46",
+      "size": [
+        310,
+        246
+      ]
+    },
+    "assets/ui/direct/goblin_saboteur.png": {
+      "bytes": 179856,
+      "git_blob_sha1": "f8fd09e61fe6fdc233d4329d082479b2650c4ebc",
+      "sha256": "7f53ab974f49117367bb44edb6cc69ed2b768b63fdd952cda5b745ea22731549",
+      "size": [
+        312,
+        246
+      ]
+    },
+    "assets/ui/direct/goblin_snare.png": {
+      "bytes": 121378,
+      "git_blob_sha1": "97156d3091a63897f1f02c3c071b3339a17be83e",
+      "sha256": "0c0a2db5e978033635d67ceb096a07a418356297d98f6ed4b009491e3757b560",
+      "size": [
+        312,
+        174
+      ]
+    },
+    "assets/ui/direct/goblin_spikes.png": {
+      "bytes": 119492,
+      "git_blob_sha1": "d183fef197dd822b9fe48de2a0da3efe61eb11b2",
+      "sha256": "0470dc5b2e42c1843c6e1c9139638ed674235688e208ce78bcebac56c1d4c3f1",
+      "size": [
+        309,
+        174
+      ]
+    },
+    "assets/ui/direct/goblin_turret.png": {
+      "bytes": 119805,
+      "git_blob_sha1": "413969fe45fb45b4f23ad36c3f8dbdfc8c27303d",
+      "sha256": "39bc83521a7192fbe31aaa889d9e659d2793b97d44cc7c6580ef6ce221bcbc11",
+      "size": [
+        311,
+        174
+      ]
+    },
+    "assets/ui/direct/gold_bar.png": {
+      "bytes": 129855,
+      "git_blob_sha1": "10fc0faa92d6fa3819a518f7ba1ad1a7a4ae4841",
+      "sha256": "6157464ee57717c5754327c9d7d7f38506eb99cc81154609be32f7839f070ec3",
+      "size": [
+        1320,
+        135
+      ]
+    },
+    "assets/ui/direct/lane_blue_1.png": {
+      "bytes": 41559,
+      "git_blob_sha1": "120ff323ef8f2335b529edf36fa96aedee061d8a",
+      "sha256": "3ca22db0c3f8cd0e73ff59a41cb9467a7ee07efcd8409f04e6d595add20a4364",
+      "size": [
+        430,
+        125
+      ]
+    },
+    "assets/ui/direct/lane_blue_2.png": {
+      "bytes": 44501,
+      "git_blob_sha1": "119b21e4a93b8d35ac52008e72b4b84ad876d142",
+      "sha256": "6b3aee66bc5a6d5f471c887554f0375b2d22ae76da2abf0f3742723bd71fdda2",
+      "size": [
+        428,
+        125
+      ]
+    },
+    "assets/ui/direct/lane_blue_3.png": {
+      "bytes": 41173,
+      "git_blob_sha1": "8c7b7f01b6d02ce45626f57e6bbf2a411bb4474a",
+      "sha256": "757fcf3519bedf18e3198675aa2d96e5fa906f1fb892419a114150637af0d286",
+      "size": [
+        416,
+        125
+      ]
+    },
+    "assets/ui/direct/lane_gold.png": {
+      "bytes": 82478,
+      "git_blob_sha1": "dd535c883c9f3d1cb1ff4f32b405454348530568",
+      "sha256": "7293705a2a30aabc011b97bc0d0ffa532019ddbcb2e1d5f9375b10e1fd87cd78",
+      "size": [
+        562,
+        143
+      ]
+    },
+    "assets/ui/direct/message_bar.png": {
+      "bytes": 64666,
+      "git_blob_sha1": "41a137491b40f99f17b9d3ae42f9427af13087d2",
+      "sha256": "3febc35f5f4bb62e3e77ef0cc44a8a10b948eceb3c92cea15e1ffea093bd9f61",
+      "size": [
+        1440,
+        108
+      ]
+    },
+    "assets/ui/direct/phase_bar.png": {
+      "bytes": 56556,
+      "git_blob_sha1": "39aa1631925698670df88494de07f34afae431ab",
+      "sha256": "a9be3a5f39e8c0ea1cc12eecf96562b3b3dbba438d9f76c447a6e0d01e3ed876",
+      "size": [
+        1235,
+        111
+      ]
+    },
+    "assets/ui/direct/raid.png": {
+      "bytes": 196925,
+      "git_blob_sha1": "862212accdb83636806a373d67f1182fa697c39e",
+      "sha256": "96edc2af69be516449716a7d1dcc206a92ade6618e3de2f76bf1560918c4d8b3",
+      "size": [
+        691,
+        283
+      ]
+    },
+    "assets/ui/direct/runner.png": {
+      "bytes": 127900,
+      "git_blob_sha1": "8dae7ef15da60f179e842967e05043526f9fcfe2",
+      "sha256": "fb53cffeb48610980138cf1ac56cf74b1d1c6a5edac92163284c75c534a54ec0",
+      "size": [
+        293,
+        203
+      ]
+    },
+    "assets/ui/direct/runner_full.png": {
+      "bytes": 648575,
+      "git_blob_sha1": "1eb72246af9cb25d28db80c08f051c0d7005bd5e",
+      "sha256": "73c446ceecb9998fdd82d13ede783306de47375b25bae2a63706521c9d9e0ae1",
+      "size": [
+        460,
+        760
+      ]
+    },
+    "assets/ui/direct/saboteur.png": {
+      "bytes": 131404,
+      "git_blob_sha1": "de0d5f4b847432a93d0c1ffe5d64177ee37b6eff",
+      "sha256": "aa322c7a14a11aa379ff439c408a549b9337f17ad2baac659d418bf3019a23c1",
+      "size": [
+        294,
+        203
+      ]
+    },
+    "assets/ui/direct/saboteur_full.png": {
+      "bytes": 666975,
+      "git_blob_sha1": "daea26b6a3188f3d131a95751f7bcd128827a721",
+      "sha256": "36203f5e244bfb13ba97e8e2998da2e0b168f6c0779929ba4eeac43d7f2724a3",
+      "size": [
+        476,
+        760
+      ]
+    },
+    "assets/ui/direct/snare.png": {
+      "bytes": 110701,
+      "git_blob_sha1": "31ecd755e0411742c221d922c154549766d28b0f",
+      "sha256": "7f03e9a27651c661741ccc2f0d5db30fc8f4707fcf9f8c1511e50811daa71d52",
+      "size": [
+        292,
+        182
+      ]
+    },
+    "assets/ui/direct/snare_full.png": {
+      "bytes": 359351,
+      "git_blob_sha1": "98252009369a5c405eefa1fa553b785a989c490a",
+      "sha256": "a424b08c20273e966f9796eaa0805c2b6bb6d7bb03f68e6d827e3571686cf201",
+      "size": [
+        467,
+        450
+      ]
+    },
+    "assets/ui/direct/spikes.png": {
+      "bytes": 107619,
+      "git_blob_sha1": "ce4869bc719badac30db870ebd76dc1f9c4af62a",
+      "sha256": "20bd3a180d75defa8a962abf4f201a7b1a7f173a639231be7d97e7375509482e",
+      "size": [
+        293,
+        182
+      ]
+    },
+    "assets/ui/direct/spikes_full.png": {
+      "bytes": 353235,
+      "git_blob_sha1": "c743a81863c49251c8a5d4570997cca496a0adcf",
+      "sha256": "76cad54e43e3923af2f72074d61c683509644523c8a468e315aea345190e261c",
+      "size": [
+        464,
+        450
+      ]
+    },
+    "assets/ui/direct/title.png": {
+      "bytes": 440040,
+      "git_blob_sha1": "659d95e013ef449c8f720957a0484e0f0c796b5a",
+      "sha256": "5025957950f2305b633a8f57f7d8e99599c61875986aeb8c2a86975667fc21a5",
+      "size": [
+        1188,
+        280
+      ]
+    },
+    "assets/ui/direct/turret.png": {
+      "bytes": 111961,
+      "git_blob_sha1": "c4f3ab55b2a0759d1670d2473d8f57bdaefa7a29",
+      "sha256": "71964ecd3483b34e5fba24fdda45129a36fcfbf2acd3498cedbb7d3d3b682e10",
+      "size": [
+        294,
+        182
+      ]
+    },
+    "assets/ui/direct/turret_full.png": {
+      "bytes": 368274,
+      "git_blob_sha1": "59a336376ca7f4f57a4c14d6afd000f623016cd0",
+      "sha256": "f5473e6f26fb8bf32c940072560e6359a1c88eeb38e53485e412ab9294d7c97f",
+      "size": [
+        482,
+        450
+      ]
+    },
+    "assets/ui/gold_bank.svg": {
+      "bytes": 646,
+      "git_blob_sha1": "1de95503a9915469000d0a06d5bb3330e6e35ec0",
+      "sha256": "293451e183f63467add2d5ebb2dcb4ad91e1a4645bab6877e65a2f7c42b31fc5"
+    },
+    "assets/ui/lobby/book.svg": {
+      "bytes": 347,
+      "git_blob_sha1": "77b379028521409430384235c2fa0104554fd9e1",
+      "sha256": "6eb34ce05f60ff9cbb6a2b08857bbcf2478b55d30354b83e298a2a0bd9407c18"
+    },
+    "assets/ui/lobby/epic_button.png": {
+      "bytes": 548134,
+      "git_blob_sha1": "d7edbdbd36275c548cdde8d82e833303c8f4069f",
+      "sha256": "2fc12117724c90a404a69291fd93faafb825b9d2683b897d2a601b97286be140",
+      "size": [
+        1280,
+        317
+      ]
+    },
+    "assets/ui/lobby/epic_vault_menu.png": {
+      "bytes": 2630588,
+      "git_blob_sha1": "618fb7a9d780e65fffa5bfd002cc25140b76be67",
+      "sha256": "60c1d90004468ee948c3c9eb3f566946aa17868355805c3737543c62888557c0",
+      "size": [
+        941,
+        1672
+      ]
+    },
+    "assets/ui/lobby/hero_dwarves.jpg": {
+      "bytes": 581877,
+      "git_blob_sha1": "b66c7e05019faf45698c4b0e912b92a5a62870c0",
+      "sha256": "e703983cc5d10db24797e6f2b618893dbcddb76d5f7e64c7e41ea82383858c92"
+    },
+    "assets/ui/lobby/hero_elves.jpg": {
+      "bytes": 571906,
+      "git_blob_sha1": "91cde9176f5c15b6f2794817c5b78be537c87889",
+      "sha256": "76e80b8771a12512a4bf85350d85f75614a3d73f475203b5bb5610134ac6d25d"
+    },
+    "assets/ui/lobby/hero_goblins.jpg": {
+      "bytes": 474110,
+      "git_blob_sha1": "35b3b501ba3194f3e12b1a7ae3062e4661471bd1",
+      "sha256": "97e1dc06dde8dc7609fa9be42994c04d92dd4d388f8e92fc94807788ef2e89c6"
+    },
+    "assets/ui/lobby/hero_voidborn.jpg": {
+      "bytes": 473165,
+      "git_blob_sha1": "325dbf92994864ddeb5e28e0bd0817b56ea80eb5",
+      "sha256": "61a52891287d82ad4415b97339dc94f671dfd58a2cf81b0a70a7f749cc8804d3"
+    },
+    "assets/ui/lobby/panel.svg": {
+      "bytes": 969,
+      "git_blob_sha1": "a0f3c941948b223deb43b1f1ad5ed2c04ad9ce4d",
+      "sha256": "b4007c9ed5b6cab33da5d59a2f072fbbe99dbf237bd657e8e2993354a202b562"
+    },
+    "assets/ui/lobby/settings.svg": {
+      "bytes": 318,
+      "git_blob_sha1": "ba160bdfd3a2b4725214994ae4dab39314ab0561",
+      "sha256": "252d5a0b43c95e5ee5e1d1a529a92ba98338a521591f409c175f055b45d4f0a1"
+    },
+    "assets/ui/lobby/vault_wars_wordmark.png": {
+      "bytes": 1842004,
+      "git_blob_sha1": "7b78b19642fa278a1b442b196038ae6b0322b003",
+      "sha256": "a43ca4ae1d048a85bd3192156bcf3e6edcb568a2553000e02bc661382d04b4db",
+      "size": [
+        2172,
+        724
+      ]
+    },
+    "assets/ui/ornate/banner_blue.svg": {
+      "bytes": 3260,
+      "git_blob_sha1": "dbd38a0bc1a470221ae0f7d15e7a2d6f76d641bb",
+      "sha256": "6bae300852ce339b5045c8ca40d2d0ce9fc8c8818612a0ab815cccef42f36dd0"
+    },
+    "assets/ui/ornate/banner_disabled.svg": {
+      "bytes": 3260,
+      "git_blob_sha1": "777567f07272a30dee47fffbc3dfc184ed378648",
+      "sha256": "19b20b93cc7dc59baab12213cb15593ebdf432cc70d5ffe92ed647a74f97276b"
+    },
+    "assets/ui/ornate/banner_gold.svg": {
+      "bytes": 3260,
+      "git_blob_sha1": "0ba4df95b84bdac116223868222b73a81de068ad",
+      "sha256": "65f2aaccd30529998273a1c6020cb939df41c57931efded78e27cfd5619c5d67"
+    },
+    "assets/ui/ornate/banner_purple.svg": {
+      "bytes": 3260,
+      "git_blob_sha1": "50595f9660a7909159d19203f8a3da954f504ec8",
+      "sha256": "f54c0178859f9812efe57e0a73f030b466ec2840b10f8efd9abe0f371a1ad593"
+    },
+    "assets/ui/ornate/card_hero.svg": {
+      "bytes": 3505,
+      "git_blob_sha1": "f5147ca2e2de79312d83a84861f57c69411f5d34",
+      "sha256": "acb4df747db75e1262db0faa21fe946a0e0dad271f21591e9e69badc742e8927"
+    },
+    "assets/ui/ornate/card_trap.svg": {
+      "bytes": 3505,
+      "git_blob_sha1": "6a72d2467e98d17daecc3f35af3514655c58389f",
+      "sha256": "72a19ec4216a21212c67009ada64fa941865799ab3b3c2814fa3a67a7a2c8fbe"
+    },
+    "assets/ui/ornate/coin.svg": {
+      "bytes": 738,
+      "git_blob_sha1": "6525790f7f23843d38f699e754a81d864bf31733",
+      "sha256": "60198a636e4fbd3df53f89708949cbee42fdb366590276d310fdbcf10489e119"
+    },
+    "assets/ui/ornate/crest.svg": {
+      "bytes": 2471,
+      "git_blob_sha1": "2b63365ffb25ff9247fb8bd159deee1fcc743602",
+      "sha256": "49c84815d549d2eefc816aee29ac6b208b446836f077a594417f567df2177234"
+    },
+    "assets/ui/ornate/divider.svg": {
+      "bytes": 629,
+      "git_blob_sha1": "131f3acd3ee48c683460d96004bc3ccb7c6c6059",
+      "sha256": "103b31d409e56b58c1d92603e0533c47c7db07ae63d9a3ef880433c06c837665"
+    },
+    "assets/ui/ornate/hud_bar.svg": {
+      "bytes": 3238,
+      "git_blob_sha1": "ac30b5ec43bdb4f57b892f5ee9212c1def7cf39d",
+      "sha256": "70b53a3cfc379680c03d729538c55054b1da6ed2d1ffdda86f7211cc487e9a62"
+    },
+    "assets/ui/ornate/lane_blue.svg": {
+      "bytes": 2943,
+      "git_blob_sha1": "8278068fb82b9339dec8d7aba59f3ed20ffc7b22",
+      "sha256": "801e050b65e684d52dffbaf979ac9a0182f6742ab60fabbf7965229fb6cb2aea"
+    },
+    "assets/ui/ornate/lane_selected.svg": {
+      "bytes": 2943,
+      "git_blob_sha1": "e44dddd2e756a8e505a062a84fbc80751e6ffb43",
+      "sha256": "a955b8fcebaaa32d43e47f9d5f5c2811266b6905fb29bc212454a0da699b16c7"
+    },
+    "assets/ui/ornate/portrait_aura.svg": {
+      "bytes": 483,
+      "git_blob_sha1": "f3c1c8fe1232c2da5f5dad7da31accda29d3ca51",
+      "sha256": "93d73021c995b68d9b5968cb96da3a4fcb74237687dd066cc2ea4fa949442455"
+    },
+    "assets/ui/ornate/status_bar.svg": {
+      "bytes": 3238,
+      "git_blob_sha1": "db6cb3a00b1060b323b3c41a3da6f2f4cb49f928",
+      "sha256": "5f2311d2c8b3321e03b5aa52e9af8b4b5f60e823c96a3a4a370e1556b5ab2750"
+    },
+    "assets/ui/raid.svg": {
+      "bytes": 598,
+      "git_blob_sha1": "81879b50a807aafad04b6121412e436adda758e6",
+      "sha256": "2bb99ef66f0874dacf9c6cc3f6bedf696e248aae220ae129426fdf9ed1c34b76"
+    },
+    "assets/ui/snare.svg": {
+      "bytes": 726,
+      "git_blob_sha1": "b8ec8eca0e73a24e9ee516b49831ef91bdf9ca2f",
+      "sha256": "e74bf400491ccbacad08f85362a22b27e21299df1b35e037f58995375f8bcb80"
+    },
+    "assets/ui/spikes.svg": {
+      "bytes": 738,
+      "git_blob_sha1": "5c2e72ffa2f7407905f3fdbd203032269799b280",
+      "sha256": "49be40788ef7f335bd78083c1d7b63b97d914668ea3ed9f0398aa52d62a6cd24"
+    },
+    "assets/ui/turret.svg": {
+      "bytes": 858,
+      "git_blob_sha1": "16728c277d5576e855c757f761bb5b1c4d6ff0d7",
+      "sha256": "d59118fc9ad900ebeafcbbe92193b8954554c1aa6c044aad5ec3c4c44e229df4"
+    },
+    "assets/world/ancient_bridge.svg": {
+      "bytes": 1095,
+      "git_blob_sha1": "a0eed4f6162e23124318a3d00b5a4cbd3842b49f",
+      "sha256": "4c05e4362689f427d659f4de50b240e45bf5bbb619c8f2d60aa5f914e3853a42"
+    },
+    "assets/world/ancient_shrine.svg": {
+      "bytes": 1358,
+      "git_blob_sha1": "52e88647b72c38542feafb009a6597f85280e471",
+      "sha256": "d758d3f8753ae62ff5b87f1a072746bdb187f66e65be98bf2ecf917a32b6d4c2"
+    },
+    "assets/world/arcane_crystal.svg": {
+      "bytes": 672,
+      "git_blob_sha1": "d3d3f57798a3d29361e1d9b0814ec796c81d0da2",
+      "sha256": "5f0e1377b0798c5bb5fc4daa83464d916727fa40ffc18377dde8bd1fedcb673b"
+    },
+    "assets/world/dwarf_guard.svg": {
+      "bytes": 1321,
+      "git_blob_sha1": "a94622e62cb152489d20e492945bcfd247bebd91",
+      "sha256": "384bd0b2bee42d6a101639d60faaff36229ae8fdb3cd47637d79d4516b4c08d9"
+    },
+    "assets/world/elf_ranger.svg": {
+      "bytes": 1205,
+      "git_blob_sha1": "4f30e1a546ee3e592ffac35682b2002091a4368b",
+      "sha256": "0936c0093814bdc9b2b85f8aa55ee1825e7939fe0e39d7adc5a7b4e2f31c4779"
+    },
+    "assets/world/enchanted_ground.svg": {
+      "bytes": 998,
+      "git_blob_sha1": "015d727e62fe4717f2db5b8c6dc6fa4f10ac5733",
+      "sha256": "0fe9653fc9321034aac21149e3b511651fccd430de02db9fafd77b8724319031"
+    },
+    "assets/world/enchanted_pine.svg": {
+      "bytes": 972,
+      "git_blob_sha1": "36a018da24c1b24029cde8630cbb97e57f0ad24d",
+      "sha256": "3cc55a9e26de81d0900e6f11fb1ab8275bfea4e2a52f2c859569d1c5b298e80f"
+    },
+    "assets/world/epic_valley.svg": {
+      "bytes": 69798,
+      "git_blob_sha1": "8121457da69607dbeb15cf8a8679814f4312d448",
+      "sha256": "77b8bfa9311ab9be091c2f84bfdae915a23010ca5f574e5b016cbb6ba73a1c63"
+    },
+    "assets/world/goblin_raider.svg": {
+      "bytes": 1181,
+      "git_blob_sha1": "6c4482eb9868ab00afa0339b640b2cea401fe356",
+      "sha256": "d2a88a917d7a9b057f2e07b522a65b12aea315ed6e2d986f3b75fd2424b197cf"
+    },
+    "assets/world/moonlit_grove.svg": {
+      "bytes": 1318,
+      "git_blob_sha1": "23194f2d9aad30c9c1a6a06a0b4773b16a19719e",
+      "sha256": "d5f314762316db2057ab1874d7710dbbfd5bcac34064d80e105e562532a02c9b"
+    },
+    "assets/world/mossy_cliff.svg": {
+      "bytes": 899,
+      "git_blob_sha1": "ce1ca513cb782ee8b4c7bb06a71a59b34751ed12",
+      "sha256": "4d9054b33a6115a3d8c94307200de836bc512f4d7c0233b146ac044bd7c26d2d"
+    },
+    "assets/world/royal_vault.svg": {
+      "bytes": 2038,
+      "git_blob_sha1": "e013df619c607ce1f98782ac9865763867d8d6b1",
+      "sha256": "4601a25022344c34db34b8db5a97eaebb0f06169b2afc15a9803c72f0958463d"
+    },
+    "assets/world/stone_path.svg": {
+      "bytes": 781,
+      "git_blob_sha1": "f86cc8d5444ee54fbac4ee1cf4a36e4877b8d5de",
+      "sha256": "52e47dce91b7c781aa258a2c84ca148da8013e8fb93c68a78a055eeaed0809b0"
+    },
+    "assets/world/vault_tier_1.svg": {
+      "bytes": 2121,
+      "git_blob_sha1": "b0325199db7653eae347b3c2f8cb32568fa77cba",
+      "sha256": "94d1b8395fe019091614dcaf292d25f9b198d554dd54a3d3e2e194bd81969a28"
+    },
+    "assets/world/vault_tier_2.svg": {
+      "bytes": 2938,
+      "git_blob_sha1": "8d41ce5c51306429c4043ac7713dbdaa259ea99f",
+      "sha256": "29769fd783c206b1a6b9957977bd86635026a2c3486c05dd3993fe86541c8f4c"
+    },
+    "assets/world/vault_tier_3.svg": {
+      "bytes": 3605,
+      "git_blob_sha1": "b7244c2d3ece857fc3b10f8791dc259df16bb6fd",
+      "sha256": "4c371fecfa8152aa53cf9cc997717d5f73ca368ca7860ca3cb1ffe0962778041"
+    },
+    "assets/world/vault_tier_4.svg": {
+      "bytes": 3969,
+      "git_blob_sha1": "8fd0962bed887407231dbf81e5cfedb89bccfbd6",
+      "sha256": "30c75faf593a314078a55c4569590be26bf756cba4689358cc74ea256aaa0c58"
+    },
+    "assets/world/vault_tier_5.svg": {
+      "bytes": 4320,
+      "git_blob_sha1": "abf952a1e7c7467a787194bf38f671d665fa269b",
+      "sha256": "a125a763ff4b089d4748d4986088e9b8829d04344be9169056c722063f15d8b3"
+    },
+    "assets/world/void_assassin.svg": {
+      "bytes": 985,
+      "git_blob_sha1": "84049c5159e165fe98528637faba87022114d99e",
+      "sha256": "6902e0862891ccb45375cb25131bb4db30bb755471241d9b79fb552f02dff238"
+    },
+    "assets/world/war_banner.svg": {
+      "bytes": 719,
+      "git_blob_sha1": "5d096055fd2362493cb5ea72a826d5497dd3cf2b",
+      "sha256": "4fdd4062e35e3d17613da0bad77809110eeb17c90b54baf9f8342bfe8b29dcb5"
+    },
+    "assets/world/waterfall.svg": {
+      "bytes": 891,
+      "git_blob_sha1": "a309b040f2b941a7b25e07c16ab42b1e30b2f2db",
+      "sha256": "717f8d62fcb6e04dfb8980336808ee47c1ed7b966da3b9dc3c46d8d4c816f48d"
+    }
+  },
+  "version": 1
+}

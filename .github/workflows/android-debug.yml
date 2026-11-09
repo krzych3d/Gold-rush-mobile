@@ -96,6 +96,12 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_lobby_codex.gd 2>&1 | tee lobby.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" lobby.log; then exit 1; fi
           grep -q "Lobby and codex PASSED" lobby.log
+          ./godot --headless --path . --script res://ci/smoke_battle_presentation.gd 2>&1 | tee presentation.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" presentation.log; then exit 1; fi
+          grep -q "Battle presentation PASSED" presentation.log
+          ./godot --headless --path . --script res://ci/smoke_localization.gd 2>&1 | tee languages.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" languages.log; then exit 1; fi
+          grep -q "Localization PASSED" languages.log
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           echo "Export templates:"
           ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
@@ -127,6 +133,7 @@ jobs:
             smoke.log
             configure.log
             lobby.log
+            presentation.log
             export.log
           retention-days: 3
           if-no-files-found: ignore

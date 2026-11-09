@@ -7,6 +7,7 @@ var effective_quality := "balanced"
 var reduced_motion := false
 var music_enabled := true
 var show_fps := false
+var language := "pl" if OS.get_locale_language() == "pl" else "en"
 var sample_time := 0.0
 var slow_samples := 0
 var config_path := CONFIG_PATH
@@ -19,6 +20,9 @@ func _init(path: String = CONFIG_PATH) -> void:
 		reduced_motion = bool(config.get_value("display", "reduced_motion", false))
 		music_enabled = bool(config.get_value("audio", "music", true))
 		show_fps = bool(config.get_value("display", "show_fps", false))
+		language = str(config.get_value("interface", "language", language))
+	if language not in ["pl", "en"]:
+		language = "en"
 	if not MODES.has(quality):
 		quality = "auto"
 	resolve_profile()
@@ -42,6 +46,7 @@ func save() -> void:
 	config.set_value("display", "reduced_motion", reduced_motion)
 	config.set_value("display", "show_fps", show_fps)
 	config.set_value("audio", "music", music_enabled)
+	config.set_value("interface", "language", language)
 	config.save(config_path)
 
 func observe_fps(delta: float, fps: float) -> bool:

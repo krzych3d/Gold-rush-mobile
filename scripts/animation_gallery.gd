@@ -1,4 +1,6 @@
 extends Control
+const L10n = preload("res://scripts/localization.gd")
+const Epic = preload("res://scripts/epic_theme.gd")
 ## In-game QA viewer for the actual animation atlases used by the battlefield.
 ## No additional image generation, network requests, or paid APIs.
 
@@ -80,10 +82,7 @@ func _ready() -> void:
 			var strip := load(path) as Texture2D
 			if strip != null and strip.get_height() == 192 and strip.get_width() == GOBLIN_FRAMES[i] * 192:
 				goblin_strips[i] = strip
-	var backdrop := ColorRect.new()
-	backdrop.color = Color("0b1426")
-	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(backdrop)
+	Epic.backdrop(self, 0.56)
 	var margins := MarginContainer.new()
 	margins.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margins.add_theme_constant_override("margin_left", 18)
@@ -95,29 +94,29 @@ func _ready() -> void:
 	layout.add_theme_constant_override("separation", 12)
 	margins.add_child(layout)
 	var title := Label.new()
-	title.text = "ANIMATION STUDIO"
+	title.text = L10n.t("GALERIA POSTACI")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_decorate(title, 32, Color("f6d18b"))
 	layout.add_child(title)
 	var sub := Label.new()
-	sub.text = "LIVE ART • SAME ATLAS AS BATTLE"
+	sub.text = L10n.t("Wybierz bohatera i poznaj jego ruchy")
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_decorate(sub, 15, Color("b4cadf"))
 	layout.add_child(sub)
 	var unit_controls := HBoxContainer.new()
 	layout.add_child(unit_controls)
-	_add_button(unit_controls, "◀ HERO", _change_unit.bind(-1))
+	_add_button(unit_controls, "◀ POSTAĆ", _change_unit.bind(-1))
 	unit_label = Label.new()
 	unit_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	unit_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_decorate(unit_label, 19, Color("f5e3bd"))
 	unit_controls.add_child(unit_label)
-	_add_button(unit_controls, "HERO ▶", _change_unit.bind(1))
+	_add_button(unit_controls, "POSTAĆ ▶", _change_unit.bind(1))
 	var factions := HBoxContainer.new()
 	factions.add_theme_constant_override("separation", 4)
 	layout.add_child(factions)
 	for index in 4:
-		_add_button(factions, ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"][index], _select_faction_preview.bind(index))
+		_add_button(factions, [L10n.t("DWARVES"), L10n.t("GOBLINS"), L10n.t("ELVES"), L10n.t("VOIDBORN")][index], _select_faction_preview.bind(index))
 	preview = Control.new()
 	preview.custom_minimum_size = Vector2(0, 250)
 	preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -129,19 +128,19 @@ func _ready() -> void:
 	layout.add_child(frame_label)
 	var action_controls := HBoxContainer.new()
 	layout.add_child(action_controls)
-	_add_button(action_controls, "◀ ACTION", _change_action.bind(-1))
+	_add_button(action_controls, L10n.t("◀ ACTION"), _change_action.bind(-1))
 	action_label = Label.new()
 	action_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	action_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_decorate(action_label, 21, Color("f5e3bd"))
 	action_controls.add_child(action_label)
-	_add_button(action_controls, "ACTION ▶", _change_action.bind(1))
+	_add_button(action_controls, L10n.t("ACTION ▶"), _change_action.bind(1))
 	var direction_controls := HBoxContainer.new()
 	layout.add_child(direction_controls)
-	_add_button(direction_controls, "FLIP DIRECTION", _flip)
-	_add_button(direction_controls, "CLOSE", _close)
+	_add_button(direction_controls, "ZMIEŃ KIERUNEK", _flip)
+	_add_button(direction_controls, "WRÓĆ", _close)
 	var footnote := Label.new()
-	footnote.text = "11 animated character roles. Base actions for every role, plus special sequences where available."
+	footnote.text = L10n.t("11 animated character roles. Base actions for every role, plus special sequences where available.")
 	footnote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	footnote.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_decorate(footnote, 13, Color("b4cadf"))
@@ -152,14 +151,17 @@ func _ready() -> void:
 func _decorate(label: Label, size: int, color: Color) -> void:
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", color)
+	if size >= 21:
+		Epic.heading(label, size)
 
 func _add_button(parent: HBoxContainer, caption: String, handler: Callable) -> void:
 	var button := Button.new()
-	button.text = caption
-	button.custom_minimum_size = Vector2(120, 50)
+	button.text = L10n.t(caption)
+	button.custom_minimum_size = Vector2(120, 62)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override("font_size", 15)
 	parent.add_child(button)
+	Epic.button(button, false, 15)
 	button.pressed.connect(handler)
 
 func _select_faction_preview(faction: int) -> void:
@@ -192,12 +194,12 @@ func _close() -> void:
 	queue_free()
 
 func _refresh_labels() -> void:
-	unit_label.text = UNIT_NAMES[selected_unit]
+	unit_label.text = L10n.t(UNIT_NAMES[selected_unit])
 	if selected_action >= ACTION_NAMES.size():
 		var names: Array = SPECIAL_NAMES.get(selected_unit, [])
-		action_label.text = names[selected_action - ACTION_NAMES.size()] if selected_action - ACTION_NAMES.size() < names.size() else "SPECIAL"
+		action_label.text = L10n.t(names[selected_action - ACTION_NAMES.size()]) if selected_action - ACTION_NAMES.size() < names.size() else L10n.t("SPECIAL")
 	else:
-		action_label.text = ACTION_NAMES[selected_action]
+		action_label.text = L10n.t(ACTION_NAMES[selected_action])
 	preview.queue_redraw()
 
 func _process(delta: float) -> void:
@@ -215,7 +217,7 @@ func _draw_preview() -> void:
 	var strip: Texture2D = goblin_strips.get(selected_action) if selected_unit == 4 and not is_special else null
 	var source: Texture2D = special_atlases.get(selected_unit) if is_special else strip if strip != null else atlases[selected_unit]
 	if source == null:
-		frame_label.text = "MISSING SOURCE TEXTURE"
+		frame_label.text = L10n.t("MISSING SOURCE TEXTURE")
 		return
 	var cell: int = 192 if strip != null else 128
 	var frame_count: int = int(source.get_width() / cell) if strip != null else 8
@@ -230,7 +232,7 @@ func _draw_preview() -> void:
 		Rect2(Vector2(-hero_width * 0.5, -hero_height), Vector2(hero_width, hero_height)),
 		Rect2(Vector2(float(frame * cell), float(row * cell)), Vector2(cell, cell)))
 	preview.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	frame_label.text = "FRAME %d/%d • %s • %s" % [
-		frame + 1, frame_count, "SPECIAL ATLAS" if is_special else "EXTRA STRIP" if strip != null else "6-ROW ATLAS",
-		"RIGHT" if facing_right else "LEFT"
+	frame_label.text = L10n.t("FRAME %d/%d • %s • %s") % [
+		frame + 1, frame_count, L10n.t("SPECIAL ATLAS") if is_special else L10n.t("EXTRA STRIP") if strip != null else L10n.t("6-ROW ATLAS"),
+		L10n.t("RIGHT") if facing_right else L10n.t("LEFT")
 	]

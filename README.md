@@ -156,3 +156,26 @@ the Animation Studio **VOIDBORN** selector and previous/next character buttons.
 - Sprite-motion quality depends on the existing artwork; animation studio can
   reveal any pose repetition, anatomy inconsistency or flicker.
 - No multiplayer or production-ready signed Android release.
+
+### Full-screen battle and epic menus
+
+See [Epic mobile presentation](docs/Epic-Mobile-Presentation.md) for the persistent gold HUD, sliding arsenal, close/overview camera controls, new faction artwork and validation coverage.
+
+### Polish and English
+
+Use **PL / EN** on the home screen or **Settings → Language**. The choice is
+saved on the phone and applied immediately to menus, the 21-entry guide,
+ability names, animated previews, shop cards, battle messages and results.
+The initial language follows the phone (Polish for `pl`, English otherwise).
+Changing language preserves the selected faction, purchases and match state.
+
+All screens share gold beveled frames, original painted button surfaces and
+Cinzel Bold headings with Polish glyphs. Paragraph text stays in the readable
+body font. Faction art is cropped in the UI to remove embedded English text;
+labels and prices are rendered by Godot in the chosen language. Viewport-aware
+portrait cropping keeps the characters' faces visible.
+
+Validation includes all existing smoke checks and `ci/smoke_localization.gd`,
+covering both languages, saved preferences, 21 guide entries for all four
+factions, localized search, native card captions and four phone sizes.
+The Android build runs these checks before publishing version **0.2.0**.

@@ -77,3 +77,18 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_lobby_codex.gd 2>&1 | tee lobby.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" lobby.log; then exit 1; fi
           grep -q "Lobby and codex PASSED" lobby.log
+      - name: Test full-screen battle, visible gold and sliding arsenal
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 ci/asset_manifest.py --check
+          ./godot --headless --path . --script res://ci/smoke_battle_presentation.gd 2>&1 | tee presentation.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" presentation.log; then exit 1; fi
+          grep -q "Battle presentation PASSED" presentation.log
+      - name: Test PL and EN, saved language and localized battle cards
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_localization.gd 2>&1 | tee languages.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" languages.log; then exit 1; fi
+          grep -q "Localization PASSED" languages.log

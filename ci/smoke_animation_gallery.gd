@@ -50,7 +50,7 @@ func _run_smoke() -> void:
 		return
 	await process_frame
 	viewer._select_faction_preview(3)
-	if viewer.selected_unit != 7 or viewer.unit_label.text != "VOID SENTINEL":
+	if viewer.selected_unit != 7 or viewer.unit_label.text != viewer.L10n.t("VOID SENTINEL"):
 		push_error("Voidborn race quick selection did not show Void Sentinel")
 		quit(1)
 		return
@@ -64,6 +64,7 @@ func _run_smoke() -> void:
 	# Regression: a real melee hit must trigger the attacking unit's animation.
 	var main_scene := load("res://main.tscn") as PackedScene
 	var game = main_scene.instantiate()
+	game.presentation.language = "pl"
 	root.add_child(game)
 	game.size = Vector2(720, 1280)
 	await process_frame

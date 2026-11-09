@@ -53,7 +53,8 @@ func button(button_node: Button, normal: String, pushed: String = "", lane: bool
 	button_node.add_theme_stylebox_override("hover", style(normal, "hover"))
 	button_node.add_theme_stylebox_override("pressed", style(chosen, "pressed"))
 	button_node.add_theme_stylebox_override("disabled", style(normal, "disabled"))
-	button_node.add_theme_stylebox_override("focus", style(chosen))
+	# Godot paints focus over the caption: keep its interior transparent.
+	button_node.add_theme_stylebox_override("focus", preload("res://scripts/epic_theme.gd").focus())
 	button_node.add_theme_color_override("font_color", Color("fff3ca"))
 	button_node.add_theme_color_override("font_hover_color", Color("ffffff"))
 	button_node.add_theme_color_override("font_pressed_color", Color("ffffff"))
@@ -117,6 +118,7 @@ func original_button(button_node: Button, name: String) -> void:
 	if art == null:
 		art = TextureRect.new()
 		art.name = "IllustratedSurface"
+		art.show_behind_parent = true
 		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED

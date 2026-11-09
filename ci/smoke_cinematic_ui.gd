@@ -15,6 +15,7 @@ func _run() -> void:
 		_fail("Cannot load Vault Wars")
 		return
 	var game = scene.instantiate()
+	game.presentation.language = "en"
 	root.add_child(game)
 	game.size = Vector2(720, 1280)
 	await process_frame
@@ -22,9 +23,10 @@ func _run() -> void:
 	if game.main_menu_overlay == null or game.main_menu_overlay.find_child("StartGame", true, false) == null:
 		_fail("Illustrated MAIN MENU / Start Game not visible at launch")
 		return
-	var help: Button = game.main_menu_overlay.find_child("HowToPlay", true, false) as Button
+	game.main_menu_overlay.find_child("OpenCodex", true, false).pressed.emit()
+	var help: Button = game.codex_overlay.find_child("HowToPlay", true, false) as Button
 	if help == null:
-		_fail("Main menu lacks how-to button")
+		_fail("Game guide lacks how-to button")
 		return
 	help.pressed.emit()
 	if game.help_overlay == null or game.help_overlay.find_child("BeginFromHowTo", true, false) == null:

@@ -11,6 +11,7 @@ func _fatal(reason: String) -> void:
 func _test() -> void:
 	var resource := load("res://main.tscn") as PackedScene
 	var game = resource.instantiate()
+	game.presentation.language = "pl"
 	root.add_child(game)
 	game.size = Vector2(720, 1280)
 	await process_frame
@@ -38,8 +39,8 @@ func _test() -> void:
 		if bank_overlay == null or raid_overlay == null or bank_overlay.text.is_empty() or raid_overlay.text.is_empty():
 			_fatal("Original HUD bank and raid prices are not dynamic")
 			return
-		if game.controls[9].text != "":
-			_fatal("Native CTA label overlaps baked illustrated CTA lettering")
+		if game.controls[9].text != "ROZPOCZNIJ ATAK":
+			_fatal("Battle dock lost its readable native start action")
 			return
 		# Every faction must display its own characters whenever the matching
 		# illustration PNG exists. Never substitute a Voidborn assassin.
