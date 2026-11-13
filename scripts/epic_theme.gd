@@ -33,6 +33,7 @@ static func button(node: Button, primary: bool = false, font_size: int = 21) -> 
 		surface.name = "EpicButtonSurface"
 		surface.primary = primary
 		node.add_child(surface)
+	surface.primary = primary
 	node.add_theme_font_override("font", DISPLAY_FONT)
 	node.add_theme_color_override("font_color", Color("ffe9b0"))
 	node.add_theme_color_override("font_outline_color", Color("180c08"))
@@ -60,6 +61,25 @@ static func heading(node: Label, font_size: int = 26) -> void:
 	node.add_theme_constant_override("outline_size", 3)
 	node.add_theme_color_override("font_shadow_color", Color("000009"))
 	node.add_theme_constant_override("shadow_offset_y", 2)
+
+static func option(node: OptionButton, font_size: int = 18) -> void:
+	button(node, false, font_size)
+	node.fit_to_longest_item = false
+	var popup := node.get_popup()
+	popup.add_theme_font_override("font", DISPLAY_FONT)
+	popup.add_theme_font_size_override("font_size", 20)
+	popup.add_theme_color_override("font_color", COPY)
+	popup.add_theme_color_override("font_hover_color", Color("ffe5ac"))
+	popup.add_theme_stylebox_override("panel", panel(16))
+	popup.add_theme_stylebox_override("hover", selected())
+	popup.add_theme_constant_override("v_separation", 20)
+
+static func selected() -> StyleBoxTexture:
+	# List rows are shallower than buttons: use the matching gold frame without
+	# squeezing the button's large crest through a tiny nine-patch center.
+	var skin := panel(8)
+	skin.modulate_color = Color(1.30, 1.12, 0.88)
+	return skin
 
 static func focus() -> StyleBoxFlat:
 	var skin := StyleBoxFlat.new()

@@ -4,6 +4,8 @@ const L10n = preload("res://scripts/localization.gd")
 const Catalog = preload("res://scripts/game_catalog.gd")
 const Preview = preload("res://scripts/menu_preview.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
+const Battlefields = preload("res://scripts/battlefields.gd")
+const MobileLayout = preload("res://scripts/mobile_layout.gd")
 const MENU_ART := "res://assets/ui/lobby/epic_vault_menu.png"
 const WORDMARK := "res://assets/ui/lobby/vault_wars_wordmark.png"
 const GOLD := Color("edce8f")
@@ -32,11 +34,18 @@ var result_count: Label
 var filtered_entries: Array[Dictionary] = []
 var quality_caption: Label
 var race_role := 0
+var codex_pages: BoxContainer
+var battlefield_choice: OptionButton
+var battlefield_preview: TextureRect
+var race_pages: BoxContainer
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_install_theme()
+	if not resized.is_connected(_responsive_layout):
+		resized.connect(_responsive_layout)
+	call_deferred("_responsive_layout")
 	focus_race = game.selected_race
 	var background := TextureRect.new()
 	background.name = "MainMenuScenery" if mode == "home" else "CinematicScenery"
@@ -60,6 +69,7 @@ func _ready() -> void:
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
 	var margin := MarginContainer.new()
+	margin.name = "ScreenSafeMargin"
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for edge in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + edge, 22 if edge in ["left", "right"] else 16)
@@ -183,8 +193,10 @@ func _install_theme() -> void:
 		for variant in ["normal", "hover", "pressed", "focus"]:
 			theme.set_stylebox(variant, control_type, Epic.focus() if variant == "focus" else Epic.panel(14))
 	theme.set_stylebox("panel", "ItemList", Epic.panel(14))
-	theme.set_stylebox("selected", "ItemList", _button_skin(false, "focus"))
-	theme.set_stylebox("selected_focus", "ItemList", _button_skin(false, "focus"))
+	theme.set_stylebox("selected", "ItemList", Epic.selected())
+	theme.set_stylebox("selected_focus", "ItemList", Epic.selected())
+	theme.set_color("font_selected_color", "ItemList", Color("fff2ce"))
+	theme.set_font("font", "ItemList", Epic.DISPLAY_FONT)
 	theme.set_color("font_placeholder_color", "LineEdit", Color("829baa"))
 
 func _panel(parent: Node, tint: Color = GOLD) -> VBoxContainer:
@@ -309,6 +321,7 @@ func rebuild_language() -> void:
 
 func _build_races() -> void:
 	var margin := MarginContainer.new()
+	margin.name = "ScreenSafeMargin"
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for edge in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + edge, 30)
@@ -322,10 +335,25 @@ func _build_races() -> void:
 	var hint := _label(L10n.t("Cztery style walki. Który jest twój?"), 18)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(hint)
+	var race_scroll := ScrollContainer.new()
+	race_scroll.name = "RaceSelectionScroll"
+	race_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	race_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(race_scroll)
+	race_pages = BoxContainer.new()
+	race_pages.name = "RacePages"
+	race_pages.vertical = true
+	race_pages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	race_pages.add_theme_constant_override("separation", 16)
+	race_scroll.add_child(race_pages)
+	var race_content := VBoxContainer.new()
+	race_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	race_content.add_theme_constant_override("separation", 10)
+	race_pages.add_child(race_content)
 	var nameplate := PanelContainer.new()
 	nameplate.name = "FactionNameplate"
 	nameplate.add_theme_stylebox_override("panel", Epic.panel(10))
-	column.add_child(nameplate)
+	race_content.add_child(nameplate)
 	hero_name = _label("", 30, GOLD)
 	hero_name.name = "SelectedFactionName"
 	hero_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -334,7 +362,7 @@ func _build_races() -> void:
 	artwork_frame.name = "RaceArtworkFrame"
 	artwork_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	artwork_frame.add_theme_stylebox_override("panel", Epic.panel(8))
-	column.add_child(artwork_frame)
+	race_content.add_child(artwork_frame)
 	hero_art = _image(Catalog.portrait(focus_race), 160)
 	hero_art.name = "SelectedRaceIllustration"
 	hero_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -344,7 +372,7 @@ func _build_races() -> void:
 	var choices := HBoxContainer.new()
 	choices.name = "RacePortraitGrid"
 	choices.add_theme_constant_override("separation", 8)
-	column.add_child(choices)
+	race_content.add_child(choices)
 	for index in 4:
 		var card := Button.new()
 		card.name = "ChooseRace%d" % index
@@ -380,7 +408,8 @@ func _build_races() -> void:
 	race_detail.name = "SelectedRaceSummary"
 	race_detail.custom_minimum_size.y = 92
 	race_detail.add_theme_constant_override("separation", 6)
-	column.add_child(race_detail)
+	race_content.add_child(race_detail)
+	_build_battlefield_picker(race_pages)
 	footer = VBoxContainer.new()
 	footer.name = "RaceActions"
 	footer.add_theme_constant_override("separation", 6)
@@ -392,6 +421,26 @@ func _build_races() -> void:
 	_quiet_style(_button(navigation, L10n.t("Poznaj tę rasę"), "InspectRace", _inspect_race), "book")
 	_quiet_style(_button(navigation, L10n.t("Wróć"), "BackFromRace", game._back_from_race_selection))
 	select_race(game.selected_race)
+
+func _build_battlefield_picker(parent: Node) -> void:
+	var pane := _panel(parent)
+	pane.get_parent().name = "BattlefieldSelection"
+	pane.add_child(_label("WYBIERZ PLANSZĘ", 24, GOLD))
+	battlefield_preview = _image(Battlefields.PATHS[Battlefields.index(game.presentation.battlefield)], 140)
+	battlefield_preview.name = "BattlefieldPreview"
+	pane.add_child(battlefield_preview)
+	battlefield_choice = OptionButton.new()
+	battlefield_choice.name = "BattlefieldChoice"
+	battlefield_choice.custom_minimum_size.y = 66
+	for title in Battlefields.TITLES:
+		battlefield_choice.add_item(L10n.t(title))
+	battlefield_choice.selected = Battlefields.index(game.presentation.battlefield)
+	pane.add_child(battlefield_choice)
+	Epic.option(battlefield_choice, 20)
+	battlefield_choice.item_selected.connect(func(index: int) -> void:
+		game._set_battlefield(Battlefields.IDS[index])
+		battlefield_preview.texture = game.epic_battlefield_texture)
+	pane.add_child(_label("Sceneria nie zmienia zasad ani premii rasy.", 17))
 
 func select_race(index: int) -> void:
 	focus_race = index
@@ -429,7 +478,8 @@ func _fit_race_portrait() -> void:
 	var source: Vector2 = crop.atlas.get_size()
 	# Keep faces in view when the phone's aspect ratio crops the tall painting.
 	var crop_height: float = minf(source.y, source.x * hero_art.size.y / hero_art.size.x)
-	crop.region = Rect2(0, 0, source.x, crop_height)
+	var crop_top: float = clampf(source.y * 0.16 - crop_height * 0.45, 0, source.y - crop_height)
+	crop.region = Rect2(0, crop_top, source.x, crop_height)
 
 func _pick_role(index: int) -> void:
 	race_role = index
@@ -443,6 +493,10 @@ func _inspect_race() -> void:
 func _build_codex() -> void:
 	var header := HBoxContainer.new()
 	content.add_child(header)
+	var crest := _image("res://assets/ui/lobby/book.svg", 44)
+	crest.custom_minimum_size.x = 44
+	crest.size_flags_horizontal = Control.SIZE_FILL
+	header.add_child(crest)
 	var heading := _label(L10n.t("KSIĘGA GRY"), 30, GOLD)
 	header.add_child(heading)
 	var tutorial := _button(header, L10n.t("Jak grać"), "HowToPlay", _open_tutorial)
@@ -459,6 +513,7 @@ func _build_codex() -> void:
 	for title in Catalog.CATEGORIES:
 		category_filter.add_item(L10n.t(title))
 	filters.add_child(category_filter)
+	Epic.option(category_filter)
 	race_filter = OptionButton.new()
 	race_filter.name = "CatalogRace"
 	race_filter.custom_minimum_size.y = 58
@@ -467,6 +522,7 @@ func _build_codex() -> void:
 		race_filter.add_item(L10n.t(title))
 	race_filter.selected = focus_race
 	filters.add_child(race_filter)
+	Epic.option(race_filter)
 	search = LineEdit.new()
 	search.name = "CatalogSearch"
 	search.placeholder_text = L10n.t("Szukaj jednostki, pułapki, zdolności…")
@@ -475,6 +531,12 @@ func _build_codex() -> void:
 	content.add_child(search)
 	result_count = _label("", 16, GOLD)
 	content.add_child(result_count)
+	codex_pages = BoxContainer.new()
+	codex_pages.name = "CodexPages"
+	codex_pages.vertical = true
+	codex_pages.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	codex_pages.add_theme_constant_override("separation", 12)
+	content.add_child(codex_pages)
 	entry_list = ItemList.new()
 	entry_list.name = "CatalogEntries"
 	entry_list.custom_minimum_size.y = 154
@@ -486,12 +548,12 @@ func _build_codex() -> void:
 	entry_list.add_theme_constant_override("v_separation", 12)
 	entry_list.add_theme_constant_override("h_separation", 8)
 	entry_list.add_theme_font_size_override("font_size", 18)
-	content.add_child(entry_list)
+	codex_pages.add_child(entry_list)
 	detail_scroll = ScrollContainer.new()
 	detail_scroll.name = "CatalogDetailScroll"
 	detail_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	content.add_child(detail_scroll)
+	codex_pages.add_child(detail_scroll)
 	detail = VBoxContainer.new()
 	detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	detail.add_theme_constant_override("separation", 12)
@@ -508,6 +570,7 @@ func _build_codex() -> void:
 	var studio := _button(navigation, L10n.t("Animacje"), "OpenAnimationStudio", _open_studio)
 	_quiet_style(studio)
 	_filter_entries()
+	call_deferred("_responsive_layout")
 
 func _filter_entries() -> void:
 	entry_list.clear()
@@ -568,6 +631,7 @@ func _select_entry(index: int) -> void:
 		actions.add_item(label)
 	actions.disabled = data["demo"] in ["bank", "spikes", "snare", "turret"]
 	playback.add_child(actions)
+	Epic.option(actions, 17)
 	actions.item_selected.connect(func(action_index: int) -> void: live_preview.set_action(action_index - 1))
 	var pause := _button(playback, L10n.t("Pauza") if live_preview.playing else L10n.t("Odtwórz"), "TogglePreview", _toggle_preview)
 	pause.size_flags_horizontal = Control.SIZE_FILL
@@ -595,6 +659,55 @@ func _toggle_preview() -> void:
 	live_preview.toggle_playback()
 	var button := find_child("TogglePreview", true, false) as Button
 	button.text = L10n.t("Pauza") if live_preview.playing else L10n.t("Odtwórz")
+
+func _responsive_layout() -> void:
+	var wide: bool = size.x > size.y
+	var safe: Rect2 = MobileLayout.safe_rect(self)
+	var margin := get_node_or_null("ScreenSafeMargin") as MarginContainer
+	if margin != null:
+		margin.offset_left = safe.position.x
+		margin.offset_top = safe.position.y
+		margin.offset_right = safe.end.x - size.x
+		margin.offset_bottom = safe.end.y - size.y
+	var languages := get_node_or_null("LanguageSwitch") as Control
+	if languages != null:
+		languages.offset_top = safe.position.y + 12
+		languages.offset_bottom = safe.position.y + 70
+		languages.offset_left = safe.end.x - size.x - 182
+		languages.offset_right = safe.end.x - size.x - 16
+	if mode == "race" and is_instance_valid(race_pages):
+		race_pages.vertical = not wide
+		hero_art.custom_minimum_size.y = 110 if wide else 220
+		race_detail.custom_minimum_size.y = 60 if wide else 92
+		for card in race_cards:
+			card.custom_minimum_size.y = 100 if wide else 142
+			var stack := card.get_child(0) as VBoxContainer
+			(stack.get_child(0) as Control).custom_minimum_size.y = 54 if wide else 89
+		_fit_race_portrait()
+	if mode == "home" and is_instance_valid(footer):
+		footer.anchor_left = 0.54 if wide else 0.08
+		footer.anchor_right = 0.97 if wide else 0.92
+		footer.anchor_top = 0.62 if wide else 0.77
+		footer.anchor_bottom = 0.97 if wide else 0.965
+		var logo := find_child("MainMenuLogo", true, false) as Control
+		logo.anchor_left = 0.03 if wide else 0.09
+		logo.anchor_right = 0.52 if wide else 0.91
+		logo.anchor_bottom = 0.29 if wide else 0.185
+		var tagline := find_child("HomeTagline", true, false) as Control
+		tagline.anchor_left = 0.54 if wide else 0.08
+		tagline.anchor_right = 0.97 if wide else 0.92
+		tagline.anchor_top = 0.53 if wide else 0.71
+		tagline.anchor_bottom = 0.61 if wide else 0.76
+	if mode != "codex" or not is_instance_valid(codex_pages):
+		return
+	codex_pages.vertical = not wide
+	entry_list.custom_minimum_size = Vector2(300 if wide else 0, 0 if wide else 154)
+	entry_list.size_flags_horizontal = Control.SIZE_FILL if wide else Control.SIZE_EXPAND_FILL
+	entry_list.size_flags_vertical = Control.SIZE_EXPAND_FILL if wide else Control.SIZE_FILL
+	entry_list.max_columns = 1 if wide or size.x < 620 else 2
+	entry_list.fixed_column_width = 268 if wide else int(maxf(190, (size.x - 140) / entry_list.max_columns))
+	detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	entry_list.call_deferred("ensure_current_is_visible")
 
 func _build_tutorial() -> void:
 	_heading(L10n.t("JAK GRAĆ"), L10n.t("Zdobądź złoto wroga. Ocal własny skarbiec."))
@@ -643,7 +756,7 @@ func _build_settings() -> void:
 	language.add_item("English")
 	language.selected = L10n.LANGUAGES.find(game.presentation.language)
 	language_panel.add_child(language)
-	Epic.button(language, false, 20)
+	Epic.option(language, 20)
 	language.item_selected.connect(func(index: int) -> void: game.call_deferred("_change_language", L10n.LANGUAGES[index]))
 	language_panel.add_child(_label(L10n.t("Zmiana języka działa od razu i zostaje zapisana."), 18))
 	var art := _image(WORDMARK, 86)
@@ -660,7 +773,7 @@ func _build_settings() -> void:
 	quality.selected = game.presentation.MODES.find(game.presentation.quality)
 	panel.add_child(quality)
 	quality.item_selected.connect(_quality_changed)
-	Epic.button(quality, false, 20)
+	Epic.option(quality, 20)
 	quality_caption = _label("", 18, GOLD)
 	panel.add_child(quality_caption)
 	_update_quality_caption()

@@ -1,5 +1,5 @@
 extends SceneTree
-## Real navigation, gold visibility, responsive drawers and camera gestures.
+## Exercise the real fixed map, both orientations, touch hit tests and drawer races.
 var game
 
 func _initialize() -> void:
@@ -11,62 +11,82 @@ func _require(value: bool, reason: String) -> bool:
 		quit(1)
 	return value
 
+func _resize(dimensions: Vector2i) -> void:
+	root.size = dimensions
+	game.size = Vector2(dimensions)
+	for _frame in 4:
+		await process_frame
+
 func _run() -> void:
 	root.size = Vector2i(720, 1280)
 	game = load("res://main.tscn").instantiate()
+	game.presentation.config_path = "user://qa-rotation.cfg"
 	game.presentation.language = "pl"
 	root.add_child(game)
 	game._choose_faction(1)
 	game.presentation.reduced_motion = true
 	await process_frame
-	await process_frame
 	var shell = game.battle_shell
-	for dimensions in [Vector2i(540, 960), Vector2i(720, 1280), Vector2i(720, 1560), Vector2i(1080, 1920)]:
-		root.size = dimensions
-		game.size = Vector2(dimensions)
-		await process_frame
-		await process_frame
-		for opened in [false, true]:
-			shell.set_drawer_open(opened, false)
-			await process_frame
-			var gold_bounds: Rect2 = game.hud.get_global_rect()
-			var enemy_bounds: Rect2 = shell.enemy_gold.get_global_rect()
-			if not _require(game.hud.is_visible_in_tree() and gold_bounds.position.y >= 0 and gold_bounds.end.y < 130 and enemy_bounds.end.x <= dimensions.x and gold_bounds.end.x <= enemy_bounds.position.x, "Gold is hidden, overlaps or leaves viewport at " + str(dimensions)):
+	if not _require(ProjectSettings.get_setting("display/window/handheld/orientation") == DisplayServer.SCREEN_SENSOR, "Android still locks the display orientation"):
+		return
+	# Physical devices scale from a square minimum so their short axis stays 720.
+	if not _require(root.content_scale_size == Vector2i(720, 720), "Logical UI shrinks when rotated"):
+		return
+	var saved_gold: Array = game.gold.duplicate()
+	var saved_phase: String = game.phase
+	var saved_race: int = game.selected_race
+	for dimensions in [Vector2i(540, 960), Vector2i(720, 1280), Vector2i(720, 1560), Vector2i(1280, 720), Vector2i(1560, 720), Vector2i(960, 540), Vector2i(720, 1280)]:
+		await _resize(dimensions)
+		var wide: bool = dimensions.x > dimensions.y
+		if not _require(shell.landscape == wide and shell.drawer_open == not wide, "Rotation did not switch portrait commands/landscape immersion at " + str(dimensions)):
+			return
+		var viewport := Rect2(Vector2.ZERO, Vector2(dimensions))
+		for node in [game.hud, shell.enemy_gold, game.main_menu_button, shell.dock]:
+			if not _require(viewport.grow(2).encloses(node.get_global_rect()), "HUD or actions leave viewport at " + str(dimensions)):
 				return
-			if not _require(game.hud.get_theme_font_size("font_size") >= 28 and game.arena.size.y >= dimensions.y - 2, "Gold too small or battlefield is not full screen"):
+		if not _require(game.hud.get_global_rect().end.x <= shell.enemy_gold.get_global_rect().position.x, "Player and enemy gold overlap"):
+			return
+		var map_bounds := Rect2(game.arena.size * 0.5 - Vector2(1200, 530) * game.camera_zoom, Vector2(2400, 1060) * game.camera_zoom)
+		if not _require(Rect2(Vector2.ZERO, game.arena.size).grow(1).encloses(map_bounds) and game.camera_offset == Vector2.ZERO, "Map crops a vault or camera drifts after rotation"):
+			return
+		if not wide:
+			if not _require(game.battlefield_frame.get_global_rect().end.y <= shell.drawer.get_global_rect().position.y and shell.drawer.get_global_rect().end.y <= shell.dock.position.y + 2, "Portrait menu covers map or permanent actions"):
 				return
-			if not _require(shell.dock.get_global_rect().end.y <= dimensions.y and shell.drawer.visible == opened, "Drawer or permanent actions overflow"):
+		var art_size: Vector2 = game._unit_art_size()
+		var logical_height: float = art_size.y * game.camera_zoom
+		if not _require(is_equal_approx(art_size.x, art_size.y) and logical_height >= 57.9 and logical_height <= 86.1, "Unit anatomy or readable size lost on rotation: " + str(logical_height)):
+			return
+		for path in 3:
+			var target: Vector2 = game.arena.size * 0.5 + game._point(path, 0.5, 0) * game.camera_zoom
+			var touch := InputEventScreenTouch.new()
+			touch.position = target
+			touch.pressed = true
+			shell.handle_input(touch)
+			touch.pressed = false
+			shell.handle_input(touch)
+			if not _require(game.lane == path, "Resized map uses wrong lane hit coordinates"):
 				return
-		var saved_gold: Array = game.gold.duplicate()
+		if not _require(game.gold == saved_gold and game.phase == saved_phase and game.selected_race == saved_race, "Rotation changed a match"):
+			return
 		game.map_mode_button.pressed.emit()
-		if not _require(shell.overview and game.camera_zoom * 2400 <= game.arena.size.x + 2, "Overview crops one of the vaults"):
+		if not _require(shell.overview and game.camera_offset == Vector2.ZERO, "Old zoom callback re-enabled a cropped view"):
 			return
-		if not _require(is_equal_approx(game._sprite_transform(Vector2.ZERO).x.length(), game.camera_zoom), "Ground rings or sprites ignore camera scale"):
-			return
-		game.map_mode_button.pressed.emit()
-		if not _require(not shell.overview and game.camera_zoom * 1060 >= game.arena.size.y - 2 and game.gold == saved_gold, "Focus mode changes economy or leaves blank bars"):
-			return
-	root.size = Vector2i(720, 1280)
-	game.size = Vector2(720, 1280)
-	await process_frame
-	await process_frame
+	await _resize(Vector2i(1280, 720))
 	shell.set_drawer_open(true, false)
 	var before: int = game.gold[0]
 	game.controls[3].pressed.emit()
-	if not _require(game.gold[0] == before - game.COSTS[0] and game.hud.text == "ZŁOTO %d" % game.gold[0], "Purchase did not update permanent gold immediately"):
+	if not _require(game.gold[0] == before - game.COSTS[0] and game.hud.text == "ZŁOTO %d" % game.gold[0], "Purchase did not update permanent gold"):
 		return
 	shell.drawer_button.pressed.emit()
-	if not _require(not shell.drawer_open, "Arsenal toggle cannot close panel"):
+	if not _require(not shell.drawer_open, "Landscape drawer cannot close"):
 		return
 	shell.drawer_button.pressed.emit()
-	if not _require(shell.drawer_open, "Arsenal toggle cannot reopen panel"):
+	if not _require(shell.drawer_open, "Landscape drawer cannot reopen"):
 		return
-	# A camera drag must not be misinterpreted as a lane selection.
-	shell.focus_location(0)
 	var old_lane: int = game.lane
 	var press := InputEventScreenTouch.new()
 	press.pressed = true
-	press.position = Vector2(360, 600)
+	press.position = Vector2(360, 200)
 	shell.handle_input(press)
 	var drag := InputEventScreenDrag.new()
 	drag.relative = Vector2(140, 0)
@@ -74,20 +94,36 @@ func _run() -> void:
 	press.pressed = false
 	press.position += drag.relative
 	shell.handle_input(press)
-	if not _require(game.camera_offset.x > 0 and game.lane == old_lane and not shell.follow_action, "Camera swipe selects a lane or fails to pan"):
+	if not _require(game.camera_offset == Vector2.ZERO and game.lane == old_lane and not shell.follow_action, "Swipe pans the map or selects a lane"):
 		return
 	game.controls[9].pressed.emit()
-	if not _require(game.phase == "ATTACK" and not shell.drawer_open and game.controls[9].text == "BITWA TRWA", "Starting attack must close arsenal and retain status"):
+	if not _require(game.phase == "ATTACK" and not shell.drawer_open, "Landscape attack did not close drawer"):
 		return
-	# Also exercise the animated path and rapid repeated toggles.
+	# Freeze only the simulation clock while comparing exact actor dictionaries.
+	# Rendering and container resizes keep running; normal time may advance units.
+	for child in game.get_children():
+		if child is Timer:
+			child.stop()
+	var snapshot: Array = game.units.duplicate(true)
+	await _resize(Vector2i(720, 1280))
+	if not _require(game.units == snapshot and shell.drawer_open, "Rotating an active match resets units or hides portrait commands"):
+		return
+	await _resize(Vector2i(1280, 720))
 	game.presentation.reduced_motion = false
 	for _index in 5:
 		shell.set_drawer_open(true)
 		shell.set_drawer_open(false)
-	await create_timer(0.4).timeout
-	if not _require(not shell.drawer.visible and game.hud.is_visible_in_tree(), "Interrupted drawer tween leaves input or currency covered"):
+	# Rotate during animation: obsolete tweens must not move the portrait menu.
+	await _resize(Vector2i(720, 1280))
+	await create_timer(0.3).timeout
+	if not _require(shell.drawer.visible and is_equal_approx(shell.drawer.position.y, shell.command_top), "Interrupted tween moved the portrait menu off-screen"):
 		return
-	print("Battle presentation PASSED: persistent gold, 4 phone sizes, purchase sync, full screen, overview, swipe, sliding arsenal and attack transition")
+	game._navigate_back()
+	if not _require(game.menu_confirmation != null, "Android Back gets trapped trying to close permanent portrait commands"):
+		return
+	game._dismiss_menu_confirmation()
+	DirAccess.remove_absolute("user://qa-rotation.cfg")
+	print("Battle presentation PASSED: seven sizes, rotation during a match/tween, whole fixed map, HUD, readable unit scale, lane hits and purchases")
 	game.queue_free()
 	await process_frame
 	quit(0)

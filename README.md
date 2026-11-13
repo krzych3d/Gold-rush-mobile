@@ -1,10 +1,30 @@
 # Gold Rush Mobile — Vault Wars
 
-Mobile-first Godot **4.2.2** fantasy lane strategy prototype (portrait).
+Mobile-first Godot **4.2.2** fantasy lane strategy prototype with automatic portrait/landscape layouts.
+
+## Portrait, landscape and five selectable maps (0.2.1)
+
+Android uses sensor orientation and a 720-pixel logical short axis. Portrait keeps
+the fixed complete map above the command menu; landscape hides commands in a
+sliding arsenal. Rotating never resets the match. The camera neither crops
+the vaults nor follows actors. Units, deaths and deposits share square artwork
+and consistent foot anchoring, with 58–86 logical-pixel cells.
+
+The original map is **Standard**. Four distinct optional backgrounds depict
+dwarven vaults, goblin strongholds, elven moon gardens and the Void rift. Select
+a preview before starting; the choice persists independently of the faction
+and does not change lanes, economy or combat. Only the selected map is loaded.
+
+The guide dropdowns, popup menus, navigation and selected index rows share the
+painted gold/violet style. In landscape the guide becomes two independently
+scrolling pages. [Animation brief 001](docs/animation-briefs/001-dwarf-vault-carrier.md)
+specifies a new complete Dwarf Carrier pack; the new character frames are not
+yet produced. [Brief index](docs/animation-briefs/index.json) tracks future
+faction/action rotation and concept fingerprints.
 
 ## Illustrated lobby and game reference
 
-**ROZPOCZNIJ GRĘ → choose one of four races → confirm → preparation.**
+**ROZPOCZNIJ GRĘ → choose one of four races and one of five maps → confirm → preparation.**
 The Polish lobby has illustrated race portraits, an animated character showcase,
 role previews, a rules screen and a searchable **Księga gry**. Its 21 entries cover
 four races, the free wave, three hired raiders, guards, three defenses, bank

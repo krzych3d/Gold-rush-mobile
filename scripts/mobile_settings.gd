@@ -8,6 +8,7 @@ var reduced_motion := false
 var music_enabled := true
 var show_fps := false
 var language := "pl" if OS.get_locale_language() == "pl" else "en"
+var battlefield := "standard"
 var sample_time := 0.0
 var slow_samples := 0
 var config_path := CONFIG_PATH
@@ -21,6 +22,9 @@ func _init(path: String = CONFIG_PATH) -> void:
 		music_enabled = bool(config.get_value("audio", "music", true))
 		show_fps = bool(config.get_value("display", "show_fps", false))
 		language = str(config.get_value("interface", "language", language))
+		battlefield = str(config.get_value("display", "battlefield", "standard"))
+	if battlefield not in ["standard", "dwarves", "goblins", "elves", "void"]:
+		battlefield = "standard"
 	if language not in ["pl", "en"]:
 		language = "en"
 	if not MODES.has(quality):
@@ -47,6 +51,7 @@ func save() -> void:
 	config.set_value("display", "show_fps", show_fps)
 	config.set_value("audio", "music", music_enabled)
 	config.set_value("interface", "language", language)
+	config.set_value("display", "battlefield", battlefield)
 	config.save(config_path)
 
 func observe_fps(delta: float, fps: float) -> bool:

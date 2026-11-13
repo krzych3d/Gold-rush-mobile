@@ -6,6 +6,7 @@ const AnimationGallery = preload("res://scripts/animation_gallery.gd")
 const OrnateHUD = preload("res://scripts/ornate_hud.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
 const BattlePresentation = preload("res://scripts/battle_presentation.gd")
+const Battlefields = preload("res://scripts/battlefields.gd")
 const BATTLE_SCENERY = preload("res://assets/ui/lobby/epic_vault_menu.png")
 var battle_shell: Control
 const CinematicOutcome = preload("res://scripts/cinematic_outcome.gd")
@@ -165,6 +166,9 @@ var shrine_texture: Texture2D = preload("res://assets/world/ancient_shrine.svg")
 var banner_texture: Texture2D = preload("res://assets/world/war_banner.svg")
 
 func _ready() -> void:
+	if OS.has_feature("android"):
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
+	_set_battlefield(presentation.battlefield, false)
 	L10n.set_language(presentation.language)
 	_set_message(message_key)
 	rng.randomize()
@@ -631,6 +635,15 @@ func _preview_faction(index: int) -> void:
 func _confirm_faction() -> void:
 	_choose_faction(selected_race)
 
+func _set_battlefield(id: String, persist: bool = true) -> void:
+	var chosen: String = Battlefields.IDS[Battlefields.index(id)]
+	presentation.battlefield = chosen
+	epic_battlefield_texture = Battlefields.texture(chosen)
+	if persist:
+		presentation.save()
+	if is_instance_valid(arena):
+		arena.queue_redraw()
+
 func _choose_faction(index: int) -> void:
 	selected_race = index
 	phase = "PREP"
@@ -775,9 +788,10 @@ func _record_fallen(data: Dictionary) -> void:
 func _draw_health_bar(p: Vector2, health: float, max_health: float, friendly: bool, width: float = 34.0, height: float = 122.0) -> void:
 	var ratio: float = clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
 	var top_left := p + Vector2(-width * 0.5, -height)
-	arena.draw_rect(Rect2(top_left - Vector2(2, 2), Vector2(width + 4, 12)), Color("08111c", 0.86))
-	arena.draw_rect(Rect2(top_left, Vector2(width, 8)), Color("542f37", 0.78))
-	arena.draw_rect(Rect2(top_left, Vector2(width * ratio, 8)), Color("55e98b") if friendly else Color("ff6976"))
+	var pixel: float = 1.0 / maxf(camera_zoom, 0.01)
+	arena.draw_rect(Rect2(top_left - Vector2.ONE * pixel, Vector2(width + 2 * pixel, 6 * pixel)), Color("08111c", 0.86))
+	arena.draw_rect(Rect2(top_left, Vector2(width, 4 * pixel)), Color("542f37", 0.78))
+	arena.draw_rect(Rect2(top_left, Vector2(width * ratio, 4 * pixel)), Color("55e98b") if friendly else Color("ff6976"))
 
 func _buy_unit(kind: int) -> void:
 	if phase != "PREP":
@@ -1130,7 +1144,7 @@ func _navigate_back() -> void:
 		_close_how_to_play()
 	elif selection_layer != null:
 		_back_from_race_selection()
-	elif is_instance_valid(battle_shell) and battle_shell.drawer_open and phase in ["PREP", "ATTACK"]:
+	elif is_instance_valid(battle_shell) and battle_shell.landscape and battle_shell.drawer_open and phase in ["PREP", "ATTACK"]:
 		battle_shell.set_drawer_open(false)
 	elif menu_confirmation != null:
 		_dismiss_menu_confirmation()
@@ -1656,6 +1670,15 @@ func _trap_position(trap: Dictionary, owner: int) -> Vector2:
 	var slot: int = int(trap.get("slot", 0))
 	return _point(int(trap["lane"]), 0.48 + float(slot % 5) * 0.085, 1 - owner)
 
+func _unit_art_size() -> Vector2:
+	# Square source cells keep their anatomy. Enlarge gently with the map rather
+	# than suddenly shrinking when a unit dies, deposits or the phone rotates.
+	var logical_height: float = clampf(64.0 * sqrt(maxf(camera_zoom, 0.01) / 0.30), 58.0, 86.0)
+	return Vector2.ONE * logical_height / maxf(camera_zoom, 0.01)
+
+func _unit_art_rect(art_size: Vector2, bob: float = 0.0) -> Rect2:
+	return Rect2(Vector2(-art_size.x * 0.5, -art_size.y * 0.88 + bob), art_size)
+
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
@@ -1773,7 +1796,8 @@ func _draw_arena() -> void:
 		var lift: float = 0.0
 		var squash: float = 1.0
 		var bob: float = -lift
-		var scale_factor: float = clampf(0.72 / camera_zoom, 1.0, 2.5)
+		var art_size: Vector2 = _unit_art_size()
+		var scale_factor: float = art_size.y / 112.0
 		var tilt: float = 0.0
 		var facing: float = _travel_facing(int(actor["side"]), not bool(actor["guard"]) and bool(data.get("returning", false)))
 		var staggered: bool = not actor["guard"] and float(data.get("stunned", 0.0)) > 0.0
@@ -1788,7 +1812,6 @@ func _draw_arena() -> void:
 		if moving and stride > 0.82 and goblin_walk_prototype == null:
 			var dust: float = (stride - 0.82) / 0.18
 			arena.draw_circle(p + Vector2(-facing * 15.0, 5.0), 3.0 + dust * 4.0, Color(0.85, 0.77, 0.58, dust * 0.28))
-		var art_size := Vector2(105, 112) * scale_factor
 		var animation_transform := _directional_sprite_transform(p, facing, tilt)
 		arena.draw_set_transform_matrix(animation_transform)
 		# A genuine special sprite replaces the basic pose only for actions it
@@ -1815,7 +1838,7 @@ func _draw_arena() -> void:
 			var special_frame: int = int(floor(float(data.get("action_time", visual_time)) * 12.0 + frame_offset)) % 8
 			if animation_row == 2:
 				special_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * 8.0 / 0.45), 0, 7)
-			arena.draw_texture_rect_region(special_sheet, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob + 13.0 * scale_factor), art_size),
+			arena.draw_texture_rect_region(special_sheet, _unit_art_rect(art_size, bob),
 				Rect2(Vector2(float(special_frame * 128), float(special_row * 128)), Vector2(128, 128)))
 		elif character_key == "goblin_raider" and goblin_action_strips.has(goblin_action):
 			var strip: Texture2D = goblin_action_strips[goblin_action]
@@ -1825,21 +1848,24 @@ func _draw_arena() -> void:
 				strip_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * float(count) / 0.45), 0, count - 1)
 			elif animation_row == 3:
 				strip_frame = clampi(int((0.28 - float(data.get("hit_time", 0.0))) * float(count) / 0.28), 0, count - 1)
-			arena.draw_texture_rect_region(strip, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob + 13.0 * scale_factor), art_size), Rect2(Vector2(float(strip_frame * 192), 0.0), Vector2(192, 192)))
+			arena.draw_texture_rect_region(strip, _unit_art_rect(art_size, bob), Rect2(Vector2(float(strip_frame * 192), 0.0), Vector2(192, 192)))
 		elif goblin_walk_prototype != null and not special_animation_atlases.has("goblin_raider") and character_key == "goblin_raider" and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
 			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12 if animation_row == 1 else 0
-			arena.draw_texture_rect_region(goblin_walk_prototype, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob + 13.0 * scale_factor), art_size), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)))
+			arena.draw_texture_rect_region(goblin_walk_prototype, _unit_art_rect(art_size, bob), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)))
 		else:
-			arena.draw_texture_rect_region(atlas, Rect2(Vector2(-art_size.x * 0.5, -art_size.y + bob + 13.0 * scale_factor), art_size), Rect2(Vector2(float(animation_frame * 128), float(animation_row * 128)), Vector2(128, 128)))
+			arena.draw_texture_rect_region(atlas, _unit_art_rect(art_size, bob), Rect2(Vector2(float(animation_frame * 128), float(animation_row * 128)), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
-		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, (52.0 if actor["guard"] else 46.0) * scale_factor, art_size.y + 10.0)
+		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, (52.0 if actor["guard"] else 46.0) * scale_factor, art_size.y * 0.88 + 8.0 / camera_zoom)
 		# All seven character sheets now have their own attack visual language.
 		if phase == "ATTACK" and animation_row == 2:
-			_draw_attack_effect(p, character_key, facing, friendly, float(data.get("attack_time", 0.0)))
+			arena.draw_set_transform_matrix(_sprite_transform(p).scaled_local(Vector2.ONE * scale_factor))
+			_draw_attack_effect(Vector2.ZERO, character_key, facing, friendly, float(data.get("attack_time", 0.0)))
 		if not actor["guard"] and int(data.get("carried", 0)) > 0:
-			_draw_carried_gold(p, facing, int(data["carried"]))
+			arena.draw_set_transform_matrix(_sprite_transform(p).scaled_local(Vector2.ONE * scale_factor))
+			_draw_carried_gold(Vector2.ZERO, facing, int(data["carried"]))
+		arena.draw_set_transform_matrix(_iso_transform())
 	# Deposit gold at the home vault with a dedicated eight-frame coin-release action.
 	for deposit in deposit_actors:
 		var dp: Vector2 = _point(int(deposit["lane"]), 0.0, int(deposit["side"]))
@@ -1855,11 +1881,13 @@ func _draw_arena() -> void:
 			var deposit_strip: Texture2D = goblin_action_strips["deposit"]
 			var deposit_count: int = deposit_strip.get_width() / 192
 			var df: int = mini(deposit_count - 1, int(float(deposit["age"]) / 0.75 * deposit_count))
-			arena.draw_texture_rect_region(deposit_strip, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(df * 192), 0), Vector2(192, 192)))
+			arena.draw_texture_rect_region(deposit_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(df * 192), 0), Vector2(192, 192)))
 		else:
-			arena.draw_texture_rect_region(da, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)))
+			arena.draw_texture_rect_region(da, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
-		_draw_deposit_effect(dp, float(deposit["age"]), int(deposit["amount"]))
+		arena.draw_set_transform_matrix(_sprite_transform(dp).scaled_local(Vector2.ONE * (_unit_art_size().y / 112.0)))
+		_draw_deposit_effect(Vector2.ZERO, float(deposit["age"]), int(deposit["amount"]))
+		arena.draw_set_transform_matrix(_iso_transform())
 	# Play the defeat row once before removing fallen units from the screen.
 	for fallen in fallen_actors:
 		var death_p: Vector2 = _point(int(fallen["lane"]), float(fallen["position"]), int(fallen["side"]))
@@ -1874,9 +1902,9 @@ func _draw_arena() -> void:
 			var death_strip: Texture2D = goblin_action_strips["death"]
 			var death_count: int = death_strip.get_width() / 192
 			var f: int = mini(death_count - 1, int(float(fallen["age"]) / 0.8 * death_count))
-			arena.draw_texture_rect_region(death_strip, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(f * 192), 0), Vector2(192, 192)))
+			arena.draw_texture_rect_region(death_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(f * 192), 0), Vector2(192, 192)))
 		else:
-			arena.draw_texture_rect_region(death_atlas, Rect2(Vector2(-52, -112), Vector2(105, 112)), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)))
+			arena.draw_texture_rect_region(death_atlas, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)))
 		arena.draw_set_transform_matrix(_iso_transform())
 	for spark in hit_sparks:
 		var p: Vector2 = spark["p"]

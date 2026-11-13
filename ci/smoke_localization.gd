@@ -98,7 +98,7 @@ func _run() -> void:
 			if not require(game.battle_shell.dock.get_global_rect().end.x <= dimensions.x and game.hud.is_visible_in_tree(), "Localized battle actions leave phone viewport"):
 				return
 	game._begin_attack()
-	if not require(game.phase == "ATTACK" and not game.battle_shell.drawer_open, "Translation altered internal phase IDs"):
+	if not require(game.phase == "ATTACK" and game.battle_shell.drawer_open, "Translation altered phase IDs or hid portrait commands"):
 		return
 	game.gold[1] = 0
 	game._check_vaults()

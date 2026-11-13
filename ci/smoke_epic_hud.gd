@@ -30,8 +30,8 @@ func _run() -> void:
 		_fail("Android must use expand aspect to avoid black letterbox bars")
 		return
 	var arena_panel: PanelContainer = game.arena.get_parent() as PanelContainer
-	if arena_panel == null or arena_panel.size.y < game.size.y - 2.0:
-		_fail("Full-screen battle must fill the available phone canvas")
+	if arena_panel == null or arena_panel.size.y < 240 or arena_panel.get_global_rect().end.y > game.battle_shell.drawer.position.y:
+		_fail("Portrait map must be readable above its separate command panel")
 		return
 	var character_button: Button = game.controls[3]
 	if character_button.size.y < 120.0:
@@ -46,8 +46,8 @@ func _run() -> void:
 		_fail("Gameplay commands did not occupy the free vertical space")
 		return
 	# Gold + phase HUD, arena, and command area should be fitted inside viewport.
-	if game_controls.get_global_rect().end.y > game.size.y + 2.0:
-		_fail("Main command controls overflow below phone viewport")
+	if game.battle_shell.drawer.get_global_rect().end.y > game.battle_shell.dock.position.y + 2.0:
+		_fail("Scrollable commands cover permanent actions")
 		return
 	if game.controls.size() != 10:
 		_fail("Expected 3 lanes + 3 units + 3 traps + start controls")

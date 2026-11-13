@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "race_rotation": ["dwarves", "void", "goblins"],
+  "focus_rotation": ["walk", "attack", "death", "carry"],
+  "next_sequence": 2,
+  "next_race": "void",
+  "next_focus": "attack",
+  "briefs": [
+    {
+      "sequence": 1,
+      "date": "2026-11-13",
+      "race": "dwarves",
+      "unit": "dwarf_carrier",
+      "focus": "walk",
+      "actions": ["idle", "walk", "attack", "hit", "death", "pickup", "carry", "deposit"],
+      "path": "docs/animation-briefs/001-dwarf-vault-carrier.md",
+      "concept_fingerprint": "hip-belt-supported-chest-counterrotating-shoulders-forearm-shove-grip-maintained",
+      "status": "brief_only",
+      "frame_count": 672,
+      "directions": ["E", "SE", "S", "SW", "W", "NW", "N", "NE"]
+    }
+  ]
+}

@@ -99,6 +99,9 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_battle_presentation.gd 2>&1 | tee presentation.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" presentation.log; then exit 1; fi
           grep -q "Battle presentation PASSED" presentation.log
+          ./godot --headless --path . --script res://ci/smoke_battlefield_choices.gd 2>&1 | tee battlefields.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" battlefields.log; then exit 1; fi
+          grep -q "Battlefield choices PASSED" battlefields.log
           ./godot --headless --path . --script res://ci/smoke_localization.gd 2>&1 | tee languages.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" languages.log; then exit 1; fi
           grep -q "Localization PASSED" languages.log

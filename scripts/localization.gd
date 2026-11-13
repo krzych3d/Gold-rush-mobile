@@ -4,6 +4,13 @@ extends RefCounted
 static var language := "pl"
 const LANGUAGES := ["pl", "en"]
 const MESSAGES := {
+	"WYBIERZ PLANSZĘ": ["WYBIERZ PLANSZĘ", "CHOOSE BATTLEFIELD"],
+	"Standard": ["Standard", "Standard"],
+	"Twierdze krasnoludów": ["Twierdze krasnoludów", "Dwarven vaults"],
+	"Goblińskie ostępy": ["Goblińskie ostępy", "Goblin strongholds"],
+	"Księżycowe ogrody": ["Księżycowe ogrody", "Elven moon gardens"],
+	"Szczelina Pustki": ["Szczelina Pustki", "Void rift"],
+	"Sceneria nie zmienia zasad ani premii rasy.": ["Sceneria nie zmienia zasad ani premii rasy.", "Scenery does not change the rules or faction bonuses."],
 	"Krasnoludy budują przewagę dzięki oszczędnościom. Ich najeźdźcy mają o 25% więcej punktów życia, a bazowe odsetki wynoszą 28% po fali.": [
 		"Krasnoludy budują przewagę dzięki oszczędnościom. Ich najeźdźcy mają o 25% więcej punktów życia, a bazowe odsetki wynoszą 28% po fali.",
 		"Dwarves build their advantage through savings. Their raiders have 25% more HP, and base interest is 28% after each wave."

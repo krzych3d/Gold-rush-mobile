@@ -264,10 +264,46 @@
       "git_blob_sha1": "e9da707150c1cd92f8ee7f32058817347dee8107",
       "sha256": "fedd3e5e71a86696346a1d44734f81f1f0fc99db656e2f9d65da8e747962e6da"
     },
+    "assets/epic/world/battlefield_dwarves.png": {
+      "bytes": 3728737,
+      "git_blob_sha1": "544fecfa06a9d7fbe3a6bb3c3c57da6219cfe94f",
+      "sha256": "88b2c4c645fa59012a30d3b79203d48ff67528b484dcfae537875dfae65b3351",
+      "size": [
+        1881,
+        836
+      ]
+    },
+    "assets/epic/world/battlefield_elves.png": {
+      "bytes": 3761506,
+      "git_blob_sha1": "a8b64b3406b9637b8f2e5957c4a919a1bcbe5b40",
+      "sha256": "502f585b0eb1179ed17ee320b5309e38f127c0e4e0172e2abdbf61a5c69cff18",
+      "size": [
+        1881,
+        836
+      ]
+    },
+    "assets/epic/world/battlefield_goblins.png": {
+      "bytes": 3693962,
+      "git_blob_sha1": "f5eaf9426b2566076b45927f15571d5efecce712",
+      "sha256": "f8f2091d3566bf833f2ed96d896437db514df40c18f80e9248cd5aa2374df7a8",
+      "size": [
+        1881,
+        836
+      ]
+    },
     "assets/epic/world/battlefield_v2.jpg": {
       "bytes": 598491,
       "git_blob_sha1": "18137aba5c39cd84d0daf19af5bf2778791ab3f0",
       "sha256": "3f3bb74ad5f6863200bc642c10420b79829be6909c978e0815773a2f3f88257f"
+    },
+    "assets/epic/world/battlefield_void.png": {
+      "bytes": 3412350,
+      "git_blob_sha1": "8625a6743818df1c6b3dc27d921fc46f7c59537d",
+      "sha256": "e07cb7f550848e3fb2e8d8c0990b2d1ced455616a3f15b9e6834457274da2ab7",
+      "size": [
+        1881,
+        836
+      ]
     },
     "assets/factions/dwarves.svg": {
       "bytes": 3651,
