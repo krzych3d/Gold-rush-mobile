@@ -47,6 +47,11 @@ func _run() -> void:
 			var banner = game.guard_button.get_node("LocalizedSurface")
 			if not require(banner.illustration.get_rect().end.x < banner.caption.position.x and banner.illustration.size.x <= 164.1, "Banner thumbnail overlaps its label"):
 				return
+			for card in [game.guard_button, game.ability_button]:
+				var crop := card.get_node("LocalizedSurface").illustration.texture as AtlasTexture
+				if crop.atlas.get_width() <= crop.atlas.get_height() * 2:
+					if not require(crop.region.size.x >= crop.atlas.get_width() * 0.9, "Portrait banner is cropped as if it were a wide source strip"):
+						return
 	await resize_game(Vector2i(720, 1280))
 	game._choose_faction(0)
 	game.account.total_xp = 680

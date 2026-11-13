@@ -45,7 +45,7 @@ func configure(source: Texture2D, title: String, price: String, is_banner: bool 
 	crop.atlas = source
 	if source != null:
 		var dimensions: Vector2 = source.get_size()
-		if banner:
+		if banner and dimensions.x > dimensions.y * 2.0:
 			crop.region = Rect2(dimensions * Vector2(0.03, 0.16), dimensions * Vector2(0.29, 0.70))
 		else:
 			# Portrait cards and wide trap cards have different label baselines.
