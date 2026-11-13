@@ -16,6 +16,9 @@ func _run() -> void:
 	root.size = Vector2i(720, 1280)
 	game = load("res://main.tscn").instantiate()
 	game.presentation.language = "pl"
+	# This artwork/navigation fixture deliberately covers every unlocked faction.
+	game.account = game.AccountProgress.new("user://qa-smoke_lobby_codex-account.cfg")
+	game.account.total_xp = game.account.xp_for_level(20)
 	root.add_child(game)
 	await process_frame
 	if not _require(not quit_on_go_back, "Android Back still exits instead of navigating"):

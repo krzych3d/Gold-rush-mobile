@@ -4,6 +4,23 @@ extends RefCounted
 static var language := "pl"
 const LANGUAGES := ["pl", "en"]
 const MESSAGES := {
+	"POZIOM KONTA %d / 20": ["POZIOM KONTA %d / 20", "ACCOUNT LEVEL %d / 20"],
+	"Elfy: poziom 5 • Pustka: poziom 10": ["Elfy: poziom 5 • Pustka: poziom 10", "Elves: level 5 • Voidborn: level 10"],
+	"Następne odblokowanie: Pustka — poziom 10": ["Następne odblokowanie: Pustka — poziom 10", "Next unlock: Voidborn — level 10"],
+	"Wszystkie rasy odblokowane": ["Wszystkie rasy odblokowane", "All factions unlocked"],
+	"POZ. %d": ["POZ. %d", "LV. %d"],
+	"Odblokowanie na poziomie %d": ["Odblokowanie na poziomie %d", "Unlocks at level %d"],
+	"Odblokowanie: poziom %d • Twój poziom: %d": ["Odblokowanie: poziom %d • Twój poziom: %d", "Unlock: level %d • Your level: %d"],
+	"ZABLOKOWANE • POZIOM %d": ["ZABLOKOWANE • POZIOM %d", "LOCKED • LEVEL %d"],
+	"+%d EXP za mecz": ["+%d EXP za mecz", "+%d XP for the match"],
+	"AWANS NA POZIOM %d": ["AWANS NA POZIOM %d", "LEVEL UP: %d"],
+	"Maksymalny poziom konta": ["Maksymalny poziom konta", "Maximum account level"],
+	"ODBLOKOWANO: %s": ["ODBLOKOWANO: %s", "UNLOCKED: %s"],
+	"EXP po ukończeniu rozgrywki": ["EXP wymaga co najmniej 10 sekund bitwy", "XP requires at least 10 seconds of battle"],
+	"Nie udało się zapisać EXP. Postęp konta zachowany.": ["Nie udało się zapisać nagrody. Poprzedni postęp zachowany.", "Reward could not be saved. Previous progress was preserved."],
+	"Nie można odczytać postępu. Zapis konta nie zostanie nadpisany.": ["Nie można odczytać postępu. Zapis konta nie zostanie nadpisany.", "Progress could not be loaded. Your saved account will not be overwritten."],
+	"POZIOM KONTA I RASY": ["POZIOM KONTA I RASY", "ACCOUNT LEVEL AND FACTIONS"],
+	"Konto rozwijasz do poziomu 20. Krasnoludy i gobliny są dostępne od początku, elfy od poziomu 5, a Pustka od 10. Za ukończony mecz otrzymasz 50 EXP za zwycięstwo lub 25 za porażkę, plus 20 za rozegraną falę (maksymalnie 20 fal). Wymagane jest co najmniej 10 sekund bitwy. Wyjście z meczu nie daje EXP. Poziom nie zwiększa statystyk jednostek. Postęp zapisuje się na tym telefonie.": ["Konto rozwijasz do poziomu 20. Krasnoludy i gobliny są dostępne od początku, elfy od poziomu 5, a Pustka od 10. Za ukończony mecz otrzymasz 50 EXP za zwycięstwo lub 25 za porażkę, plus 20 za rozegraną falę (maksymalnie 20 fal). Wymagane jest co najmniej 10 sekund bitwy. Wyjście z meczu nie daje EXP. Poziom nie zwiększa statystyk jednostek. Postęp zapisuje się na tym telefonie.", "Reach account level 20. Dwarves and Goblins are available from the start, Elves unlock at level 5, and Voidborn at 10. A completed match grants 50 XP for a win or 25 for a loss, plus 20 per played wave (up to 20 waves). At least 10 seconds of battle are required. Leaving a match grants no XP. Account level does not increase unit stats. Progress is saved on this phone."],
 	"WYBIERZ PLANSZĘ": ["WYBIERZ PLANSZĘ", "CHOOSE BATTLEFIELD"],
 	"Standard": ["Standard", "Standard"],
 	"Twierdze krasnoludów": ["Twierdze krasnoludów", "Dwarven vaults"],

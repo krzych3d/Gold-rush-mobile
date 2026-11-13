@@ -95,3 +95,10 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_localization.gd 2>&1 | tee languages.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" languages.log; then exit 1; fi
           grep -q "Localization PASSED" languages.log
+      - name: Test account levels, persistent XP and race unlocks
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_account_progress.gd 2>&1 | tee account.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" account.log; then exit 1; fi
+          grep -q "Account progression PASSED" account.log

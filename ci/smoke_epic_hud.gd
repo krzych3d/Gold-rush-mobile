@@ -15,6 +15,9 @@ func _run() -> void:
 		return
 	var game = main_scene.instantiate()
 	game.presentation.language = "pl"
+	# This artwork/navigation fixture deliberately covers every unlocked faction.
+	game.account = game.AccountProgress.new("user://qa-smoke_epic_hud-account.cfg")
+	game.account.total_xp = game.account.xp_for_level(20)
 	root.add_child(game)
 	game.size = Vector2(720, 1280)
 	await process_frame

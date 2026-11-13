@@ -12,6 +12,9 @@ func _test() -> void:
 	var resource := load("res://main.tscn") as PackedScene
 	var game = resource.instantiate()
 	game.presentation.language = "pl"
+	# This artwork/navigation fixture deliberately covers every unlocked faction.
+	game.account = game.AccountProgress.new("user://qa-smoke_original_hud-account.cfg")
+	game.account.total_xp = game.account.xp_for_level(20)
 	root.add_child(game)
 	game.size = Vector2(720, 1280)
 	await process_frame

@@ -6,6 +6,7 @@ const Preview = preload("res://scripts/menu_preview.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
 const Battlefields = preload("res://scripts/battlefields.gd")
 const MobileLayout = preload("res://scripts/mobile_layout.gd")
+const AccountPanel = preload("res://scripts/account_progress_panel.gd")
 const MENU_ART := "res://assets/ui/lobby/epic_vault_menu.png"
 const WORDMARK := "res://assets/ui/lobby/vault_wars_wordmark.png"
 const GOLD := Color("edce8f")
@@ -38,6 +39,7 @@ var codex_pages: BoxContainer
 var battlefield_choice: OptionButton
 var battlefield_preview: TextureRect
 var race_pages: BoxContainer
+var account_badge: PanelContainer
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -280,6 +282,10 @@ func _build_home() -> void:
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	Epic.heading(tagline, 20)
 	add_child(tagline)
+	account_badge = AccountPanel.new()
+	account_badge.name = "HomeAccountProgress"
+	account_badge.profile = game.account
+	add_child(account_badge)
 
 func _build_language_switch() -> void:
 	var row := HBoxContainer.new()
@@ -311,6 +317,8 @@ func rebuild_language() -> void:
 	race_cards.clear()
 	live_preview = null
 	_ready()
+	if mode == "race":
+		select_race(retained_race)
 	if mode == "codex":
 		focus_race = retained_race
 		focus_entry = retained_entry
@@ -402,6 +410,18 @@ func _build_races() -> void:
 		Epic.heading(name_label, 16)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		stack.add_child(name_label)
+		if not game.account.race_unlocked(index):
+			art.modulate = Color(0.42, 0.43, 0.56)
+			var lock := _label(L10n.t("POZ. %d") % game.account.UNLOCK_LEVELS[index], 15, Color("ffe3a5"))
+			lock.name = "RaceLock%d" % index
+			lock.position = Vector2(10, 6)
+			lock.autowrap_mode = TextServer.AUTOWRAP_OFF
+			lock.custom_minimum_size = Vector2(85, 24)
+			lock.size = Vector2(85, 24)
+			lock.add_theme_color_override("font_outline_color", Color.BLACK)
+			lock.add_theme_constant_override("outline_size", 5)
+			card.add_child(lock)
+			card.tooltip_text = L10n.t("Odblokowanie na poziomie %d") % game.account.UNLOCK_LEVELS[index]
 		card.pressed.connect(select_race.bind(index))
 		race_cards.append(card)
 	race_detail = VBoxContainer.new()
@@ -443,8 +463,12 @@ func _build_battlefield_picker(parent: Node) -> void:
 	pane.add_child(_label("Sceneria nie zmienia zasad ani premii rasy.", 17))
 
 func select_race(index: int) -> void:
+	if index < 0 or index >= Catalog.RACE_TITLES.size():
+		return
 	focus_race = index
-	game.selected_race = index
+	var unlocked: bool = game.account.race_unlocked(index)
+	if unlocked:
+		game.selected_race = index
 	hero_name.text = L10n.t(Catalog.RACE_TITLES[index]).to_upper()
 	var source := load(Catalog.portrait(index)) as Texture2D
 	var portrait := AtlasTexture.new()
@@ -464,9 +488,12 @@ func select_race(index: int) -> void:
 	race_detail.add_child(summary)
 	var bonus := _label([L10n.t("28% odsetek  •  +25% PŻ najeźdźców"), L10n.t("18% odsetek  •  +20% tempa najeźdźców"), L10n.t("18% odsetek  •  +10% PŻ  •  +10 łupu"), L10n.t("18% odsetek  •  +10% tempa  •  +15 łupu")][index], 18)
 	bonus.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if not unlocked:
+		bonus.text = L10n.t("Odblokowanie: poziom %d • Twój poziom: %d") % [game.account.UNLOCK_LEVELS[index], game.account.level()]
 	race_detail.add_child(bonus)
 	var confirm := find_child("ConfirmFaction", true, false) as Button
-	confirm.text = L10n.t("GRAJ: %s") % L10n.t(Catalog.RACE_TITLES[index]).to_upper()
+	confirm.disabled = not unlocked
+	confirm.text = L10n.t("GRAJ: %s") % L10n.t(Catalog.RACE_TITLES[index]).to_upper() if unlocked else L10n.t("ZABLOKOWANE • POZIOM %d") % game.account.UNLOCK_LEVELS[index]
 	Epic._fit_button(confirm)
 
 func _fit_race_portrait() -> void:
@@ -489,6 +516,8 @@ func _pick_role(index: int) -> void:
 
 func _inspect_race() -> void:
 	game._show_codex("race_%d" % focus_race)
+	game.codex_overlay.race_filter.selected = focus_race
+	game.codex_overlay.race_filter.item_selected.emit(focus_race)
 
 func _build_codex() -> void:
 	var header := HBoxContainer.new()
@@ -685,6 +714,10 @@ func _responsive_layout() -> void:
 			(stack.get_child(0) as Control).custom_minimum_size.y = 54 if wide else 89
 		_fit_race_portrait()
 	if mode == "home" and is_instance_valid(footer):
+		account_badge.anchor_left = 0.54 if wide else 0.08
+		account_badge.anchor_right = 0.97 if wide else 0.92
+		account_badge.anchor_top = 0.36 if wide else 0.615
+		account_badge.anchor_bottom = 0.51 if wide else 0.70
 		footer.anchor_left = 0.54 if wide else 0.08
 		footer.anchor_right = 0.97 if wide else 0.92
 		footer.anchor_top = 0.62 if wide else 0.77
@@ -717,6 +750,7 @@ func _build_tutorial() -> void:
 	art.clip_contents = true
 	content.add_child(art)
 	var chapters := [
+		[L10n.t("POZIOM KONTA I RASY"), L10n.t("Konto rozwijasz do poziomu 20. Krasnoludy i gobliny są dostępne od początku, elfy od poziomu 5, a Pustka od 10. Za ukończony mecz otrzymasz 50 EXP za zwycięstwo lub 25 za porażkę, plus 20 za rozegraną falę (maksymalnie 20 fal). Wymagane jest co najmniej 10 sekund bitwy. Wyjście z meczu nie daje EXP. Poziom nie zwiększa statystyk jednostek. Postęp zapisuje się na tym telefonie."), "dwarf_bank"],
 		[L10n.t("ZŁOTO JEST TWOIM ŻYCIEM"), L10n.t("Zaczynasz z 1000 złota. Każdy zakup zabiera monety ze skarbca. Gdy twój skarbiec osiągnie zero, przegrywasz od razu. Zachowuj rezerwę."), "dwarf_bank"],
 		[L10n.t("PRZYGOTOWANIE • 30 SEKUND"), L10n.t("Wybierz jedną z trzech alejek. Kup zwiadowców (75), tragarzy (140), sabotażystów (110), obronę lub ulepszenia. Szczegóły i podglądy znajdziesz w Księdze gry."), "dwarf_runner"],
 		[L10n.t("ATAK • DO 60 SEKUND"), L10n.t("Darmowa fala rusza z kupionymi jednostkami. Najeźdźca musi ukraść złoto i wrócić do twojego skarbca. Łup niedostarczony przed końcem fali wraca do obrabowanej strony."), "goblin_carrier"],

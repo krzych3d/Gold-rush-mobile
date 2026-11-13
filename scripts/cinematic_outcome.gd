@@ -8,6 +8,8 @@ signal main_menu_requested
 
 const OutcomeMusic = preload("res://scripts/outcome_music.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
+const AccountPanel = preload("res://scripts/account_progress_panel.gd")
+const MobileLayout = preload("res://scripts/mobile_layout.gd")
 var confetti: CPUParticles2D
 var backdrop: ColorRect
 var centerpiece: VBoxContainer
@@ -16,6 +18,8 @@ var is_victory := false
 var reduced_motion := false
 var effect_count := 46
 var music_enabled := true
+var account
+var account_reward: Dictionary = {}
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -52,6 +56,15 @@ func _ready() -> void:
 func _recenter_particles() -> void:
 	if confetti != null:
 		confetti.position = size * 0.5
+	var margin := get_node_or_null("ResultSafeMargin") as MarginContainer
+	if margin != null:
+		var safe: Rect2 = MobileLayout.safe_rect(self)
+		margin.offset_left = safe.position.x + 16
+		margin.offset_top = safe.position.y + 16
+		margin.offset_right = safe.end.x - size.x - 16
+		margin.offset_bottom = safe.end.y - size.y - 16
+		if is_instance_valid(centerpiece):
+			centerpiece.custom_minimum_size.x = minf(590, maxf(300, safe.size.x - 40))
 
 func _new_title(title_text: String, font_size: int, tint: Color) -> Label:
 	var label := Label.new()
@@ -86,10 +99,19 @@ func present(victory: bool, draw: bool, reason: String, wave: int, our_gold: int
 	confetti.emitting = not reduced_motion
 	var shadow_frame := PanelContainer.new()
 	shadow_frame.add_theme_stylebox_override("panel", Epic.panel(26))
+	var margin := MarginContainer.new()
+	margin.name = "ResultSafeMargin"
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(margin)
+	var scroll := ScrollContainer.new()
+	scroll.name = "ResultScroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	margin.add_child(scroll)
 	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(center)
+	scroll.add_child(center)
 	centerpiece = VBoxContainer.new()
 	centerpiece.custom_minimum_size = Vector2(minf(size.x - 40.0, 590.0), 0)
 	centerpiece.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -122,6 +144,12 @@ func present(victory: bool, draw: bool, reason: String, wave: int, our_gold: int
 	stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	inside.add_child(stats)
 	inside.add_child(_new_title(reason, 16, Color("b9a9d3")))
+	if account != null:
+		var account_panel := AccountPanel.new()
+		account_panel.name = "OutcomeAccountProgress"
+		account_panel.profile = account
+		account_panel.reward = account_reward
+		inside.add_child(account_panel)
 	var replay := Button.new()
 	replay.name = "PlayAgain"
 	replay.custom_minimum_size = Vector2(0, 77)
@@ -138,6 +166,7 @@ func present(victory: bool, draw: bool, reason: String, wave: int, our_gold: int
 	Epic.button(menu, false, 20)
 	inside.add_child(menu)
 	menu.pressed.connect(func() -> void: main_menu_requested.emit())
+	call_deferred("_recenter_particles")
 	centerpiece.pivot_offset = Vector2(centerpiece.size.x * 0.5, centerpiece.size.y * 0.5)
 	centerpiece.scale = Vector2.ONE if reduced_motion else Vector2(0.70, 0.70)
 	centerpiece.modulate.a = 0.0

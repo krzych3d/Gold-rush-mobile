@@ -2,6 +2,46 @@
 
 Mobile-first Godot **4.2.2** fantasy lane strategy prototype with automatic portrait/landscape layouts.
 
+## Account levels and faction unlocks (0.2.2)
+
+The local account starts at level 1 and caps at **20**. Dwarves and Goblins are
+available immediately, Elves unlock at **5**, and Voidborn at **10**. Locked
+factions remain available for portrait/guide previews; both the confirm action
+and game callbacks enforce the level requirement. Account level does not change
+unit HP, speed, damage, gold capacity or other battle stats. Map selection stays
+independent of faction unlocks.
+
+A completed match grants **50 XP for a win** or **25 XP for a loss/draw**, plus
+**20 XP per finished wave**, including the final battle wave, up to 20 waves.
+At least ten seconds of actual battle participation and one played wave are
+required. Abandoning a match or spending the last gold before fighting grants
+no XP. A unique match ID prevents repeated result checks from awarding again.
+
+The cumulative level threshold is `100*n + 25*n*(n-1)`, where `n=level-1`:
+
+| Account level | Total XP | Unlock |
+|---:|---:|---|
+| 1 | 0 | Dwarves and Goblins |
+| 5 | 700 | Elves |
+| 10 | 2700 | Voidborn |
+| 20 | 10450 | Maximum level |
+
+Home shows level, XP progress and the next race unlock. Match results show
+earned XP, level-ups and newly available factions. The result can scroll on a
+short landscape screen. Labels support Polish and English.
+
+`user://account_progress.cfg` stores XP and recent rewarded match IDs separately
+from presentation settings. Saves use a temporary file, atomic rename and the
+previous valid backup. An unreadable primary can recover from backup; two invalid
+copies are preserved and cannot be silently overwritten with level-one data.
+This is a device-local profile, not a cloud login or cross-device account.
+Closing and reopening retains progress; uninstalling/clearing app data removes it.
+
+`ci/smoke_account_progress.gd` covers every level boundary, exact unlock levels,
+real match rewards, duplicate claims, restart persistence, rollback on failed
+save, backup recovery, protected unreadable saves and locked-race navigation.
+The Godot and APK workflows both require this check before successful delivery.
+
 ## Portrait, landscape and five selectable maps (0.2.1)
 
 Android uses sensor orientation and a 720-pixel logical short axis. Portrait keeps

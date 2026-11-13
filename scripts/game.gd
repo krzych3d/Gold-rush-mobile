@@ -12,6 +12,7 @@ var battle_shell: Control
 const CinematicOutcome = preload("res://scripts/cinematic_outcome.gd")
 const LobbyScreen = preload("res://scripts/lobby_screen.gd")
 const MobileSettings = preload("res://scripts/mobile_settings.gd")
+const AccountProgress = preload("res://scripts/account_progress.gd")
 const Catalog = preload("res://scripts/game_catalog.gd")
 const VAULT_TIER_ART = [
 	preload("res://assets/world/vault_tier_1.svg"),
@@ -42,6 +43,12 @@ const TRAP_DAMAGE := [40.0, 25.0, 11.0]
 const TRAP_CHARGES := [3, 2, 999]
 
 var presentation = MobileSettings.new()
+var account = AccountProgress.new()
+var account_match_id := ""
+var account_battle_seconds := 0.0
+var account_finished_waves := 0
+var account_wave_active := false
+var account_reward: Dictionary = {}
 var codex_overlay: Control
 var settings_overlay: Control
 
@@ -628,12 +635,13 @@ func _open_animation_gallery() -> void:
 	add_child(studio)
 
 func _preview_faction(index: int) -> void:
-	selected_race = index
 	if selection_layer != null:
 		selection_layer.select_race(index)
+	elif account.race_unlocked(index):
+		selected_race = index
 
 func _confirm_faction() -> void:
-	_choose_faction(selected_race)
+	_choose_faction(selection_layer.focus_race if is_instance_valid(selection_layer) else selected_race)
 
 func _set_battlefield(id: String, persist: bool = true) -> void:
 	var chosen: String = Battlefields.IDS[Battlefields.index(id)]
@@ -645,7 +653,14 @@ func _set_battlefield(id: String, persist: bool = true) -> void:
 		arena.queue_redraw()
 
 func _choose_faction(index: int) -> void:
+	if not account.race_unlocked(index):
+		return
 	selected_race = index
+	account_match_id = Crypto.new().generate_random_bytes(16).hex_encode()
+	account_battle_seconds = 0.0
+	account_finished_waves = 0
+	account_wave_active = false
+	account_reward = {}
 	phase = "PREP"
 	remaining = PREP_TIME
 	_set_message(RACE_DESCRIPTIONS[index])
@@ -667,7 +682,10 @@ func _choose_faction(index: int) -> void:
 func _change_race() -> void:
 	if phase != "PREP" or wave != 1:
 		return
-	selected_race = (selected_race + 1) % RACE_NAMES.size()
+	for _step in RACE_NAMES.size():
+		selected_race = (selected_race + 1) % RACE_NAMES.size()
+		if account.race_unlocked(selected_race):
+			break
 	_set_message("Playing as %s", [RACE_NAMES[selected_race]])
 	_refresh()
 
@@ -860,8 +878,13 @@ func _start_pressed() -> void:
 		_begin_attack()
 
 func _begin_attack() -> void:
+	if phase != "PREP":
+		return
 	_bot_prepare()
+	if phase == "END":
+		return
 	phase = "ATTACK"
+	account_wave_active = true
 	remaining = ATTACK_TIME
 	units.clear()
 	for side in 2:
@@ -938,6 +961,8 @@ func _tick() -> void:
 		_refresh()
 
 func _simulate(dt: float) -> void:
+	if phase == "ATTACK" and not account_match_id.is_empty():
+		account_battle_seconds += maxf(0, dt)
 	for side_traps in traps:
 		for trap in side_traps:
 			trap["cooldown"] = maxf(0.0, float(trap.get("cooldown", 0.0)) - dt)
@@ -1037,6 +1062,8 @@ func _check_vaults() -> bool:
 		return phase == "END"
 	if gold[0] > 0 and gold[1] > 0:
 		return false
+	var rewarded_waves: int = account_finished_waves + (1 if account_wave_active else 0)
+	account_reward = account.claim_match(account_match_id, gold[1] <= 0 and gold[0] > 0, rewarded_waves, account_battle_seconds)
 	phase = "END"
 	remaining = 0.0
 	if gold[0] <= 0 and gold[1] <= 0:
@@ -1058,6 +1085,8 @@ func _show_cinematic_result() -> void:
 	result_overlay.reduced_motion = presentation.reduced_motion
 	result_overlay.effect_count = 8 if presentation.effective_quality == "battery" else 46
 	result_overlay.music_enabled = presentation.music_enabled
+	result_overlay.account = account
+	result_overlay.account_reward = account_reward
 	add_child(result_overlay)
 	result_overlay.play_again_requested.connect(_restart_match)
 	result_overlay.main_menu_requested.connect(_return_to_main_menu)
@@ -1154,6 +1183,8 @@ func _navigate_back() -> void:
 func _end_wave() -> void:
 	if phase != "ATTACK":
 		return
+	account_finished_waves += 1
+	account_wave_active = false
 	for unit in units:
 		if unit["carried"] > 0:
 			gold[1 - unit["side"]] += unit["carried"]

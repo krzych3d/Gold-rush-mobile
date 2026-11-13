@@ -18,6 +18,9 @@ func _run() -> void:
 	game = load("res://main.tscn").instantiate()
 	game.presentation = Settings.new("user://qa-battlefields.cfg")
 	game.presentation.language = "pl"
+	# This artwork/navigation fixture deliberately covers every unlocked faction.
+	game.account = game.AccountProgress.new("user://qa-smoke_battlefield_choices-account.cfg")
+	game.account.total_xp = game.account.xp_for_level(20)
 	root.add_child(game)
 	await process_frame
 	await process_frame
