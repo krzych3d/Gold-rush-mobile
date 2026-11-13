@@ -71,7 +71,7 @@ func _run() -> void:
 	badge.hide()
 	var elapsed: float = flight.elapsed
 	flight.advance(1)
-	if not require(is_equal_approx(flight.elapsed, elapsed), "Hidden reward keeps consuming its flight animation"):
+	if not require(is_equal_approx(flight.elapsed, elapsed) and not flight.visible, "Hidden reward advances or leaves frozen motes over another screen"):
 		return
 	badge.show()
 	flight.advance(flight.delay + flight.DURATION * 0.60 - flight.elapsed)

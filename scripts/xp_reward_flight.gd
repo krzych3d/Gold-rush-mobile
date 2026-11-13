@@ -33,8 +33,14 @@ func _process(delta: float) -> void:
 	advance(delta)
 
 func advance(delta: float) -> void:
-	if not active or not target_visible():
+	if not active:
 		return
+	if not target_visible():
+		# CanvasLayer drawing does not inherit a hidden menu's visibility.
+		# Remove the last frame of motes as well as pausing their clock.
+		hide()
+		return
+	show()
 	elapsed += maxf(0, delta)
 	var progress: float = clampf((elapsed - delay) / DURATION, 0, 1)
 	# Motes first arrive after the opening part of the arc.
