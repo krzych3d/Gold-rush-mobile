@@ -7,7 +7,6 @@ const MATCH_WIN_XP := 50
 const MATCH_LOSS_XP := 25
 const WAVE_XP := 20
 const MAX_REWARDED_WAVES := 20
-const MIN_BATTLE_SECONDS := 10.0
 const HISTORY_LIMIT := 64
 var config_path := "user://account_progress.cfg"
 var total_xp := 0
@@ -83,7 +82,7 @@ func _save() -> bool:
 func claim_match(match_id: String, victory: bool, finished_waves: int, battle_seconds: float) -> Dictionary:
 	var before: int = level()
 	var result := {"gained": 0, "before_level": before, "level": before, "unlocked": [], "status": "ineligible"}
-	if match_id.is_empty() or match_id.length() > 128 or finished_waves < 1 or battle_seconds < MIN_BATTLE_SECONDS:
+	if match_id.is_empty() or match_id.length() > 128 or finished_waves < 1 or battle_seconds <= 0.0:
 		return result
 	if claimed_matches.has(match_id):
 		result["status"] = "already_claimed"

@@ -750,7 +750,7 @@ func _build_tutorial() -> void:
 	art.clip_contents = true
 	content.add_child(art)
 	var chapters := [
-		[L10n.t("POZIOM KONTA I RASY"), L10n.t("Konto rozwijasz do poziomu 20. Krasnoludy i gobliny są dostępne od początku, elfy od poziomu 5, a Pustka od 10. Za ukończony mecz otrzymasz 50 EXP za zwycięstwo lub 25 za porażkę, plus 20 za rozegraną falę (maksymalnie 20 fal). Wymagane jest co najmniej 10 sekund bitwy. Wyjście z meczu nie daje EXP. Poziom nie zwiększa statystyk jednostek. Postęp zapisuje się na tym telefonie."), "dwarf_bank"],
+		[L10n.t("POZIOM KONTA I RASY"), L10n.t("Konto rozwijasz do poziomu 20. Krasnoludy i gobliny są dostępne od początku, elfy od poziomu 5, a Pustka od 10. Za ukończony mecz otrzymasz 50 EXP za zwycięstwo lub 25 za porażkę, plus 20 za rozegraną falę (maksymalnie 20 fal). Wymagane jest rozpoczęcie bitwy. Wyjście z meczu nie daje EXP. Poziom nie zwiększa statystyk jednostek. Postęp zapisuje się na tym telefonie."), "dwarf_bank"],
 		[L10n.t("ZŁOTO JEST TWOIM ŻYCIEM"), L10n.t("Zaczynasz z 1000 złota. Każdy zakup zabiera monety ze skarbca. Gdy twój skarbiec osiągnie zero, przegrywasz od razu. Zachowuj rezerwę."), "dwarf_bank"],
 		[L10n.t("PRZYGOTOWANIE • 30 SEKUND"), L10n.t("Wybierz jedną z trzech alejek. Kup zwiadowców (75), tragarzy (140), sabotażystów (110), obronę lub ulepszenia. Szczegóły i podglądy znajdziesz w Księdze gry."), "dwarf_runner"],
 		[L10n.t("ATAK • DO 60 SEKUND"), L10n.t("Darmowa fala rusza z kupionymi jednostkami. Najeźdźca musi ukraść złoto i wrócić do twojego skarbca. Łup niedostarczony przed końcem fali wraca do obrabowanej strony."), "goblin_carrier"],

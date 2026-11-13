@@ -33,11 +33,20 @@ func _run() -> void:
 	if not require(Account.xp_for_level(5) == 700 and Account.xp_for_level(10) == 2700 and Account.xp_for_level(20) == 10450, "Progression curve changed unexpectedly"):
 		return
 	profile.total_xp = 0
-	for seconds in [0.0, 9.99]:
+	for seconds in [0.0, -1.0]:
 		profile.claim_match("short", true, 1, seconds)
 	profile.claim_match("no-waves", true, 0, 60)
 	if not require(profile.total_xp == 0 and profile.claimed_matches.is_empty(), "Preparation or short/empty match awarded XP"):
 		return
+	# A fast legitimate victory/loss is still a finished game. Do not impose
+	# an arbitrary duration that removes its reward after a quick vault raid.
+	clean(PATH + ".fast")
+	var fast = Account.new(PATH + ".fast")
+	var quick_win: Dictionary = fast.claim_match("fast-win", true, 1, 2.0)
+	var quick_loss: Dictionary = fast.claim_match("fast-loss", false, 1, 1.0)
+	if not require(quick_win["gained"] == 70 and quick_loss["gained"] == 45, "Fast completed matches lose their XP reward"):
+		return
+	clean(PATH + ".fast")
 	var first: Dictionary = profile.claim_match("first-win", true, 3, 60)
 	if not require(first["gained"] == 110 and profile.level() == 2 and first["status"] == "saved", "Win and completed waves give wrong reward"):
 		return
@@ -144,5 +153,5 @@ func _run() -> void:
 	game.queue_free()
 	await process_frame
 	clean(PATH)
-	print("Account progression PASSED: thresholds 1–20, XP rewards, duplicate prevention, persistent saves, backup/failed-save preservation, real race locks, previews and match-level unlock")
+	print("Account progression PASSED: thresholds 1–20, normal/fast-match XP, duplicate prevention, persistent saves, backup/failed-save preservation, real race locks, previews and match-level unlock")
 	quit(0)

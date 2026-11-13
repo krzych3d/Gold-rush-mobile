@@ -13,8 +13,8 @@ independent of faction unlocks.
 
 A completed match grants **50 XP for a win** or **25 XP for a loss/draw**, plus
 **20 XP per finished wave**, including the final battle wave, up to 20 waves.
-At least ten seconds of actual battle participation and one played wave are
-required. Abandoning a match or spending the last gold before fighting grants
+Actual battle participation and one played wave are required. Fast completed
+matches receive the same outcome and wave bonuses. Abandoning a match or spending the last gold before fighting grants
 no XP. A unique match ID prevents repeated result checks from awarding again.
 
 The cumulative level threshold is `100*n + 25*n*(n-1)`, where `n=level-1`:
