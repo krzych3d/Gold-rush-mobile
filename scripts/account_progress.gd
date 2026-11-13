@@ -27,8 +27,11 @@ static func xp_for_level(value: int) -> int:
 	return steps * 100 + 25 * steps * (steps - 1)
 
 func level() -> int:
+	return level_for_xp(total_xp)
+
+static func level_for_xp(amount: int) -> int:
 	var current := 1
-	while current < MAX_LEVEL and total_xp >= xp_for_level(current + 1):
+	while current < MAX_LEVEL and amount >= xp_for_level(current + 1):
 		current += 1
 	return current
 
@@ -40,6 +43,32 @@ func xp_needed() -> int:
 
 func race_unlocked(race: int) -> bool:
 	return race >= 0 and race < UNLOCK_LEVELS.size() and level() >= UNLOCK_LEVELS[race]
+
+static func recovery_code_for_xp(amount: int) -> String:
+	var value: int = clampi(amount, 0, xp_for_level(MAX_LEVEL))
+	var checksum: String = ("vault-wars-v1|" + str(value)).sha256_text().substr(0, 8).to_upper()
+	return "VW1-%d-%s" % [value, checksum]
+
+func recovery_code() -> String:
+	return recovery_code_for_xp(total_xp)
+
+func restore_recovery_code(code: String) -> String:
+	# This local code detects typing mistakes; it is not online authentication.
+	var parts := code.strip_edges().to_upper().split("-")
+	if parts.size() != 3 or parts[0] != "VW1" or parts[1].length() > 5 or not parts[1].is_valid_int():
+		return "invalid"
+	var value: int = parts[1].to_int()
+	if value < 0 or value > xp_for_level(MAX_LEVEL) or recovery_code_for_xp(value) != code.strip_edges().to_upper():
+		return "invalid"
+	if value <= total_xp:
+		return "unchanged"
+	var previous: int = total_xp
+	total_xp = value
+	if not _save():
+		total_xp = previous
+		return "save_failed"
+	changed.emit()
+	return "saved"
 
 func _load_file(path: String) -> bool:
 	var config := ConfigFile.new()
@@ -81,7 +110,7 @@ func _save() -> bool:
 
 func claim_match(match_id: String, victory: bool, finished_waves: int, battle_seconds: float) -> Dictionary:
 	var before: int = level()
-	var result := {"gained": 0, "before_level": before, "level": before, "unlocked": [], "status": "ineligible"}
+	var result := {"gained": 0, "before_level": before, "level": before, "before_xp": total_xp, "after_xp": total_xp, "unlocked": [], "status": "ineligible"}
 	if match_id.is_empty() or match_id.length() > 128 or finished_waves < 1 or battle_seconds <= 0.0:
 		return result
 	if claimed_matches.has(match_id):
@@ -103,6 +132,9 @@ func claim_match(match_id: String, victory: bool, finished_waves: int, battle_se
 	result["gained"] = total_xp - old_xp
 	result["earned"] = earned
 	result["level"] = level()
+	result["before_xp"] = old_xp
+	result["after_xp"] = total_xp
+	result["match_id"] = match_id
 	for race in UNLOCK_LEVELS.size():
 		if UNLOCK_LEVELS[race] > before and UNLOCK_LEVELS[race] <= level():
 			result["unlocked"].append(race)

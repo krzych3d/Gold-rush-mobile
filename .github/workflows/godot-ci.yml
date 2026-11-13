@@ -102,3 +102,10 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_account_progress.gd 2>&1 | tee account.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" account.log; then exit 1; fi
           grep -q "Account progression PASSED" account.log
+      - name: Test compact battle cards and gold-to-XP rewards
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_reward_presentation.gd 2>&1 | tee reward-ui.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" reward-ui.log; then exit 1; fi
+          grep -q "Reward presentation PASSED" reward-ui.log

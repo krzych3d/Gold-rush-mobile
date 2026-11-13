@@ -49,6 +49,8 @@ var account_battle_seconds := 0.0
 var account_finished_waves := 0
 var account_wave_active := false
 var account_reward: Dictionary = {}
+var pending_account_reward: Dictionary = {}
+const PENDING_REWARD_META := "vault_wars_pending_reward_visual"
 var codex_overlay: Control
 var settings_overlay: Control
 
@@ -173,6 +175,11 @@ var shrine_texture: Texture2D = preload("res://assets/world/ancient_shrine.svg")
 var banner_texture: Texture2D = preload("res://assets/world/war_banner.svg")
 
 func _ready() -> void:
+	if get_tree().has_meta(PENDING_REWARD_META):
+		var pending = get_tree().get_meta(PENDING_REWARD_META)
+		if pending is Dictionary and int(pending.get("after_xp", -1)) == account.total_xp:
+			pending_account_reward = pending.duplicate(true)
+		get_tree().remove_meta(PENDING_REWARD_META)
 	if OS.has_feature("android"):
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
 	_set_battlefield(presentation.battlefield, false)
@@ -661,6 +668,7 @@ func _choose_faction(index: int) -> void:
 	account_finished_waves = 0
 	account_wave_active = false
 	account_reward = {}
+	pending_account_reward = {}
 	phase = "PREP"
 	remaining = PREP_TIME
 	_set_message(RACE_DESCRIPTIONS[index])
@@ -1094,11 +1102,32 @@ func _show_cinematic_result() -> void:
 		gold[0] <= 0 and gold[1] <= 0, victory_reason, wave, gold[0], gold[1])
 
 func _restart_match() -> void:
+	_stage_reward_visual_for_menu()
 	get_tree().reload_current_scene()
 
 func _return_to_main_menu() -> void:
 	# A fresh scene opens the existing four-race selection screen.
+	_stage_reward_visual_for_menu()
 	get_tree().reload_current_scene()
+
+func _stage_reward_visual_for_menu() -> void:
+	if is_instance_valid(result_overlay):
+		var badge = result_overlay.find_child("OutcomeAccountProgress", true, false)
+		var remaining: Dictionary = _remaining_account_reward(badge)
+		if not remaining.is_empty():
+			get_tree().set_meta(PENDING_REWARD_META, remaining)
+
+func _remaining_account_reward(badge) -> Dictionary:
+	if badge == null or badge.visual_done:
+		return {}
+	var remaining: Dictionary = badge.reward.duplicate(true)
+	remaining["before_xp"] = badge.displayed_xp
+	remaining["before_level"] = account.level_for_xp(badge.displayed_xp)
+	remaining["gained"] = account.total_xp - badge.displayed_xp
+	return remaining if int(remaining["gained"]) > 0 else {}
+
+func _clear_pending_account_reward() -> void:
+	pending_account_reward = {}
 
 func _request_main_menu() -> void:
 	if phase == "SELECT":

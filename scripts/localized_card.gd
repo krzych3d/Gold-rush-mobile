@@ -16,7 +16,7 @@ func _ready() -> void:
 	illustration = TextureRect.new()
 	illustration.name = "FactionIllustration"
 	illustration.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	illustration.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	illustration.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	illustration.clip_contents = true
 	illustration.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(illustration)
@@ -45,7 +45,12 @@ func configure(source: Texture2D, title: String, price: String, is_banner: bool 
 	crop.atlas = source
 	if source != null:
 		var dimensions: Vector2 = source.get_size()
-		crop.region = Rect2(dimensions * Vector2(0.03, 0.16), dimensions * Vector2(0.29, 0.70)) if banner else Rect2(dimensions * Vector2(0.04, 0.15), dimensions * Vector2(0.92, 0.63))
+		if banner:
+			crop.region = Rect2(dimensions * Vector2(0.03, 0.16), dimensions * Vector2(0.29, 0.70))
+		else:
+			# Portrait cards and wide trap cards have different label baselines.
+			var wide: bool = dimensions.x > dimensions.y * 1.5
+			crop.region = Rect2(dimensions * Vector2(0.04, 0.06 if wide else 0.05), dimensions * Vector2(0.92, 0.66 if wide else 0.73))
 	illustration.texture = crop
 	caption.text = title
 	cost.text = price
@@ -57,9 +62,15 @@ func configure(source: Texture2D, title: String, price: String, is_banner: bool 
 func _layout() -> void:
 	if illustration == null:
 		return
-	illustration.position = Vector2(8, 8)
-	illustration.size = Vector2(size.x * 0.28 - 8, size.y - 16) if banner else Vector2(size.x - 16, maxf(20, size.y - 62))
-	var text_x: float = size.x * 0.30 if banner else 6
+	var slot: float = minf(180, size.x * 0.28)
+	if banner:
+		illustration.size = Vector2(maxf(16, slot - 16), minf(62, maxf(20, size.y - 16)))
+		illustration.position = Vector2(8, (size.y - illustration.size.y) * 0.5)
+	else:
+		var available_height: float = maxf(20, size.y - 62)
+		illustration.size = Vector2(minf(190, maxf(20, size.x - 28)), minf(126, available_height))
+		illustration.position = Vector2((size.x - illustration.size.x) * 0.5, 8 + (available_height - illustration.size.y) * 0.5)
+	var text_x: float = slot + 4 if banner else 6
 	var text_width: float = size.x - text_x - 8
 	caption.position = Vector2(text_x, 8 if banner else maxf(20, size.y - 55))
 	caption.size = Vector2(text_width, (size.y - 16) * 0.60 if banner else 28)

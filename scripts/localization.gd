@@ -4,6 +4,15 @@ extends RefCounted
 static var language := "pl"
 const LANGUAGES := ["pl", "en"]
 const MESSAGES := {
+	"KOPIA POSTĘPU": ["KOPIA POSTĘPU", "PROGRESS BACKUP"],
+	"Zachowaj kod przed reinstalacją gry. Przywraca EXP i odblokowane rasy na tym lub innym telefonie.": ["Zachowaj kod przed reinstalacją gry. Przywraca EXP i odblokowane rasy na tym lub innym telefonie.", "Save this code before reinstalling. It restores XP and unlocked factions on this or another phone."],
+	"Skopiuj kod": ["Skopiuj kod", "Copy code"],
+	"Wklej kod postępu": ["Wklej kod postępu", "Paste progress code"],
+	"Przywróć postęp": ["Przywróć postęp", "Restore progress"],
+	"Postęp przywrócony. Poziom %d.": ["Postęp przywrócony. Poziom %d.", "Progress restored. Level %d."],
+	"Masz już taki lub wyższy postęp.": ["Masz już taki lub wyższy postęp.", "Your progress is already at this point or higher."],
+	"Nieprawidłowy kod postępu.": ["Nieprawidłowy kod postępu.", "Invalid progress code."],
+	"Nie udało się zapisać postępu.": ["Nie udało się zapisać postępu.", "Progress could not be saved."],
 	"POZIOM KONTA %d / 20": ["POZIOM KONTA %d / 20", "ACCOUNT LEVEL %d / 20"],
 	"Elfy: poziom 5 • Pustka: poziom 10": ["Elfy: poziom 5 • Pustka: poziom 10", "Elves: level 5 • Voidborn: level 10"],
 	"Następne odblokowanie: Pustka — poziom 10": ["Następne odblokowanie: Pustka — poziom 10", "Next unlock: Voidborn — level 10"],

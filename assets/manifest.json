@@ -916,6 +916,11 @@
       "git_blob_sha1": "325dbf92994864ddeb5e28e0bd0817b56ea80eb5",
       "sha256": "61a52891287d82ad4415b97339dc94f671dfd58a2cf81b0a70a7f749cc8804d3"
     },
+    "assets/ui/lobby/level_crest.svg": {
+      "bytes": 1027,
+      "git_blob_sha1": "dcdd45e3d61b7874a6a7c4292016823296ea16f6",
+      "sha256": "88362ae6b6d584c6739d603dfbf69e6d66fc9f0ae400972dc713c05b6622c5fb"
+    },
     "assets/ui/lobby/panel.svg": {
       "bytes": 969,
       "git_blob_sha1": "a0f3c941948b223deb43b1f1ad5ed2c04ad9ce4d",
@@ -934,6 +939,16 @@
         2172,
         724
       ]
+    },
+    "assets/ui/lobby/xp_fill.svg": {
+      "bytes": 547,
+      "git_blob_sha1": "0426cde41c5540621d15ea3cd25faa098940bb25",
+      "sha256": "6333e7e4230a48db8dbaa5460eea1261f3d07e411113886f3f0e391a4536120d"
+    },
+    "assets/ui/lobby/xp_trough.svg": {
+      "bytes": 882,
+      "git_blob_sha1": "4d719f287358964ea64a460d56d88b724acb0e14",
+      "sha256": "3e0149384829b7f0bee5fc89509fdac9962677ace5c47cd9a8fdce4378d88a20"
     },
     "assets/ui/ornate/banner_blue.svg": {
       "bytes": 3260,

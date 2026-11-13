@@ -285,6 +285,12 @@ func _build_home() -> void:
 	account_badge = AccountPanel.new()
 	account_badge.name = "HomeAccountProgress"
 	account_badge.profile = game.account
+	account_badge.reward = game.pending_account_reward
+	account_badge.show_reward_summary = false
+	account_badge.reward_origin = start
+	account_badge.allow_motion = not game.presentation.reduced_motion
+	account_badge.coin_budget = 8 if game.presentation.effective_quality == "battery" else 12
+	account_badge.reward_animation_finished.connect(game._clear_pending_account_reward)
 	add_child(account_badge)
 
 func _build_language_switch() -> void:
@@ -307,6 +313,8 @@ func _build_language_switch() -> void:
 
 func rebuild_language() -> void:
 	# Rebuild visible labels without replacing the game, purchases or preferences.
+	if mode == "home" and is_instance_valid(account_badge) and not account_badge.visual_done:
+		game.pending_account_reward = game._remaining_account_reward(account_badge)
 	var retained_race := focus_race
 	var retained_entry := focus_entry
 	var retained_category: int = category_filter.selected if is_instance_valid(category_filter) else 0
@@ -793,6 +801,7 @@ func _build_settings() -> void:
 	Epic.option(language, 20)
 	language.item_selected.connect(func(index: int) -> void: game.call_deferred("_change_language", L10n.LANGUAGES[index]))
 	language_panel.add_child(_label(L10n.t("Zmiana języka działa od razu i zostaje zapisana."), 18))
+	_build_account_backup(content)
 	var art := _image(WORDMARK, 86)
 	art.name = "SettingsCrest"
 	content.add_child(art)
@@ -846,6 +855,31 @@ func _check(parent: Node, caption: String, id: String, value: bool, handler: Cal
 	check.add_theme_stylebox_override("focus", Epic.focus())
 	check.add_theme_color_override("font_color", COPY)
 	check.toggled.connect(handler)
+
+func _build_account_backup(parent: Node) -> void:
+	var pane := _panel(parent)
+	pane.add_child(_label("KOPIA POSTĘPU", 24, GOLD))
+	pane.add_child(_label("Zachowaj kod przed reinstalacją gry. Przywraca EXP i odblokowane rasy na tym lub innym telefonie.", 18))
+	var current := LineEdit.new()
+	current.name = "AccountRecoveryCode"
+	current.text = game.account.recovery_code()
+	current.editable = false
+	current.custom_minimum_size.y = 54
+	pane.add_child(current)
+	_button(pane, "Skopiuj kod", "CopyRecoveryCode", func() -> void: DisplayServer.clipboard_set(current.text))
+	var restore := LineEdit.new()
+	restore.name = "RestoreAccountCode"
+	restore.placeholder_text = L10n.t("Wklej kod postępu")
+	restore.custom_minimum_size.y = 54
+	pane.add_child(restore)
+	var result := _label("", 17, GOLD)
+	result.name = "AccountRestoreStatus"
+	_button(pane, "Przywróć postęp", "RestoreAccountProgress", func() -> void:
+		var status: String = game.account.restore_recovery_code(restore.text)
+		current.text = game.account.recovery_code()
+		var messages := {"saved": "Postęp przywrócony. Poziom %d.", "unchanged": "Masz już taki lub wyższy postęp.", "invalid": "Nieprawidłowy kod postępu.", "save_failed": "Nie udało się zapisać postępu."}
+		result.text = L10n.t(messages[status]) % game.account.level() if status == "saved" else L10n.t(messages[status]))
+	pane.add_child(result)
 
 func _quality_changed(index: int) -> void:
 	game.presentation.quality = game.presentation.MODES[index]

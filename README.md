@@ -2,6 +2,41 @@
 
 Mobile-first Godot **4.2.2** fantasy lane strategy prototype with automatic portrait/landscape layouts.
 
+## Battle thumbnails and gold-to-XP presentation (0.2.3)
+
+Battle illustrations now use contained previews with explicit size limits rather
+than cover/crop zoom. Character previews retain their upper silhouette; wide
+trap pictures exclude their own baked label baseline. Buttons, captions, prices
+and tap targets keep their existing behavior. Banner thumbnails stay separate
+from their native captions.
+
+The account badge has a level medallion, a beveled gold XP vessel, rune marks
+and a brief level-up flare. After an eligible match, a bounded set of golden
+motes flies from the reward into the XP bar. Displayed XP advances as motes
+arrive and switches ranges correctly at a level boundary. The real award is
+saved before this animation starts; flying gold does not spend vault currency
+or grant a second reward.
+
+Leaving the result before collection finishes hands the remaining visual to
+the main menu. Already displayed XP does not rewind. The flight follows the
+current bar after rotation, waits while the target is hidden or clipped, and
+respects reduced motion. Idle badges do not run a continuous particle loop.
+Effects use one canvas item with at most sixteen motes; battery profiles use
+eight.
+
+**Settings → Progress backup** provides a local XP recovery code. It restores
+XP and associated race unlocks after reinstalling or on another phone. Older
+codes cannot lower progress, invalid checksums are rejected, and failed writes
+roll back. The code is a local copy/checksum, not an online account login. The
+current test-build workflow generates an ephemeral debug signing key; an
+installer may require removal of an older build, so retain a recovery code
+before uninstalling. Existing account save files and schema remain unchanged.
+
+`ci/smoke_reward_presentation.gd` covers compact cards across four factions and
+phone sizes, timed delivery and level crossing, unchanged saved XP/vault gold,
+handoff without replay, rotation, reduced motion, invalid/no-award results and
+the settings recovery flow. It is required by both Godot and APK workflows.
+
 ## Account levels and faction unlocks (0.2.2)
 
 The local account starts at level 1 and caps at **20**. Dwarves and Goblins are

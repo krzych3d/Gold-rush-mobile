@@ -149,6 +149,8 @@ func present(victory: bool, draw: bool, reason: String, wave: int, our_gold: int
 		account_panel.name = "OutcomeAccountProgress"
 		account_panel.profile = account
 		account_panel.reward = account_reward
+		account_panel.allow_motion = not reduced_motion
+		account_panel.coin_budget = 8 if effect_count <= 8 else 12
 		inside.add_child(account_panel)
 	var replay := Button.new()
 	replay.name = "PlayAgain"
