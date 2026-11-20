@@ -109,6 +109,13 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_reward_presentation.gd 2>&1 | tee reward-ui.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" reward-ui.log; then exit 1; fi
           grep -q "Reward presentation PASSED" reward-ui.log
+      - name: Test guided tutorial, real clicks, isolation and phone layouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_guided_tutorial.gd 2>&1 | tee tutorial.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" tutorial.log; then exit 1; fi
+          grep -q "Guided tutorial PASSED" tutorial.log
       - name: Test faction balance and strategy counters in the shipping simulator
         shell: bash
         run: |

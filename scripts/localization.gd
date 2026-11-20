@@ -4,6 +4,9 @@ extends RefCounted
 static var language := "pl"
 const LANGUAGES := ["pl", "en"]
 const MESSAGES := {
+	"WZNÓW MECZ": ["WZNÓW MECZ", "RESUME MATCH"],
+	"SAMOUCZEK • BEZ LIMITU CZASU": ["SAMOUCZEK • BEZ LIMITU CZASU", "TUTORIAL • NO TIME LIMIT"],
+	"POKAŻ PRZYKŁAD": ["POKAŻ PRZYKŁAD", "SHOW EXAMPLE"],
 	"Odsetki +%d. Presja skarbców po tej fali: -%d dla obu stron.": ["Odsetki +%d. Presja skarbców po tej fali: -%d dla obu stron.", "Interest +%d. Vault pressure after this wave: -%d for both sides."],
 	" • presja %d": [" • presja %d", " • pressure %d"],
 	"⚔ TRENING %d  •  %d": ["⚔ TRENING %d  •  %d", "⚔ TRAINING %d  •  %d"],

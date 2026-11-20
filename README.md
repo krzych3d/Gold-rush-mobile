@@ -2,6 +2,27 @@
 
 Mobile-first Godot **4.2.2** fantasy lane strategy prototype with automatic portrait/landscape layouts.
 
+## Guided tutorial without a countdown
+
+The main menu has a **Tutorial** entry. Fifteen selectable lessons cover the
+three lanes and one free raider; runner, carrier and saboteur; defender, spikes,
+snares and tower; vault upgrades, all three training levels and mixed recruitment;
+and separate Dwarf, Goblin, Elf and Voidborn abilities.
+
+A framed instruction panel, gold spotlight and pointer guide real button clicks.
+Only the required action is enabled. Demonstrations use the shipping simulator
+and stop at the observed outcome until the player chooses Next. Pause, repeat
+and the lesson list are always reachable. Portrait places instructions above the
+board; landscape places them beside it. Required purchases scroll into view.
+
+Training runs in a separate game instance with no countdown, automatic waves,
+defeat or XP rewards. It preserves a suspended real match and permits locked
+faction previews without unlocking them. Polish and English are supported.
+The original normal-match clocks and account rules remain in force outside training.
+
+[Lesson coverage and verification](docs/Guided-Tutorial.md) describe the examples.
+Both Godot validation and APK export require the real-input tutorial smoke test.
+
 ## Faction balance and strategy counters (2026-11-20)
 
 All four factions now use the same rules on both sides. Raider loot bonuses are

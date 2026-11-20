@@ -15,6 +15,10 @@ const MobileSettings = preload("res://scripts/mobile_settings.gd")
 const AccountProgress = preload("res://scripts/account_progress.gd")
 const Catalog = preload("res://scripts/game_catalog.gd")
 const Rules = preload("res://scripts/balance_rules.gd")
+const TutorialCoach = preload("res://scripts/tutorial_coach.gd")
+var tutorial_mode := false
+var tutorial_coach
+var tutorial_session: Control
 const VAULT_TIER_ART = [
 	preload("res://assets/world/vault_tier_1.svg"),
 	preload("res://assets/world/vault_tier_2.svg"),
@@ -222,7 +226,7 @@ func _ready() -> void:
 	menu_music.volume_db = -9.0
 	menu_music.stream_paused = not presentation.music_enabled
 	add_child(menu_music)
-	if ResourceLoader.exists("res://assets/audio/enchanted_vault_theme.wav"):
+	if not tutorial_mode and ResourceLoader.exists("res://assets/audio/enchanted_vault_theme.wav"):
 		var score := load("res://assets/audio/enchanted_vault_theme.wav") as AudioStreamWAV
 		if score != null:
 			score.loop_mode = AudioStreamWAV.LOOP_FORWARD
@@ -484,7 +488,8 @@ func _ready() -> void:
 	battle_shell.game = self
 	battle_shell.legacy_root = root
 	add_child(battle_shell)
-	_show_main_menu()
+	if not tutorial_mode:
+		_show_main_menu()
 
 func _show_main_menu() -> void:
 	if main_menu_overlay != null:
@@ -570,6 +575,8 @@ func _change_language(code: String) -> void:
 	for screen in [main_menu_overlay, selection_layer, codex_overlay, settings_overlay, help_overlay]:
 		if is_instance_valid(screen):
 			screen.rebuild_language()
+	if is_instance_valid(tutorial_session):
+		tutorial_session.rebuild_language()
 	_refresh()
 
 func _set_message(key: String, arguments: Array = []) -> void:
@@ -596,6 +603,8 @@ func _apply_presentation(persist: bool = false) -> void:
 		presentation.save()
 
 func _process(delta: float) -> void:
+	if is_instance_valid(tutorial_session):
+		return
 	if phase == "SELECT" or phase == "END":
 		return
 	visual_time += delta
@@ -625,6 +634,36 @@ func _close_how_to_play() -> void:
 		help_overlay.queue_free()
 		help_overlay = null
 	_restore_lobby()
+
+func _start_tutorial(chapter: int = 0) -> void:
+	if is_instance_valid(tutorial_session):
+		return
+	_hide_lobby()
+	tutorial_session = TutorialCoach.new()
+	tutorial_session.name = "GuidedTutorial"
+	tutorial_session.host = self
+	tutorial_session.chapter_index = chapter
+	tutorial_session.z_index = 130
+	add_child(tutorial_session)
+
+func _close_tutorial() -> void:
+	if not is_instance_valid(tutorial_session):
+		return
+	var session: Control = tutorial_session
+	session.closing = true
+	session.simulation_running = false
+	session.restore_host_controls()
+	tutorial_session = null
+	remove_child(session)
+	session.queue_free()
+	if help_overlay == null:
+		_show_how_to_play()
+	_restore_lobby()
+
+func _tutorial_allows(action: String) -> bool:
+	if is_instance_valid(tutorial_session):
+		return false
+	return not tutorial_mode or not is_instance_valid(tutorial_coach) or tutorial_coach.allows(action)
 
 func _show_race_selection() -> void:
 	if selection_layer != null:
@@ -707,6 +746,8 @@ func _change_race() -> void:
 	_refresh()
 
 func _select_lane(index: int) -> void:
+	if not _tutorial_allows("lane:%d" % index):
+		return
 	lane = index
 	_set_message("Selected lane %d", [(lane + 1)])
 	_refresh()
@@ -730,6 +771,8 @@ func side_ability(side: int) -> bool:
 	return ability_used if side == 0 else bot_ability_used
 
 func activate_ability(side: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("ability"):
+		return false
 	if phase != "PREP" or side_ability(side) or gold[side] < ABILITY_COST + reserve:
 		return false
 	if side_race(side) == 0 and guard_count(side) == 0:
@@ -774,6 +817,8 @@ func guard_count(side: int, path: int = -1) -> int:
 	return count
 
 func purchase_bank(side: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("bank"):
+		return false
 	var cost: int = BANK_BASE_COST + side_bank(side) * BANK_STEP_COST
 	if phase != "PREP" or side_bank(side) >= 5 or gold[side] < cost + reserve:
 		return false
@@ -786,6 +831,8 @@ func purchase_bank(side: int, reserve: int = 0) -> bool:
 	return true
 
 func purchase_training(side: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("training"):
+		return false
 	var cost: int = Rules.training_cost(side_training(side))
 	if phase != "PREP" or side_training(side) >= 3 or gold[side] < cost + reserve:
 		return false
@@ -821,6 +868,8 @@ func _buy_guard() -> void:
 	_refresh()
 
 func purchase_guard(side: int, path: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("guard"):
+		return false
 	var count: int = guard_count(side, path)
 	if phase != "PREP" or gold[side] < GUARD_COST + reserve or count >= 3:
 		return false
@@ -914,6 +963,8 @@ func _buy_unit(kind: int) -> void:
 	_refresh()
 
 func purchase_unit(side: int, path: int, kind: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("unit:%d" % kind):
+		return false
 	var lane_count := 0
 	for order in orders[side]:
 		if order["lane"] == path:
@@ -944,6 +995,8 @@ func _buy_trap(kind: int) -> void:
 	_refresh()
 
 func purchase_trap(side: int, path: int, kind: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("trap:%d" % kind):
+		return false
 	var lane_count := 0
 	var occupied: Array = []
 	for trap in traps[side]:
@@ -1066,6 +1119,13 @@ func _start_pressed() -> void:
 		_begin_attack()
 
 func _begin_attack() -> void:
+	if is_instance_valid(tutorial_session):
+		return
+	if tutorial_mode:
+		if _tutorial_allows("attack") and phase == "PREP":
+			tutorial_coach.launch_demo()
+			_refresh()
+		return
 	if phase != "PREP":
 		return
 	_bot_prepare()
@@ -1106,6 +1166,8 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "frenzy": side_ability(side) and side_race(side) == 1, "shadow_evasion": side_ability(side) and side_race(side) == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
+	if tutorial_mode or is_instance_valid(tutorial_session) or (is_instance_valid(help_overlay) and help_overlay.visible):
+		return
 	performance_elapsed += 0.05
 	if performance_elapsed >= 1.0:
 		performance_elapsed = 0.0
@@ -1257,6 +1319,8 @@ func _simulate(dt: float) -> void:
 	_check_vaults()
 
 func _check_vaults() -> bool:
+	if tutorial_mode:
+		return false
 	if phase == "END" or phase == "SELECT":
 		return phase == "END"
 	if gold[0] > 0 and gold[1] > 0:
@@ -1382,6 +1446,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _navigate_back() -> void:
+	if is_instance_valid(tutorial_session):
+		_close_tutorial()
+		return
+	if tutorial_mode and is_instance_valid(tutorial_coach):
+		tutorial_coach.exit_to_lessons()
+		return
 	var studio := get_node_or_null("AnimationStudio")
 	if studio != null:
 		studio.queue_free()
@@ -1504,6 +1574,8 @@ func _refresh() -> void:
 	_refresh_localized_cards()
 	if is_instance_valid(battle_shell):
 		battle_shell.sync()
+	if tutorial_mode and is_instance_valid(tutorial_coach):
+		tutorial_coach.sync_controls()
 	arena.queue_redraw()
 
 func _refresh_localized_cards() -> void:

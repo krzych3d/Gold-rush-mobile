@@ -194,6 +194,8 @@ func _follow() -> void:
 	fit_camera()
 
 func handle_input(event: InputEvent) -> void:
+	if game.tutorial_mode:
+		return # Guided lane buttons remain the only active training input.
 	if event is InputEventScreenTouch or event is InputEventMouseButton:
 		if event is InputEventMouseButton and event.button_index != MOUSE_BUTTON_LEFT:
 			return
@@ -218,8 +220,12 @@ func sync() -> void:
 	game.timer_label.text = L10n.t("FALA %d • %s\n%d s • odsetki %d%%") % [game.wave, L10n.t("PRZYGOTOWANIE") if game.phase == "PREP" else L10n.t("BITWA"), int(maxf(0, ceilf(game.remaining))), int(game.interest_rate(game.selected_race, game.bank_level) * 100)]
 	if game.wave >= game.Rules.PRESSURE_START:
 		game.timer_label.text += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
+	if game.tutorial_mode:
+		game.timer_label.text = L10n.t("SAMOUCZEK • BEZ LIMITU CZASU")
 	drawer_button.text = L10n.t("SCHOWAJ ↓") if drawer_open else L10n.t("ARSENAŁ ↑")
 	game.controls[9].text = L10n.t("GRAJ PONOWNIE") if game.phase == "END" else L10n.t("ROZPOCZNIJ ATAK") if game.phase == "PREP" else L10n.t("BITWA TRWA")
+	if game.tutorial_mode:
+		game.controls[9].text = L10n.t("POKAŻ PRZYKŁAD")
 	for node in [drawer_button, game.controls[9]]:
 		Epic._fit_button(node)
 	if phase_seen != game.phase:

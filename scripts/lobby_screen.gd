@@ -7,6 +7,7 @@ const Epic = preload("res://scripts/epic_theme.gd")
 const Battlefields = preload("res://scripts/battlefields.gd")
 const MobileLayout = preload("res://scripts/mobile_layout.gd")
 const AccountPanel = preload("res://scripts/account_progress_panel.gd")
+const TutorialLessons = preload("res://scripts/tutorial_lessons.gd")
 const MENU_ART := "res://assets/ui/lobby/epic_vault_menu.png"
 const WORDMARK := "res://assets/ui/lobby/vault_wars_wordmark.png"
 const GOLD := Color("edce8f")
@@ -248,7 +249,7 @@ func _clear(node: Node) -> void:
 	live_preview = null
 
 func _build_home() -> void:
-	# Exactly three actions. The artwork is the scene, not a card inside a panel.
+	# Play plus compact learning/reference/settings actions over the existing art.
 	var logo := _image(WORDMARK, 0)
 	logo.name = "MainMenuLogo"
 	logo.anchor_left = 0.09
@@ -271,6 +272,7 @@ func _build_home() -> void:
 	var navigation := HBoxContainer.new()
 	navigation.add_theme_constant_override("separation", 10)
 	footer.add_child(navigation)
+	_quiet_style(_button(navigation, TutorialLessons.text(["Samouczek", "Tutorial"]), "OpenTutorial", game._show_how_to_play), "book")
 	_quiet_style(_button(navigation, L10n.t("Księga gry"), "OpenCodex", game._show_codex.bind("runner")), "book")
 	_quiet_style(_button(navigation, L10n.t("Ustawienia"), "OpenSettings", game._show_settings), "settings")
 	var tagline := _label(L10n.t("TWÓJ SKARBIEC. TWOJA LEGENDA."), 18, GOLD)
@@ -751,41 +753,16 @@ func _responsive_layout() -> void:
 	entry_list.call_deferred("ensure_current_is_visible")
 
 func _build_tutorial() -> void:
-	_heading(L10n.t("JAK GRAĆ"), L10n.t("Zdobądź złoto wroga. Ocal własny skarbiec."))
-	var art := _image("res://assets/epic/world/battlefield_clean.jpg", 190)
-	art.name = "TutorialBattlefield"
-	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	art.clip_contents = true
-	content.add_child(art)
-	var chapters := [
-		[L10n.t("POZIOM KONTA I RASY"), L10n.t("Konto rozwijasz do poziomu 20. Krasnoludy i gobliny są dostępne od początku, elfy od poziomu 5, a Pustka od 10. Za ukończony mecz otrzymasz 50 EXP za zwycięstwo lub 25 za porażkę, plus 20 za rozegraną falę (maksymalnie 20 fal). Wymagane jest rozpoczęcie bitwy. Wyjście z meczu nie daje EXP. Poziom nie zwiększa statystyk jednostek. Postęp zapisuje się na tym telefonie."), "dwarf_bank"],
-		[L10n.t("ZŁOTO JEST TWOIM ŻYCIEM"), L10n.t("Zaczynasz z 1000 złota. Każdy zakup zabiera monety ze skarbca. Gdy twój skarbiec osiągnie zero, przegrywasz od razu. Zachowuj rezerwę."), "dwarf_bank"],
-		[L10n.t("PRZYGOTOWANIE • 30 SEKUND"), L10n.t("Wybierz alejkę. Ceny bazowe: zwiadowca 75, tragarz 140, sabotażysta 110. Kolejny najeźdźca tego samego typu w tej fali kosztuje o 20% ceny bazowej więcej. Łącz różne role i obronę."), "dwarf_runner"],
-		[L10n.t("ATAK • DO 60 SEKUND"), L10n.t("Darmowa fala rusza z kupionymi jednostkami. Najeźdźca musi ukraść złoto i wrócić do twojego skarbca. Łup niedostarczony przed końcem fali wraca do obrabowanej strony."), "goblin_carrier"],
-		[L10n.t("ROZWIJAJ SKARBIEC"), L10n.t("Skarbiec dodaje po 4 punkty procentowe odsetek na poziom. Tylko pierwsze 1000 złota zarabia odsetki; minimum wypłaty to 20. Od fali 6 oba skarbce tracą po walce 75 złota, potem o 75 więcej co falę."), "elf_bank"],
-		[L10n.t("BROŃ SWOICH ALEJEK"), L10n.t("Kolce zadają obrażenia. Sidła ranią i zatrzymują przeciwnika na 2,5 s. Wieżyczki strzelają co 0,6 s. Obrońca pilnuje wybranej alejki."), "dwarf_turret"],
-		[L10n.t("RASY I ZDOLNOŚCI"), L10n.t("Krasnoludy: oszczędzanie i PŻ. Gobliny: szybkość. Elfy: PŻ i łup. Voidborn: szybkość i łup. Zdolność kosztuje 120 złota, raz na falę w przygotowaniach. Iron Wall wzmacnia już zatrudnionych obrońców."), "goblin_ability"],
-		[L10n.t("ZWYCIĘSTWO"), L10n.t("Opróżnij skarbiec przeciwnika. Każda wydana moneta zmniejsza też twoje życie. Mecz trwa do wyzerowania skarbca; nie ma limitu pięciu fal."), "dwarf_raid"]
-	]
+	_heading(TutorialLessons.text(["SAMOUCZEK KROK PO KROKU", "GUIDED TUTORIAL"]), TutorialLessons.text(["Bez timera. Klikaj wskazane przyciski i oglądaj prawdziwe przykłady.", "No countdown. Tap highlighted controls and watch real examples."]))
+	content.add_child(_label(TutorialLessons.text(["Każdą lekcję możesz wybrać osobno i powtórzyć. Ćwiczysz na osobnej planszy, bez wydawania złota meczu i bez zdobywania EXP. Lekcje ras są dostępne także przed ich odblokowaniem.", "Choose any lesson and replay it. Practice uses a separate board without spending match gold or earning XP. Faction lessons are available before their normal unlocks."]), 19))
+	_primary_style(_button(content, TutorialLessons.text(["ZACZNIJ OD PODSTAW", "START WITH THE BASICS"]), "BeginFromHowTo", game._start_tutorial.bind(0), true))
+	var chapters: Array = TutorialLessons.definitions()
 	for index in chapters.size():
-		var chapter: Array = chapters[index]
-		var pane := _panel(content)
-		pane.get_parent().name = "TutorialChapter%d" % index
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 16)
-		pane.add_child(row)
-		var illustration := _image("res://assets/ui/direct/" + str(chapter[2]) + ".png", 100)
-		illustration.custom_minimum_size.x = 110
-		illustration.size_flags_horizontal = Control.SIZE_FILL
-		row.add_child(illustration)
-		var copy := VBoxContainer.new()
-		copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		copy.add_theme_constant_override("separation", 10)
-		row.add_child(copy)
-		copy.add_child(_label(str(chapter[0]), 21, GOLD))
-		copy.add_child(_label(str(chapter[1]), 19))
+		var title: String = TutorialLessons.text(chapters[index]["title"])
+		_button(content, "%02d  •  %s" % [index + 1, title], "TutorialChapter%d" % index, game._start_tutorial.bind(index))
 	_button(footer, L10n.t("WRÓĆ DO MENU"), "BackToMainMenu", game._close_how_to_play)
-	_primary_style(_button(footer, L10n.t("ROZPOCZNIJ GRĘ"), "BeginFromHowTo", game._open_race_selection, true))
+	var resume_match: bool = game.phase in ["PREP", "ATTACK"]
+	_primary_style(_button(footer, L10n.t("WZNÓW MECZ") if resume_match else L10n.t("ROZPOCZNIJ GRĘ"), "PlayAfterTutorial", game._close_how_to_play if resume_match else game._open_race_selection, true))
 
 func _build_settings() -> void:
 	_heading(L10n.t("USTAWIENIA"), L10n.t("Dostosuj oprawę do telefonu i swojego komfortu."))
