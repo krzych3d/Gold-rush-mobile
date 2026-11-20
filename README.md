@@ -2,6 +2,25 @@
 
 Mobile-first Godot **4.2.2** fantasy lane strategy prototype with automatic portrait/landscape layouts.
 
+## Faction balance and strategy counters (2026-11-20)
+
+All four factions now use the same rules on both sides. Raider loot bonuses are
+proportional; Dwarven shields expire after one wave; savings earn interest on at
+most 1000 gold; training costs 120/200/280. From wave 6, increasing, symmetric
+vault pressure prevents endless camping. Repeating a hired role within a wave
+adds 20% of its base price each time, encouraging mixed formations; live cards
+show the next price. Carriers, spikes, towers and sabotage
+have explicit counters. Towers prioritize heavy carriers and deal bonus damage
+to them. Goblin Frenzy also accelerates actual melee strikes.
+
+The bot pays for its own racial ability and upgrades, respects identical unit,
+lane and structure limits, and uses previous raids rather than hidden purchases.
+The Polish/English reference and live prices describe the updated rules.
+
+[Balance rules, counters and reproducible verification](docs/Race-Balance.md)
+explain the changes. `ci/smoke_balance.gd` checks mechanics; the seeded strategy
+tournament uses the shipping simulator at 20 Hz and swaps board sides.
+
 ## Battle thumbnails and gold-to-XP presentation (0.2.3)
 
 Battle illustrations now use contained previews with explicit size limits rather

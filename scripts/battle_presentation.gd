@@ -214,8 +214,10 @@ func sync() -> void:
 		last_language = L10n.language
 		_refresh_navigation(self)
 	game.hud.text = L10n.t("ZŁOTO %d") % game.gold[0]
-	enemy_gold.text = L10n.t("WRÓG %d") % game.gold[1]
+	enemy_gold.text = "%s %d" % [L10n.t(game.RACE_NAMES[game.bot_race]), game.gold[1]]
 	game.timer_label.text = L10n.t("FALA %d • %s\n%d s • odsetki %d%%") % [game.wave, L10n.t("PRZYGOTOWANIE") if game.phase == "PREP" else L10n.t("BITWA"), int(maxf(0, ceilf(game.remaining))), int(game.interest_rate(game.selected_race, game.bank_level) * 100)]
+	if game.wave >= game.Rules.PRESSURE_START:
+		game.timer_label.text += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
 	drawer_button.text = L10n.t("SCHOWAJ ↓") if drawer_open else L10n.t("ARSENAŁ ↑")
 	game.controls[9].text = L10n.t("GRAJ PONOWNIE") if game.phase == "END" else L10n.t("ROZPOCZNIJ ATAK") if game.phase == "PREP" else L10n.t("BITWA TRWA")
 	for node in [drawer_button, game.controls[9]]:

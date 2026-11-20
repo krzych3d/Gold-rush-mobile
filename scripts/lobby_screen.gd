@@ -494,7 +494,7 @@ func select_race(index: int) -> void:
 	var summary := _label(Catalog.RACE_STYLES[index], 24, game.RACE_COLORS[index])
 	summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	race_detail.add_child(summary)
-	var bonus := _label([L10n.t("28% odsetek  •  +25% PŻ najeźdźców"), L10n.t("18% odsetek  •  +20% tempa najeźdźców"), L10n.t("18% odsetek  •  +10% PŻ  •  +10 łupu"), L10n.t("18% odsetek  •  +10% tempa  •  +15 łupu")][index], 18)
+	var bonus := _label([L10n.t("24% odsetek  •  +25% PŻ najeźdźców"), L10n.t("18% odsetek  •  +20% tempa  •  +5% łupu"), L10n.t("18% odsetek  •  +10% PŻ  •  +5% łupu"), L10n.t("18% odsetek  •  +5% tempa  •  +8% łupu")][index], 18)
 	bonus.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if not unlocked:
 		bonus.text = L10n.t("Odblokowanie: poziom %d • Twój poziom: %d") % [game.account.UNLOCK_LEVELS[index], game.account.level()]
@@ -760,9 +760,9 @@ func _build_tutorial() -> void:
 	var chapters := [
 		[L10n.t("POZIOM KONTA I RASY"), L10n.t("Konto rozwijasz do poziomu 20. Krasnoludy i gobliny są dostępne od początku, elfy od poziomu 5, a Pustka od 10. Za ukończony mecz otrzymasz 50 EXP za zwycięstwo lub 25 za porażkę, plus 20 za rozegraną falę (maksymalnie 20 fal). Wymagane jest rozpoczęcie bitwy. Wyjście z meczu nie daje EXP. Poziom nie zwiększa statystyk jednostek. Postęp zapisuje się na tym telefonie."), "dwarf_bank"],
 		[L10n.t("ZŁOTO JEST TWOIM ŻYCIEM"), L10n.t("Zaczynasz z 1000 złota. Każdy zakup zabiera monety ze skarbca. Gdy twój skarbiec osiągnie zero, przegrywasz od razu. Zachowuj rezerwę."), "dwarf_bank"],
-		[L10n.t("PRZYGOTOWANIE • 30 SEKUND"), L10n.t("Wybierz jedną z trzech alejek. Kup zwiadowców (75), tragarzy (140), sabotażystów (110), obronę lub ulepszenia. Szczegóły i podglądy znajdziesz w Księdze gry."), "dwarf_runner"],
+		[L10n.t("PRZYGOTOWANIE • 30 SEKUND"), L10n.t("Wybierz alejkę. Ceny bazowe: zwiadowca 75, tragarz 140, sabotażysta 110. Kolejny najeźdźca tego samego typu w tej fali kosztuje o 20% ceny bazowej więcej. Łącz różne role i obronę."), "dwarf_runner"],
 		[L10n.t("ATAK • DO 60 SEKUND"), L10n.t("Darmowa fala rusza z kupionymi jednostkami. Najeźdźca musi ukraść złoto i wrócić do twojego skarbca. Łup niedostarczony przed końcem fali wraca do obrabowanej strony."), "goblin_carrier"],
-		[L10n.t("ROZWIJAJ SKARBIEC"), L10n.t("Poziomy skarbca 1–5 zmieniają jego wygląd i dodają po 4 punkty procentowe odsetek po fali. Odsetki liczą się od pozostałego złota; minimalna wypłata to 20."), "elf_bank"],
+		[L10n.t("ROZWIJAJ SKARBIEC"), L10n.t("Skarbiec dodaje po 4 punkty procentowe odsetek na poziom. Tylko pierwsze 1000 złota zarabia odsetki; minimum wypłaty to 20. Od fali 6 oba skarbce tracą po walce 75 złota, potem o 75 więcej co falę."), "elf_bank"],
 		[L10n.t("BROŃ SWOICH ALEJEK"), L10n.t("Kolce zadają obrażenia. Sidła ranią i zatrzymują przeciwnika na 2,5 s. Wieżyczki strzelają co 0,6 s. Obrońca pilnuje wybranej alejki."), "dwarf_turret"],
 		[L10n.t("RASY I ZDOLNOŚCI"), L10n.t("Krasnoludy: oszczędzanie i PŻ. Gobliny: szybkość. Elfy: PŻ i łup. Voidborn: szybkość i łup. Zdolność kosztuje 120 złota, raz na falę w przygotowaniach. Iron Wall wzmacnia już zatrudnionych obrońców."), "goblin_ability"],
 		[L10n.t("ZWYCIĘSTWO"), L10n.t("Opróżnij skarbiec przeciwnika. Każda wydana moneta zmniejsza też twoje życie. Mecz trwa do wyzerowania skarbca; nie ma limitu pięciu fal."), "dwarf_raid"]

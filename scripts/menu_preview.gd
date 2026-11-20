@@ -82,7 +82,7 @@ func _caption() -> String:
 	if action >= 0:
 		return [L10n.t("Spoczynek"), L10n.t("Ruch"), L10n.t("Atak"), L10n.t("Trafienie"), L10n.t("Upadek"), L10n.t("Oddanie złota")][action]
 	match preview_mode:
-		"spikes": return L10n.t("Kolce • 40 obrażeń • 3 ładunki")
+		"spikes": return L10n.t("Kolce • 50 obrażeń • 3 ładunki")
 		"snare": return L10n.t("Sidła • zatrzymanie na 2,5 s")
 		"turret": return L10n.t("Wieżyczka • strzał co 0,6 s")
 		"bank": return L10n.t("Rozwój skarbca • poziom %d / 5") % (1 + int(elapsed / 2.0) % 5)

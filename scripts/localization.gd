@@ -4,6 +4,9 @@ extends RefCounted
 static var language := "pl"
 const LANGUAGES := ["pl", "en"]
 const MESSAGES := {
+	"Odsetki +%d. Presja skarbców po tej fali: -%d dla obu stron.": ["Odsetki +%d. Presja skarbców po tej fali: -%d dla obu stron.", "Interest +%d. Vault pressure after this wave: -%d for both sides."],
+	" • presja %d": [" • presja %d", " • pressure %d"],
+	"⚔ TRENING %d  •  %d": ["⚔ TRENING %d  •  %d", "⚔ TRAINING %d  •  %d"],
 	"KOPIA POSTĘPU": ["KOPIA POSTĘPU", "PROGRESS BACKUP"],
 	"Zachowaj kod przed reinstalacją gry. Przywraca EXP i odblokowane rasy na tym lub innym telefonie.": ["Zachowaj kod przed reinstalacją gry. Przywraca EXP i odblokowane rasy na tym lub innym telefonie.", "Save this code before reinstalling. It restores XP and unlocked factions on this or another phone."],
 	"Skopiuj kod": ["Skopiuj kod", "Copy code"],
@@ -37,21 +40,21 @@ const MESSAGES := {
 	"Księżycowe ogrody": ["Księżycowe ogrody", "Elven moon gardens"],
 	"Szczelina Pustki": ["Szczelina Pustki", "Void rift"],
 	"Sceneria nie zmienia zasad ani premii rasy.": ["Sceneria nie zmienia zasad ani premii rasy.", "Scenery does not change the rules or faction bonuses."],
-	"Krasnoludy budują przewagę dzięki oszczędnościom. Ich najeźdźcy mają o 25% więcej punktów życia, a bazowe odsetki wynoszą 28% po fali.": [
-		"Krasnoludy budują przewagę dzięki oszczędnościom. Ich najeźdźcy mają o 25% więcej punktów życia, a bazowe odsetki wynoszą 28% po fali.",
-		"Dwarves build their advantage through savings. Their raiders have 25% more HP, and base interest is 28% after each wave."
+	"Krasnoludy mają +25% PŻ najeźdźców i 24% odsetek. Odsetki naliczane są od maksymalnie 1000 złota.": [
+		"Krasnoludy mają +25% PŻ najeźdźców i 24% odsetek. Odsetki naliczane są od maksymalnie 1000 złota.",
+		"Dwarves have +25% raider HP and 24% interest. Only the first 1000 gold earns interest."
 	],
-	"Gobliny wysyłają najeźdźców szybszych o 20%. Szybciej docierają do skarbca i wracają ze złotem. Bazowe odsetki: 18% po fali.": [
-		"Gobliny wysyłają najeźdźców szybszych o 20%. Szybciej docierają do skarbca i wracają ze złotem. Bazowe odsetki: 18% po fali.",
-		"Goblin raiders move 20% faster. They reach the vault and bring gold back sooner. Base interest: 18% after each wave."
+	"Gobliny mają +20% tempa i +5% pojemności najeźdźców oraz 18% odsetek. Sidła i obrońcy zatrzymują ich szybkie wypady.": [
+		"Gobliny mają +20% tempa i +5% pojemności najeźdźców oraz 18% odsetek. Sidła i obrońcy zatrzymują ich szybkie wypady.",
+		"Goblin raiders have +20% speed, +5% capacity and 18% interest. Snares and defenders stop their fast raids."
 	],
-	"Elfi najeźdźcy mają o 10% więcej punktów życia i mieszczą dodatkowe 10 złota. Bazowe odsetki: 18% po fali.": [
-		"Elfi najeźdźcy mają o 10% więcej punktów życia i mieszczą dodatkowe 10 złota. Bazowe odsetki: 18% po fali.",
-		"Elven raiders have 10% more HP and carry 10 extra gold. Base interest: 18% after each wave."
+	"Elfy mają +10% PŻ i +5% pojemności najeźdźców oraz 18% odsetek. Premia do łupu jest procentowa, także dla darmowej fali.": [
+		"Elfy mają +10% PŻ i +5% pojemności najeźdźców oraz 18% odsetek. Premia do łupu jest procentowa, także dla darmowej fali.",
+		"Elven raiders have +10% HP and +5% capacity, with 18% interest. The loot bonus is proportional, including free raiders."
 	],
-	"Kosmiczni zabójcy Voidborn wysyłają najeźdźców szybszych o 10%, z miejscem na dodatkowe 15 złota. Bazowe odsetki: 18% po fali.": [
-		"Kosmiczni zabójcy Voidborn wysyłają najeźdźców szybszych o 10%, z miejscem na dodatkowe 15 złota. Bazowe odsetki: 18% po fali.",
-		"The Voidborn are assassins from the cosmos. Their raiders move 10% faster and carry 15 extra gold. Base interest: 18% after each wave."
+	"Voidborn mają +5% tempa i +8% pojemności najeźdźców oraz 18% odsetek. Mają mniej PŻ niż krasnoludy i elfy.": [
+		"Voidborn mają +5% tempa i +8% pojemności najeźdźców oraz 18% odsetek. Mają mniej PŻ niż krasnoludy i elfy.",
+		"Voidborn raiders have +5% speed and +8% capacity, with 18% interest. They have less HP than dwarves and elves."
 	],
 	"Zostaw część złota w skarbcu. Wyższe odsetki działają od oszczędności pozostałych po zakupach.": [
 		"Zostaw część złota w skarbcu. Wyższe odsetki działają od oszczędności pozostałych po zakupach.",
@@ -69,21 +72,21 @@ const MESSAGES := {
 		"Przed trudnym wypadem aktywuj Krok cienia: najeźdźca ominie pierwszy napotkany efekt pułapki.",
 		"Activate Shadow Step before a dangerous raid: each raider bypasses the first trap effect it encounters."
 	],
-	"Iron Wall dodaje 60 aktualnych i maksymalnych PŻ każdemu TWOJEMU OBROŃCY obecnemu w chwili aktywacji. Nie wzmacnia obrońców kupionych później.": [
-		"Żelazny mur dodaje 60 aktualnych i maksymalnych PŻ każdemu TWOJEMU OBROŃCY obecnemu w chwili aktywacji. Nie wzmacnia obrońców kupionych później.",
-		"Iron Wall adds 60 current and maximum HP to every friendly DEFENDER present when activated. Defenders hired later do not receive this bonus."
+	"Iron Wall daje obecnym obrońcom tarczę 60 PŻ na jedną falę. Tarcza pochłania obrażenia, nie leczy i znika po fali. Nie kumuluje się.": [
+		"Żelazny mur daje obecnym obrońcom tarczę 60 PŻ na jedną falę. Tarcza pochłania obrażenia, nie leczy i znika po fali. Nie kumuluje się.",
+		"Iron Wall gives existing defenders a 60 HP shield for one wave. It absorbs damage without healing and expires after the wave. It cannot stack."
 	],
-	"Goblin Frenzy zwiększa prędkość wszystkich twoich najeźdźców nadchodzącej fali o 35%, oprócz ich stałej premii rasowej.": [
-		"Gobliński szał zwiększa prędkość wszystkich twoich najeźdźców nadchodzącej fali o 35%, oprócz ich stałej premii rasowej.",
-		"Goblin Frenzy increases the speed of all your raiders in the next wave by 35%, in addition to their permanent faction bonus."
+	"Goblin Frenzy daje +25% tempa na jedną falę. W zwarciu najeźdźcy uderzają co 0,45 s zamiast co 0,65 s. Sidła i kolce nadal ich zatrzymują.": [
+		"Gobliński szał daje +25% tempa na jedną falę. W zwarciu najeźdźcy uderzają co 0,45 s zamiast co 0,65 s. Sidła i kolce nadal ich zatrzymują.",
+		"Goblin Frenzy grants +25% speed for one wave. Raiders strike every 0.45 s instead of 0.65 s in melee. Snares and spikes still stop them."
 	],
-	"Moon Blessing dodaje 35 miejsc na złoto każdemu twojemu najeźdźcy nadchodzącej fali, oprócz stałej premii elfów.": [
-		"Księżycowe błogosławieństwo dodaje 35 miejsc na złoto każdemu twojemu najeźdźcy nadchodzącej fali, oprócz stałej premii elfów.",
-		"Moon Blessing gives each of your raiders in the next wave room for 35 extra gold, in addition to the permanent elven bonus."
+	"Moon Blessing zwiększa pojemność najeźdźców o 35% na jedną falę. Zysk wymaga bezpiecznego powrotu z łupem.": [
+		"Księżycowe błogosławieństwo zwiększa pojemność najeźdźców o 35% na jedną falę. Zysk wymaga bezpiecznego powrotu z łupem.",
+		"Moon Blessing increases raider capacity by 35% for one wave. Extra loot must be brought home safely."
 	],
-	"Shadow Step zwiększa prędkość twoich najeźdźców o 18% w nadchodzącej fali. Każdy z nich jednorazowo omija pierwszy napotkany efekt pułapki.": [
-		"Krok cienia zwiększa prędkość twoich najeźdźców o 18% w nadchodzącej fali. Każdy z nich jednorazowo omija pierwszy napotkany efekt pułapki.",
-		"Shadow Step increases your raiders' speed by 18% in the next wave. Each raider also bypasses the first trap effect it encounters once."
+	"Shadow Step daje +12% tempa na jedną falę i unik jednego uruchomienia pułapki lub strzału wieży na jednostkę. Kolejne pułapki i strzały działają normalnie.": [
+		"Krok cienia daje +12% tempa na jedną falę i unik jednego uruchomienia pułapki lub strzału wieży na jednostkę. Kolejne pułapki i strzały działają normalnie.",
+		"Shadow Step grants +12% speed for one wave and evades one trap activation or tower shot per raider. Later traps and shots still work."
 	],
 	"Najeźdźcy dołączają bez opłaty na każdej alejce po rozpoczęciu ataku. Zbierają złoto i wracają do twojego skarbca tak samo jak płatne jednostki.": [
 		"Najeźdźcy dołączają bez opłaty na każdej alejce po rozpoczęciu ataku. Zbierają złoto i wracają do twojego skarbca tak samo jak płatne jednostki.",
@@ -93,13 +96,13 @@ const MESSAGES := {
 		"Szybki najeźdźca do wypadów na skarbiec. Kradnie złoto, odwraca się i wraca tą samą alejką. Zysk trafia do ciebie po powrocie.",
 		"A fast raider for vault runs. It steals gold, turns around and returns along the same lane. You receive the loot when it gets home."
 	],
-	"Powolny i wytrzymały najeźdźca z dużą pojemnością na złoto. To transport łupu; nie jest dodatkowym obrońcą skarbca.": [
-		"Powolny i wytrzymały najeźdźca z dużą pojemnością na złoto. To transport łupu; nie jest dodatkowym obrońcą skarbca.",
-		"A slow, tough raider with a large gold capacity. It transports loot and does not serve as an extra vault defender."
+	"Powolny i wytrzymały najeźdźca z dużą pojemnością na złoto. Zadaje obrońcom bazowo 22 obrażenia na sekundę, przebijając blokadę. Wymaga wsparcia przeciw wieżom i sidłom.": [
+		"Powolny i wytrzymały najeźdźca z dużą pojemnością na złoto. Zadaje obrońcom bazowo 22 obrażenia na sekundę, przebijając blokadę. Wymaga wsparcia przeciw wieżom i sidłom.",
+		"A slow, tough raider with large gold capacity. Deals a base 22 damage per second to defenders to break a blockade. Needs support against towers and snares."
 	],
-	"Rozbraja pierwsze napotkane kolce lub sidła bez obrażeń od tej pułapki. Może to zrobić raz na wyprawę. Nie rozbraja wieżyczek.": [
-		"Rozbraja pierwsze napotkane kolce lub sidła bez obrażeń od tej pułapki. Może to zrobić raz na wyprawę. Nie rozbraja wieżyczek.",
-		"Disarms the first spikes or snare it encounters without taking damage from that trap. Can do so once per trip. Cannot disarm turrets."
+	"Rozbraja jedną napotkaną pułapkę, także wieżyczkę. Kolejna linia obrony działa normalnie. Bez pułapek zwiadowca jest tańszym wyborem.": [
+		"Rozbraja jedną napotkaną pułapkę, także wieżyczkę. Kolejna linia obrony działa normalnie. Bez pułapek zwiadowca jest tańszym wyborem.",
+		"Disarms one encountered trap, including a turret. The next defensive layer works normally. Against an open lane, a runner is cheaper."
 	],
 	"Wesprzyj falę zakupami na wybranej alejce. Darmowe jednostki też korzystają z premii rasy i treningu.": [
 		"Wesprzyj falę zakupami na wybranej alejce. Darmowe jednostki też korzystają z premii rasy i treningu.",
@@ -113,21 +116,21 @@ const MESSAGES := {
 		"Wyślij obok szybszych jednostek. Chroń drogę powrotną, aby nie stracić dużego łupu.",
 		"Send alongside faster units. Protect the return route to keep your valuable loot safe."
 	],
-	"Kup przed tragarzem, gdy na trasie są kolce albo sidła. Wieżyczkę pokonaj większą grupą.": [
-		"Kup przed tragarzem, gdy na trasie są kolce albo sidła. Wieżyczkę pokonaj większą grupą.",
+	"Wyślij przed tragarzem przeciw pułapkom i wieżom. Przeciwnik może osłonić wieżę obrońcą lub tańszą pułapką.": [
+		"Wyślij przed tragarzem przeciw pułapkom i wieżom. Przeciwnik może osłonić wieżę obrońcą lub tańszą pułapką.",
 		"Buy before a carrier if the route has spikes or snares. Overwhelm turrets with a larger group."
 	],
-	"Statystyki rasy bez treningu i zdolności. Maks. 6 płatnych jednostek na falę, 4 na alejce.": [
-		"Statystyki rasy bez treningu i zdolności. Maks. 6 płatnych jednostek na falę, 4 na alejce.",
-		"Faction stats without training or abilities. Max. 6 hired units per wave, 4 per lane."
+	"Statystyki bez treningu i zdolności. Kolejna jednostka tego samego typu w tej fali kosztuje o 20% ceny bazowej więcej, niezależnie od alejki. Maks. 6 płatnych jednostek, 4 na alejce.": [
+		"Statystyki bez treningu i zdolności. Kolejna jednostka tego samego typu w tej fali kosztuje o 20% ceny bazowej więcej, niezależnie od alejki. Maks. 6 płatnych jednostek, 4 na alejce.",
+		"Stats without training or abilities. Each additional unit of the same type this wave costs another 20% of base price, across all lanes. Max. 6 hired units, 4 per lane."
 	],
 	"Po 2, 3, 4, 5 i 7 jednostek na alejce w falach 1–5; od fali 5 po 7.": [
 		"Po 2, 3, 4, 5 i 7 jednostek na alejce w falach 1–5; od fali 5 po 7.",
 		"2, 3, 4, 5 and 7 units per lane in waves 1–5; 7 per lane from wave 5 onward."
 	],
-	"Pozostaje na wybranej alejce i atakuje pobliskich wrogów. Zadaje 26 obrażeń co 0,9 s, gdy ma cel w zasięgu. Przetrwałe jednostki bronią w kolejnych falach.": [
-		"Pozostaje na wybranej alejce i atakuje pobliskich wrogów. Zadaje 26 obrażeń co 0,9 s, gdy ma cel w zasięgu. Przetrwałe jednostki bronią w kolejnych falach.",
-		"Stays on the chosen lane and attacks nearby enemies. Deals 26 damage every 0.9 s while a target is in range. Surviving defenders remain for later waves."
+	"Zatrzymuje najeźdźców w walce i zadaje 26 obrażeń co 0,9 s. Tragarz zadaje mu 22 obrażenia na sekundę, inni płatni najeźdźcy 14, darmowi 10. Przetrwały obrońca zostaje na kolejne fale.": [
+		"Zatrzymuje najeźdźców w walce i zadaje 26 obrażeń co 0,9 s. Tragarz zadaje mu 22 obrażenia na sekundę, inni płatni najeźdźcy 14, darmowi 10. Przetrwały obrońca zostaje na kolejne fale.",
+		"Blocks raiders in combat and deals 26 damage every 0.9 s. Carriers retaliate with 22 damage per second, other hired raiders with 14 and free raiders with 10. Surviving defenders persist across waves."
 	],
 	"Rozstaw przed atakiem. Jako krasnolud najpierw kup obrońców, a potem aktywuj Iron Wall.": [
 		"Rozstaw przed atakiem. Jako krasnolud najpierw kup obrońców, a potem aktywuj Żelazny mur.",
@@ -137,17 +140,17 @@ const MESSAGES := {
 		"Maks. 3 twoich obrońców na alejce. Każdy zakup uszczupla skarbiec.",
 		"Max. 3 friendly defenders per lane. Every purchase reduces your vault's gold."
 	],
-	"Zadają 40 obrażeń przy uruchomieniu. Mają 3 ładunki. Pojedynczy najeźdźca uruchamia dane kolce tylko raz.": [
-		"Zadają 40 obrażeń przy uruchomieniu. Mają 3 ładunki. Pojedynczy najeźdźca uruchamia dane kolce tylko raz.",
-		"Deal 40 damage when triggered. Have 3 charges. A raider can trigger each spike trap only once."
+	"Zadają 50 obrażeń przy uruchomieniu, mają 3 ładunki. Eliminują podstawowego zwiadowcę jednym trafieniem; tragarze wytrzymują więcej. Każda jednostka uruchamia je tylko raz.": [
+		"Zadają 50 obrażeń przy uruchomieniu, mają 3 ładunki. Eliminują podstawowego zwiadowcę jednym trafieniem; tragarze wytrzymują więcej. Każda jednostka uruchamia je tylko raz.",
+		"Deal 50 damage per activation with 3 charges. Kill a basic runner in one hit; carriers withstand more. Each raider triggers each trap only once."
 	],
 	"Zadają 25 obrażeń i zatrzymują najeźdźcę na 2,5 s. Mają 2 ładunki. To zatrzymanie, a nie trwałe obniżenie szybkości.": [
 		"Zadają 25 obrażeń i zatrzymują najeźdźcę na 2,5 s. Mają 2 ładunki. To zatrzymanie, a nie trwałe obniżenie szybkości.",
 		"Deal 25 damage and stop a raider for 2.5 s. Have 2 charges. This is a temporary stop, not a permanent speed reduction."
 	],
-	"Strzela w przeciwników na swojej alejce: 11 obrażeń co 0,6 s. Działa również w kolejnych falach i nie jest rozbrajana przez sabotażystę.": [
-		"Strzela w przeciwników na swojej alejce: 11 obrażeń co 0,6 s. Działa również w kolejnych falach i nie jest rozbrajana przez sabotażystę.",
-		"Shoots enemies on its lane: 11 damage every 0.6 s. Remains for later waves and cannot be disarmed by a saboteur."
+	"Strzela co 0,6 s: 16 obrażeń, przeciw tragarzom 32. Priorytetem są tragarze, potem najbliższy skarbca wróg. Sabotażysta może ją rozbroić: osłoń ją inną obroną.": [
+		"Strzela co 0,6 s: 16 obrażeń, przeciw tragarzom 32. Priorytetem są tragarze, potem najbliższy skarbca wróg. Sabotażysta może ją rozbroić: osłoń ją inną obroną.",
+		"Shoots every 0.6 s: 16 damage, 32 against carriers. Prioritizes carriers, then the enemy nearest the vault. A saboteur can disarm it; protect it with another defense."
 	],
 	"Broń zagrożonej alejki i łącz z obrońcą. Uważaj na sabotażystów.": [
 		"Broń zagrożonej alejki i łącz z obrońcą. Uważaj na sabotażystów.",
@@ -165,9 +168,9 @@ const MESSAGES := {
 		"Złoto jest jednocześnie twoim życiem i walutą. Każdy poziom skarbca dodaje 4 punkty procentowe do odsetek po fali. Poziomy 1–5 mają osobne budynki w grze.",
 		"Gold is both your life and your currency. Each vault level adds 4 percentage points of interest after each wave. Levels 1–5 have distinct buildings in battle."
 	],
-	"Odsetki liczą się od pozostałego złota; minimalna wypłata to 20. Nie wydawaj ostatnich monet na ulepszenie.": [
-		"Odsetki liczą się od pozostałego złota; minimalna wypłata to 20. Nie wydawaj ostatnich monet na ulepszenie.",
-		"Interest is based on your remaining gold; the minimum payout is 20. Do not spend your last coins on an upgrade."
+	"Odsetki liczą się od maksymalnie 1000 pozostałego złota; minimum 20. Nadwyżka nie zwiększa wypłaty. Od fali 6 oba skarbce tracą złoto po fali: 75, 150, 225 i dalej +75.": [
+		"Odsetki liczą się od maksymalnie 1000 pozostałego złota; minimum 20. Nadwyżka nie zwiększa wypłaty. Od fali 6 oba skarbce tracą złoto po fali: 75, 150, 225 i dalej +75.",
+		"Only the first 1000 remaining gold earns interest; minimum 20. Excess savings do not increase income. From wave 6 both vaults lose 75, 150, 225 gold and another 75 each subsequent wave."
 	],
 	"Ulepszenie kosztuje złoto z twojego skarbca. Zero złota kończy mecz od razu.": [
 		"Ulepszenie kosztuje złoto z twojego skarbca. Zero złota kończy mecz od razu.",
@@ -213,9 +216,9 @@ const MESSAGES := {
 		"Obserwuj wroga i wzmacniaj zagrożoną trasę. Pustej alejki nie osłania obrońca z sąsiedniej.",
 		"Watch the enemy and reinforce threatened routes. A defender on another lane cannot protect an empty one."
 	],
-	"Masz 30 sekund na zakupy. Możesz rozpocząć atak wcześniej przyciskiem najazdu. Atak trwa do 60 sekund lub do powrotu i usunięcia wszystkich najeźdźców. Potem otrzymujesz odsetki i zaczyna się następna fala.": [
-		"Masz 30 sekund na zakupy. Możesz rozpocząć atak wcześniej przyciskiem najazdu. Atak trwa do 60 sekund lub do powrotu i usunięcia wszystkich najeźdźców. Potem otrzymujesz odsetki i zaczyna się następna fala.",
-		"You have 30 seconds to shop. The raid button can start the attack earlier. Attacks last up to 60 seconds or until all raiders have returned or been removed. Then you receive interest and the next wave begins."
+	"Masz 30 sekund na zakupy i do 60 sekund ataku. Po walce otrzymujesz odsetki od maks. 1000 złota. Od fali 6 oba skarbce tracą 75 złota po fali, potem o 75 więcej co falę. Najazdy pozwalają przełamać oblężenie.": [
+		"Masz 30 sekund na zakupy i do 60 sekund ataku. Po walce otrzymujesz odsetki od maks. 1000 złota. Od fali 6 oba skarbce tracą 75 złota po fali, potem o 75 więcej co falę. Najazdy pozwalają przełamać oblężenie.",
+		"You have 30 seconds to shop and up to 60 seconds to attack. Interest applies to at most 1000 gold. From wave 6 both vaults lose 75 gold after combat, increasing by 75 each wave. Raids break the siege."
 	],
 	"Niedostarczony łup po końcu czasu wraca do obrabowanej strony. Walka trwa do opróżnienia skarbca.": [
 		"Niedostarczony łup po końcu czasu wraca do obrabowanej strony. Walka trwa do opróżnienia skarbca.",
@@ -225,17 +228,17 @@ const MESSAGES := {
 		"Zaczynasz z 1000 złota. Każdy zakup zabiera monety ze skarbca. Gdy twój skarbiec osiągnie zero, przegrywasz od razu. Zachowuj rezerwę.",
 		"You start with 1000 gold. Every purchase takes coins from your vault. If your vault reaches zero, you lose immediately. Keep a reserve."
 	],
-	"Wybierz jedną z trzech alejek. Kup zwiadowców (75), tragarzy (140), sabotażystów (110), obronę lub ulepszenia. Szczegóły i podglądy znajdziesz w Księdze gry.": [
-		"Wybierz jedną z trzech alejek. Kup zwiadowców (75), tragarzy (140), sabotażystów (110), obronę lub ulepszenia. Szczegóły i podglądy znajdziesz w Księdze gry.",
-		"Choose one of three lanes. Buy runners (75), carriers (140), saboteurs (110), defenses or upgrades. Find details and previews in the Game guide."
+	"Wybierz alejkę. Ceny bazowe: zwiadowca 75, tragarz 140, sabotażysta 110. Kolejny najeźdźca tego samego typu w tej fali kosztuje o 20% ceny bazowej więcej. Łącz różne role i obronę.": [
+		"Wybierz alejkę. Ceny bazowe: zwiadowca 75, tragarz 140, sabotażysta 110. Kolejny najeźdźca tego samego typu w tej fali kosztuje o 20% ceny bazowej więcej. Łącz różne role i obronę.",
+		"Choose a lane. Base prices: runner 75, carrier 140, saboteur 110. Each additional raider of the same type this wave costs another 20% of base price. Combine roles and defenses."
 	],
 	"Darmowa fala rusza z kupionymi jednostkami. Najeźdźca musi ukraść złoto i wrócić do twojego skarbca. Łup niedostarczony przed końcem fali wraca do obrabowanej strony.": [
 		"Darmowa fala rusza z kupionymi jednostkami. Najeźdźca musi ukraść złoto i wrócić do twojego skarbca. Łup niedostarczony przed końcem fali wraca do obrabowanej strony.",
 		"The free wave joins your hired units. A raider must steal gold and bring it back to your vault. Loot not delivered before the wave ends returns to the side it was stolen from."
 	],
-	"Poziomy skarbca 1–5 zmieniają jego wygląd i dodają po 4 punkty procentowe odsetek po fali. Odsetki liczą się od pozostałego złota; minimalna wypłata to 20.": [
-		"Poziomy skarbca 1–5 zmieniają jego wygląd i dodają po 4 punkty procentowe odsetek po fali. Odsetki liczą się od pozostałego złota; minimalna wypłata to 20.",
-		"Vault levels 1–5 change its appearance and add 4 percentage points of interest per level after a wave. Interest is based on remaining gold; the minimum payout is 20."
+	"Skarbiec dodaje po 4 punkty procentowe odsetek na poziom. Tylko pierwsze 1000 złota zarabia odsetki; minimum wypłaty to 20. Od fali 6 oba skarbce tracą po walce 75 złota, potem o 75 więcej co falę.": [
+		"Skarbiec dodaje po 4 punkty procentowe odsetek na poziom. Tylko pierwsze 1000 złota zarabia odsetki; minimum wypłaty to 20. Od fali 6 oba skarbce tracą po walce 75 złota, potem o 75 więcej co falę.",
+		"Vault levels add 4 percentage points of interest each. Only the first 1000 gold earns interest; minimum payout 20. From wave 6 both vaults lose 75 gold after combat, increasing by 75 each wave."
 	],
 	"Kolce zadają obrażenia. Sidła ranią i zatrzymują przeciwnika na 2,5 s. Wieżyczki strzelają co 0,6 s. Obrońca pilnuje wybranej alejki.": [
 		"Kolce zadają obrażenia. Sidła ranią i zatrzymują przeciwnika na 2,5 s. Wieżyczki strzelają co 0,6 s. Obrońca pilnuje wybranej alejki.",
@@ -1021,21 +1024,21 @@ const MESSAGES := {
 		"Tempo i duże łupy",
 		"Speed and rich loot"
 	],
-	"28% odsetek  •  +25% PŻ najeźdźców": [
-		"28% odsetek  •  +25% PŻ najeźdźców",
-		"28% interest  •  +25% raider HP"
+	"24% odsetek  •  +25% PŻ najeźdźców": [
+		"24% odsetek  •  +25% PŻ najeźdźców",
+		"24% interest  •  +25% raider HP"
 	],
-	"18% odsetek  •  +20% tempa najeźdźców": [
-		"18% odsetek  •  +20% tempa najeźdźców",
-		"18% interest  •  +20% raider speed"
+	"18% odsetek  •  +20% tempa  •  +5% łupu": [
+		"18% odsetek  •  +20% tempa  •  +5% łupu",
+		"18% interest  •  +20% speed  •  +5% loot"
 	],
-	"18% odsetek  •  +10% PŻ  •  +10 łupu": [
-		"18% odsetek  •  +10% PŻ  •  +10 łupu",
-		"18% interest  •  +10% HP  •  +10 loot"
+	"18% odsetek  •  +10% PŻ  •  +5% łupu": [
+		"18% odsetek  •  +10% PŻ  •  +5% łupu",
+		"18% interest  •  +10% HP  •  +5% loot"
 	],
-	"18% odsetek  •  +10% tempa  •  +15 łupu": [
-		"18% odsetek  •  +10% tempa  •  +15 łupu",
-		"18% interest  •  +10% speed  •  +15 loot"
+	"18% odsetek  •  +5% tempa  •  +8% łupu": [
+		"18% odsetek  •  +5% tempa  •  +8% łupu",
+		"18% interest  •  +5% speed  •  +8% loot"
 	],
 	"Odsetki: %d%% / falę": [
 		"Odsetki: %d%% / falę",
@@ -1149,9 +1152,9 @@ const MESSAGES := {
 		"Trening najazdu",
 		"Raid training"
 	],
-	"Koszt: %d / poziom": [
-		"Koszt: %d / poziom",
-		"Cost: %d / level"
+	"Koszty treningu: 120 / 200 / 280": [
+		"Koszty treningu: 120 / 200 / 280",
+		"Training costs: 120 / 200 / 280"
 	],
 	"3 poziomy": [
 		"3 poziomy",
@@ -1205,9 +1208,9 @@ const MESSAGES := {
 		"Podgląd wstrzymany",
 		"Preview paused"
 	],
-	"Kolce • 40 obrażeń • 3 ładunki": [
-		"Kolce • 40 obrażeń • 3 ładunki",
-		"Spikes • 40 damage • 3 charges"
+	"Kolce • 50 obrażeń • 3 ładunki": [
+		"Kolce • 50 obrażeń • 3 ładunki",
+		"Spikes • 50 damage • 3 charges"
 	],
 	"Sidła • zatrzymanie na 2,5 s": [
 		"Sidła • zatrzymanie na 2,5 s",
@@ -1321,21 +1324,21 @@ const MESSAGES := {
 		"FALA %d • %s\n%d s • odsetki %d%%",
 		"WAVE %d • %s\n%d s • interest %d%%"
 	],
-	"Krasnoludy: 28% odsetek i +25% PŻ najeźdźców": [
-		"Krasnoludy: 28% odsetek i +25% PŻ najeźdźców",
-		"Dwarves: 28% interest and +25% raider HP"
+	"Krasnoludy: 24% odsetek i +25% PŻ najeźdźców": [
+		"Krasnoludy: 24% odsetek i +25% PŻ najeźdźców",
+		"Dwarves: 24% interest and +25% raider HP"
 	],
-	"Gobliny: 18% odsetek i +20% tempa najeźdźców": [
-		"Gobliny: 18% odsetek i +20% tempa najeźdźców",
-		"Goblins: 18% interest and +20% raider speed"
+	"Gobliny: 18% odsetek, +20% tempa i +5% pojemności": [
+		"Gobliny: 18% odsetek, +20% tempa i +5% pojemności",
+		"Goblins: 18% interest, +20% speed and +5% capacity"
 	],
-	"Elfy: 18% odsetek, +10% PŻ i +10 złota pojemności": [
-		"Elfy: 18% odsetek, +10% PŻ i +10 złota pojemności",
-		"Elves: 18% interest, +10% HP and +10 gold capacity"
+	"Elfy: 18% odsetek, +10% PŻ i +5% pojemności": [
+		"Elfy: 18% odsetek, +10% PŻ i +5% pojemności",
+		"Elves: 18% interest, +10% HP and +5% capacity"
 	],
-	"Voidborn: 18% odsetek, +10% tempa i +15 złota pojemności": [
-		"Voidborn: 18% odsetek, +10% tempa i +15 złota pojemności",
-		"Voidborn: 18% interest, +10% speed and +15 gold capacity"
+	"Voidborn: 18% odsetek, +5% tempa i +8% pojemności": [
+		"Voidborn: 18% odsetek, +5% tempa i +8% pojemności",
+		"Voidborn: 18% interest, +5% speed and +8% capacity"
 	],
 	"TWÓJ SKARBIEC. TWOJA LEGENDA.": [
 		"TWÓJ SKARBIEC. TWOJA LEGENDA.",

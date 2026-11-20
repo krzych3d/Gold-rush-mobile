@@ -111,6 +111,9 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_reward_presentation.gd 2>&1 | tee reward-ui.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" reward-ui.log; then exit 1; fi
           grep -q "Reward presentation PASSED" reward-ui.log
+          ./godot --headless --path . --script res://ci/smoke_balance.gd 2>&1 | tee balance.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" balance.log; then exit 1; fi
+          grep -q "Balance regression PASSED" balance.log
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           echo "Export templates:"
           ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
