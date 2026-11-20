@@ -43,3 +43,7 @@ godot --headless --path . --script res://ci/smoke_guided_tutorial.gd
 ```
 
 Test jest wymagany w walidacji Godot i przed eksportem APK. Otwarty wcześniej raport balansu dotyczy źródeł z commitu `a603e98e51a3cf6c49ba140aa152676362fcf65f`; dodane szkolenie jest oddzielone od normalnej symulacji. Pełny turniej CI nadal sprawdza aktualną wersję gry.
+
+## Testowy APK
+
+Gałąź `codex/race-balance-2026-11-20` buduje także APK. Po udanych testach publikuje osobny prerelease `preview-<pierwsze 12 znaków SHA>` z bezpośrednim plikiem APK. Główna gałąź zachowuje swój dotychczasowy `debug-latest`. Budowanie wersji testowej nie wymaga scalenia zmian do `main`, a źródło paczki można sprawdzić po SHA w opisie wydania.
