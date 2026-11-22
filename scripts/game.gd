@@ -1310,6 +1310,9 @@ func _simulate(dt: float) -> void:
 			if unit["position"] >= 1.0:
 				var amount: int = mini(unit["capacity"], gold[defender])
 				gold[defender] -= amount
+				# Inform the battle HUD immediately; the cosmetic flash never alters gold.
+				if amount > 0 and is_instance_valid(battle_shell) and not tutorial_mode:
+					battle_shell.flash_vault(defender, amount)
 				unit["carried"] = amount
 				unit["steal_timer"] = 0.65
 				unit["action_time"] = 0.0
@@ -1321,6 +1324,9 @@ func _simulate(dt: float) -> void:
 				unit["position"] -= unit["speed"] * dt
 			if unit["position"] <= 0.0:
 				gold[unit["side"]] += unit["carried"]
+				# Gold arrives at its owner before a purely visual flight to the HUD.
+				if int(unit["carried"]) > 0 and is_instance_valid(battle_shell) and not tutorial_mode:
+					battle_shell.queue_gold_flight(int(unit["side"]), int(unit["lane"]), int(unit["carried"]))
 				deposit_actors.append({"side": int(unit["side"]), "lane": int(unit["lane"]), "kind": int(unit["kind"]), "age": 0.0, "amount": int(unit["carried"])})
 				units.erase(unit)
 	# Resolve both sides' actions before checking the result, removing the
@@ -2022,6 +2028,21 @@ func _unit_art_size() -> Vector2:
 func _unit_art_rect(art_size: Vector2, bob: float = 0.0) -> Rect2:
 	return Rect2(Vector2(-art_size.x * 0.5, -art_size.y * 0.88 + bob), art_size)
 
+func _incoming_threats() -> Array[int]:
+	# A tactical warning, not a modifier to AI, damage, or pathfinding.
+	var counts: Array[int] = [0, 0, 0]
+	if phase != "ATTACK":
+		return counts
+	for unit in units:
+		if int(unit["side"]) != 1 or bool(unit.get("returning", false)):
+			continue
+		if float(unit["position"]) < 0.62 or float(unit.get("health", 0.0)) <= 0.0:
+			continue
+		var target_lane: int = int(unit["lane"])
+		if target_lane >= 0 and target_lane < 3:
+			counts[target_lane] += 1
+	return counts
+
 func _draw_arena() -> void:
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
@@ -2286,6 +2307,18 @@ func _draw_arena() -> void:
 		var gy := center.y + cos(float(i) * 4.73 + visual_time * 0.4) * h * 0.48
 		arena.draw_circle(Vector2(gx, gy), 2.2, Color("ffdf7a", 0.6))
 	arena.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# Fixed-size, screen-space danger badges remain legible on compact phones.
+	# Mark only enemies approaching our vault; returning raiders no longer count.
+	if phase == "ATTACK" and not tutorial_mode:
+		var threatened_lanes: Array[int] = _incoming_threats()
+		for path in 3:
+			if threatened_lanes[path] <= 0:
+				continue
+			var alert: Vector2 = _sprite_transform(_point(path, 0.085, 0)).origin
+			var pulse: float = 0.75 if presentation.reduced_motion else 0.68 + 0.24 * sin(visual_time * 5.0 + float(path))
+			arena.draw_circle(alert, 15.5, Color("491e28", 0.87))
+			arena.draw_arc(alert, 17.0, 0.0, TAU, 20, Color("ff8265", pulse), 2.5)
+			arena.draw_string(arena.get_theme_default_font(), alert + Vector2(-9, 5), str(threatened_lanes[path]), HORIZONTAL_ALIGNMENT_CENTER, 18, 14, Color.WHITE)
 	# No minimap: the entire battlefield is always visible.
 
 func _draw_attack_effect(p: Vector2, character_key: String, facing: float, friendly: bool, remaining_attack: float) -> void:

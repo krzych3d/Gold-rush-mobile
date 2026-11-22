@@ -21,6 +21,12 @@ var phase_seen := ""
 var last_language := ""
 var command_top := 0.0
 var usable := Rect2()
+# Visual-only events; currency and combat state are always committed in game.gd.
+const GOLD_FLIGHT_SECONDS := 0.85
+const VAULT_FLASH_SECONDS := 0.45
+var gold_flights: Array[Dictionary] = []
+var vault_flashes: Array[float] = [0.0, 0.0]
+var effects_canvas: Control
 
 func _ready() -> void:
 	name = "FullScreenBattle"
@@ -55,6 +61,14 @@ func _ready() -> void:
 	game.controls[9].reparent(row)
 	game.controls[9].custom_minimum_size.y = 66
 	Epic.button(game.controls[9], true, 21)
+	# One small overlay for all coin trails. It never captures taps.
+	effects_canvas = Control.new()
+	effects_canvas.name = "BattleGoldFeedback"
+	effects_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	effects_canvas.z_index = 30
+	add_child(effects_canvas)
+	effects_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	effects_canvas.draw.connect(_draw_gold_feedback)
 	resized.connect(_layout)
 	call_deferred("_layout")
 	sync()
@@ -217,6 +231,9 @@ func sync() -> void:
 		_refresh_navigation(self)
 	game.hud.text = L10n.t("ZŁOTO %d") % game.gold[0]
 	enemy_gold.text = "%s %d" % [L10n.t(game.RACE_NAMES[game.bot_race]), game.gold[1]]
+	# Critical gold amounts remain unmistakable even without motion effects.
+	game.hud.add_theme_color_override("font_color", Color("ff8d84") if game.gold[0] <= 250 else Color("f6d68c"))
+	enemy_gold.add_theme_color_override("font_color", Color("ffe1a4") if game.gold[1] <= 250 else Color("ffb7a8"))
 	game.timer_label.text = L10n.t("FALA %d • %s\n%d s • odsetki %d%%") % [game.wave, L10n.t("PRZYGOTOWANIE") if game.phase == "PREP" else L10n.t("BITWA"), int(maxf(0, ceilf(game.remaining))), int(game.interest_rate(game.selected_race, game.bank_level) * 100)]
 	if game.wave >= game.Rules.PRESSURE_START:
 		game.timer_label.text += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
@@ -234,6 +251,82 @@ func sync() -> void:
 			set_drawer_open(false)
 		elif game.phase == "PREP" and not landscape:
 			set_drawer_open(true, false)
+
+
+func queue_gold_flight(side: int, path: int, amount: int) -> void:
+	# Only a completed return can create this effect; no duplicate currency.
+	if amount <= 0 or side < 0 or side > 1 or path < 0 or path >= 3:
+		return
+	if effects_canvas == null or game.presentation.reduced_motion:
+		return
+	gold_flights.append({"side": side, "lane": path, "amount": amount, "age": 0.0})
+	var budget: int = 6 if game.presentation.effective_quality == "battery" else 12
+	while gold_flights.size() > budget:
+		gold_flights.pop_front()
+	effects_canvas.queue_redraw()
+
+func flash_vault(side: int, amount: int) -> void:
+	# Highlight lost coins at the existing gold HUD, without changing combat.
+	if amount <= 0 or side < 0 or side > 1 or effects_canvas == null:
+		return
+	if game.presentation.reduced_motion:
+		return
+	vault_flashes[side] = VAULT_FLASH_SECONDS
+	effects_canvas.queue_redraw()
+
+func _process(delta: float) -> void:
+	if effects_canvas == null:
+		return
+	if game.presentation.reduced_motion:
+		if not gold_flights.is_empty() or vault_flashes[0] > 0.0 or vault_flashes[1] > 0.0:
+			gold_flights.clear()
+			vault_flashes = [0.0, 0.0]
+			effects_canvas.queue_redraw()
+		return
+	if gold_flights.is_empty() and vault_flashes[0] <= 0.0 and vault_flashes[1] <= 0.0:
+		return
+	for index in range(gold_flights.size() - 1, -1, -1):
+		var flight: Dictionary = gold_flights[index]
+		flight["age"] = float(flight["age"]) + delta
+		if float(flight["age"]) >= GOLD_FLIGHT_SECONDS:
+			gold_flights.remove_at(index)
+	for side in 2:
+		vault_flashes[side] = maxf(0.0, vault_flashes[side] - delta)
+	effects_canvas.queue_redraw()
+
+func _gold_source(side: int, path: int) -> Vector2:
+	var world: Vector2 = game._point(path, 0.0, side)
+	var arena_local: Vector2 = game._sprite_transform(world).origin
+	return effects_canvas.get_global_transform().affine_inverse() * (game.arena.get_global_transform() * arena_local)
+
+func _gold_target(side: int) -> Vector2:
+	var target: Label = game.hud if side == 0 else enemy_gold
+	return effects_canvas.get_global_transform().affine_inverse() * target.get_global_rect().get_center()
+
+func _draw_gold_feedback() -> void:
+	if game.presentation.reduced_motion:
+		return
+	for side in 2:
+		if vault_flashes[side] > 0.0:
+			var progress: float = 1.0 - vault_flashes[side] / VAULT_FLASH_SECONDS
+			var center: Vector2 = _gold_target(side)
+			var color: Color = Color("ff796c") if side == 0 else Color("ffcc80")
+			effects_canvas.draw_arc(center, 20.0 + 28.0 * progress,
+				0.0, TAU, 24, Color(color.r, color.g, color.b, 0.78 * (1.0 - progress)), 3.0)
+	for flight in gold_flights:
+		var source: Vector2 = _gold_source(int(flight["side"]), int(flight["lane"]))
+		var target: Vector2 = _gold_target(int(flight["side"]))
+		var progress: float = clampf(float(flight["age"]) / GOLD_FLIGHT_SECONDS, 0.0, 1.0)
+		var arc_height: float = 30.0 + minf(25.0, float(flight["amount"]) * 0.05)
+		var motes: int = 3 if game.presentation.effective_quality == "battery" else 5
+		for mote in motes:
+			var delayed: float = clampf((progress - 0.035 * float(mote)) / (1.0 - 0.035 * float(mote)), 0.0, 1.0)
+			var eased: float = delayed * delayed * (3.0 - 2.0 * delayed)
+			var offset: Vector2 = Vector2(sin(float(mote) * 2.399) * 10.0, -arc_height * sin(eased * PI))
+			var point: Vector2 = source.lerp(target, eased) + offset * (1.0 - eased * 0.5)
+			var alpha: float = minf(1.0, delayed * 8.0) * (1.0 - 0.55 * eased)
+			effects_canvas.draw_circle(point, 3.6 - 1.4 * eased, Color(1.0, 0.77, 0.25, alpha))
+			effects_canvas.draw_circle(point + Vector2(-0.9, -1.0), 1.1, Color(1.0, 0.98, 0.72, alpha))
 
 func _refresh_navigation(node: Node) -> void:
 	if node is Button and node.has_meta("caption_key"):

@@ -122,6 +122,45 @@ func _run() -> void:
 	if not _require(game.menu_confirmation != null, "Android Back gets trapped trying to close permanent portrait commands"):
 		return
 	game._dismiss_menu_confirmation()
+	# Cosmetic feedback cannot modify gold or disrupt lane control.
+	var wallet_before: Array = game.gold.duplicate()
+	game.presentation.reduced_motion = false
+	if not _require(shell.effects_canvas != null and shell.effects_canvas.mouse_filter == Control.MOUSE_FILTER_IGNORE, "Gold feedback overlay captures player touches"):
+		return
+	shell.queue_gold_flight(0, 1, 60)
+	shell.flash_vault(0, 60)
+	if not _require(shell.gold_flights.size() == 1 and shell.vault_flashes[0] > 0.0, "Battle did not show earned/lost gold effects"):
+		return
+	var old_position: Vector2 = shell._gold_source(0, 1)
+	await _resize(Vector2i(1280, 720))
+	var new_position: Vector2 = shell._gold_source(0, 1)
+	if not _require(old_position.distance_to(new_position) > 10.0, "Gold flight did not follow battlefield rotation"):
+		return
+	shell._process(1.0)
+	if not _require(shell.gold_flights.is_empty() and shell.vault_flashes[0] <= 0.0 and game.gold == wallet_before, "Gold effect changed currency or failed to expire"):
+		return
+	game.presentation.reduced_motion = true
+	shell.queue_gold_flight(0, 1, 60)
+	shell.flash_vault(0, 60)
+	if not _require(shell.gold_flights.is_empty() and shell.vault_flashes[0] == 0.0, "Reduced-motion mode does not suppress gold feedback"):
+		return
+	game.presentation.reduced_motion = false
+	var existing_units: Array = game.units
+	game.units = [
+		{"side": 1, "lane": 0, "position": 0.72, "returning": false, "health": 20.0},
+		{"side": 1, "lane": 0, "position": 0.87, "returning": false, "health": 20.0},
+		{"side": 1, "lane": 1, "position": 0.88, "returning": true, "health": 20.0},
+		{"side": 0, "lane": 2, "position": 0.98, "returning": false, "health": 20.0},
+		{"side": 1, "lane": 2, "position": 0.20, "returning": false, "health": 20.0}
+	]
+	if not _require(game._incoming_threats() == [2, 0, 0], "Tactical lane alert miscounts threats or shows returning units"):
+		return
+	game.units = existing_units
+	game.phase = "PREP"
+	if not _require(game._incoming_threats() == [0, 0, 0], "Tactical alerts must be hidden during preparation"):
+		return
+	if not _require(game.gold == wallet_before, "UI tests mutated battle gold"):
+		return
 	DirAccess.remove_absolute("user://qa-rotation.cfg")
 	print("Battle presentation PASSED: seven sizes, rotation during a match/tween, whole fixed map, HUD, readable unit scale, lane hits and purchases")
 	game.queue_free()
