@@ -16,6 +16,8 @@ const AccountProgress = preload("res://scripts/account_progress.gd")
 const Catalog = preload("res://scripts/game_catalog.gd")
 const Rules = preload("res://scripts/balance_rules.gd")
 const TutorialCoach = preload("res://scripts/tutorial_coach.gd")
+const WaveLedger = preload("res://scripts/wave_ledger.gd")
+const WaveSummaryPanel = preload("res://scripts/wave_summary_panel.gd")
 var tutorial_mode := false
 var tutorial_coach
 var tutorial_session: Control
@@ -59,6 +61,9 @@ var pending_account_reward: Dictionary = {}
 const PENDING_REWARD_META := "vault_wars_pending_reward_visual"
 var codex_overlay: Control
 var settings_overlay: Control
+var wave_ledger = WaveLedger.new()
+var last_wave_summary: Dictionary = {}
+var wave_summary_overlay: Control
 
 var selected_race := 0
 var bot_race := 1
@@ -945,6 +950,7 @@ func _guard_combat(dt: float) -> void:
 					unit["strike_cooldown"] = 0.45 if bool(unit.get("frenzy", false)) else 0.65
 
 func _record_fallen(data: Dictionary) -> void:
+	wave_ledger.record_fallen(int(data["side"]), bool(data.get("guard", false)))
 	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false)), "guard": bool(data.get("guard", false))})
 	if fallen_actors.size() > 30:
 		fallen_actors.pop_front()
@@ -1144,6 +1150,7 @@ func _begin_attack() -> void:
 	_refresh()
 
 func launch_wave() -> void:
+	wave_ledger.begin_wave(wave, gold)
 	units.clear()
 	previous_raids = [[0, 0, 0], [0, 0, 0]]
 	previous_kinds = [[0, 0, 0], [0, 0, 0]]
@@ -1171,6 +1178,9 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "previous_position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "frenzy": side_ability(side) and side_race(side) == 1, "shadow_evasion": side_ability(side) and side_race(side) == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
+	# A visible report never consumes the next wave's preparation clock.
+	if is_instance_valid(wave_summary_overlay):
+		return
 	if tutorial_mode or is_instance_valid(tutorial_session) or (is_instance_valid(help_overlay) and help_overlay.visible):
 		return
 	performance_elapsed += SIM_STEP
@@ -1323,6 +1333,7 @@ func _simulate(dt: float) -> void:
 			if not bool(unit.get("blocked", false)):
 				unit["position"] -= unit["speed"] * dt
 			if unit["position"] <= 0.0:
+				wave_ledger.record_delivery(int(unit["side"]), int(unit["carried"]))
 				gold[unit["side"]] += unit["carried"]
 				# Gold arrives at its owner before a purely visual flight to the HUD.
 				if int(unit["carried"]) > 0 and is_instance_valid(battle_shell) and not tutorial_mode:
@@ -1399,6 +1410,19 @@ func _remaining_account_reward(badge) -> Dictionary:
 func _clear_pending_account_reward() -> void:
 	pending_account_reward = {}
 
+func _show_wave_summary() -> void:
+	if last_wave_summary.is_empty() or tutorial_mode or phase != "PREP" or is_instance_valid(wave_summary_overlay):
+		return
+	wave_summary_overlay = WaveSummaryPanel.new()
+	wave_summary_overlay.summary = last_wave_summary.duplicate(true)
+	add_child(wave_summary_overlay)
+	wave_summary_overlay.dismissed.connect(_close_wave_summary)
+
+func _close_wave_summary() -> void:
+	if is_instance_valid(wave_summary_overlay):
+		wave_summary_overlay.queue_free()
+	wave_summary_overlay = null
+
 func _request_main_menu() -> void:
 	if phase == "SELECT":
 		return
@@ -1461,6 +1485,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _navigate_back() -> void:
+	if is_instance_valid(wave_summary_overlay):
+		_close_wave_summary()
+		return
 	if is_instance_valid(tutorial_session):
 		_close_tutorial()
 		return
@@ -1499,6 +1526,7 @@ func _end_wave() -> void:
 	if _check_vaults():
 		return
 	# Only the first 1000 coins earn interest: wealth cannot grow exponentially.
+	var gold_before_interest: Array = gold.duplicate()
 	for side in 2:
 		var payout: int = Rules.interest_payout(gold[side], side_race(side), side_bank(side))
 		interest_last[side] = payout
@@ -1511,6 +1539,7 @@ func _end_wave() -> void:
 		gold[side] = maxi(0, gold[side] - pressure)
 	if _check_vaults():
 		return
+	last_wave_summary = wave_ledger.finish(gold_before_interest, interest_last, pressure, gold)
 	wave += 1
 	ability_used = false
 	bot_ability_used = false
@@ -1519,6 +1548,8 @@ func _end_wave() -> void:
 	_set_message("INTEREST +%d GOLD! Protect savings or invest in your army.", [interest_last[0]])
 	if wave >= Rules.PRESSURE_START:
 		_set_message("Odsetki +%d. Presja skarbców po tej fali: -%d dla obu stron.", [interest_last[0], Rules.vault_pressure(wave)])
+	if presentation.wave_summary_auto and not last_wave_summary.is_empty() and not tutorial_mode:
+		call_deferred("_show_wave_summary")
 
 func _refresh() -> void:
 	race_button.text = L10n.t("RACE: %s") % L10n.t(RACE_NAMES[selected_race])
