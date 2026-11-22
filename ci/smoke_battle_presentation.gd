@@ -161,6 +161,69 @@ func _run() -> void:
 		return
 	if not _require(game.gold == wallet_before, "UI tests mutated battle gold"):
 		return
+
+	# Independent statistics test: deliveries, casualties, income and pressure.
+	var Ledger = load("res://scripts/wave_ledger.gd")
+	var tracker = Ledger.new()
+	tracker.begin_wave(4, [600, 450])
+	tracker.record_delivery(0, 70)
+	tracker.record_delivery(1, 25)
+	tracker.record_fallen(0, false)
+	tracker.record_fallen(1, false)
+	tracker.record_fallen(0, true)
+	var report: Dictionary = tracker.finish([670, 475], [40, 20], 10, [700, 485])
+	if not _require(report["delivered"] == [70, 25] and report["raiders_lost"] == [1, 1] and report["defenders_lost"] == [1, 0], "Wave report lost combat events"):
+		return
+	if not _require(report["net"] == [100, 35] and report["interest"] == [40, 20] and report["pressure"] == 10, "Wave report miscalculated gold balance"):
+		return
+	if not _require(tracker.current.is_empty(), "Report must reset wave event counters"):
+		return
+	game.phase = "PREP"
+	game.last_wave_summary = report
+	shell.sync()
+	if not _require(shell.summary_button != null and not shell.summary_button.disabled, "Manual wave report unavailable"):
+		return
+	var before_report_gold: Array = game.gold.duplicate()
+	var before_report_timer: float = game.remaining
+	shell.summary_button.pressed.emit()
+	await process_frame
+	if not _require(is_instance_valid(game.wave_summary_overlay), "Manual summary did not open"):
+		return
+	var report_panel = game.wave_summary_overlay
+	if not _require(report_panel.continue_button != null and report_panel.continue_button.text == "WZNÓW PRZYGOTOWANIE", "Report missing resume action"):
+		return
+	game._tick()
+	if not _require(game.remaining == before_report_timer and game.gold == before_report_gold, "Wave report consumed preparation time or changed gold"):
+		return
+	await _resize(Vector2i(960, 540))
+	if not _require(Rect2(Vector2.ZERO, Vector2(960, 540)).grow(2).encloses(report_panel.card.get_global_rect()), "Report card clipped in landscape"):
+		return
+	game._navigate_back()
+	if not _require(game.wave_summary_overlay == null, "Android Back failed to close summary"):
+		return
+	game.presentation.wave_summary_auto = true
+	game.presentation.save()
+	var Settings = load("res://scripts/mobile_settings.gd")
+	var saved_settings = Settings.new("user://qa-rotation.cfg")
+	if not _require(saved_settings.wave_summary_auto, "Automatic report setting did not persist"):
+		return
+	# A real wave transition should pause the next preparation countdown.
+	game.units.clear()
+	game.phase = "ATTACK"
+	game.wave_ledger.begin_wave(game.wave, game.gold)
+	game._end_wave()
+	await process_frame
+	if not _require(game.phase == "PREP" and is_instance_valid(game.wave_summary_overlay), "Automatic report not shown after completed wave"):
+		return
+	var auto_timer: float = game.remaining
+	game._tick()
+	if not _require(game.remaining == auto_timer, "Automatic report did not pause preparation"):
+		return
+	game.wave_summary_overlay.continue_button.pressed.emit()
+	if not _require(game.wave_summary_overlay == null, "Resume button did not dismiss summary"):
+		return
+	game.presentation.wave_summary_auto = false
+	game.presentation.save()
 	DirAccess.remove_absolute("user://qa-rotation.cfg")
 	print("Battle presentation PASSED: seven sizes, rotation during a match/tween, whole fixed map, HUD, readable unit scale, lane hits and purchases")
 	game.queue_free()
