@@ -28,6 +28,7 @@ const RACE_DESCRIPTIONS := ["Krasnoludy: 28% odsetek i +25% PŻ najeźdźców", 
 const RACE_COLORS := [Color("d7a85c"), Color("78c978"), Color("a6dfff"), Color("ba8aff")]
 const PREP_TIME := 30.0
 const ATTACK_TIME := 60.0
+const SIM_STEP := 0.05 # Fixed 20 Hz gameplay simulation; rendering is interpolated separately.
 const COSTS := [75, 140, 110]
 const LOOTS := [50, 160, 40]
 const HP := [45.0, 180.0, 75.0]
@@ -100,6 +101,7 @@ var menu_music: AudioStreamPlayer
 var performance_label: Label
 var performance_elapsed := 0.0
 var render_elapsed := 0.0
+var visual_step_elapsed := 0.0 # Time since the last simulation tick, for render-only interpolation.
 var ui_elapsed := 0.0
 var title_label: Label
 var race_button: Button
@@ -463,7 +465,7 @@ func _ready() -> void:
 	controls.append(start)
 	start.pressed.connect(_start_pressed)
 	var clock := Timer.new()
-	clock.wait_time = 0.05
+	clock.wait_time = SIM_STEP
 	clock.timeout.connect(_tick)
 	add_child(clock)
 	clock.start()
@@ -591,9 +593,12 @@ func _process(delta: float) -> void:
 	if phase == "SELECT" or phase == "END":
 		return
 	visual_time += delta
+	visual_step_elapsed = minf(visual_step_elapsed + delta, SIM_STEP)
 	render_elapsed += delta
-	if render_elapsed >= 1.0 / presentation.battlefield_fps():
-		render_elapsed = 0.0
+	var redraw_interval: float = 1.0 / presentation.battlefield_fps()
+	if render_elapsed >= redraw_interval:
+		# Preserve elapsed time to avoid uneven frame pacing at 30/45 FPS.
+		render_elapsed = fmod(render_elapsed, redraw_interval)
 		arena.queue_redraw()
 	presentation.observe_fps(delta, Engine.get_frames_per_second())
 
@@ -936,10 +941,10 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	var unit_health: float = stats["health"]
 	var unit_speed: float = stats["speed"]
 	var unit_capacity: int = stats["capacity"]
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "previous_position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
-	performance_elapsed += 0.05
+	performance_elapsed += SIM_STEP
 	if performance_elapsed >= 1.0:
 		performance_elapsed = 0.0
 		performance_label.text = "FPS %d  |  SCRIPT %.1f ms  |  UNITS %d" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, units.size() + guards.size()]
@@ -950,12 +955,13 @@ func _tick() -> void:
 	if _check_vaults():
 		_refresh()
 		return
-	remaining -= 0.05
+	remaining -= SIM_STEP
 	if phase == "PREP":
 		if remaining <= 0.0:
 			_begin_attack()
 	else:
-		_simulate(0.05)
+		visual_step_elapsed = 0.0
+		_simulate(SIM_STEP)
 		if _check_vaults():
 			_refresh()
 			return
@@ -963,7 +969,7 @@ func _tick() -> void:
 			_end_wave()
 	# Buttons and rich text are expensive to layout on older Android devices.
 	# Update the clock and affordability 5×/sec rather than 20×/sec.
-	ui_elapsed += 0.05
+	ui_elapsed += SIM_STEP
 	if ui_elapsed >= 0.2 or phase == "END":
 		ui_elapsed = 0.0
 		_refresh()
@@ -991,6 +997,10 @@ func _simulate(dt: float) -> void:
 		spark["life"] = float(spark["life"]) - dt
 		if float(spark["life"]) <= 0.0:
 			hit_sparks.erase(spark)
+	# Snapshot positions before the fixed-step movement update. Rendering never
+	# changes simulation positions, so physics, traps and balance stay identical.
+	for unit in units:
+		unit["previous_position"] = float(unit["position"])
 	_guard_combat(dt)
 	for unit in units.duplicate():
 		unit["action_time"] = float(unit.get("action_time", 0.0)) + dt
@@ -1810,9 +1820,13 @@ func _draw_arena() -> void:
 	for guard in guards:
 		actors.append({"p": _point(int(guard["lane"]), float(guard["position"]), int(guard["side"])), "data": guard, "guard": true, "side": int(guard["side"])})
 	for unit in units:
-		if float(unit["position"]) < -0.035:
+		var position_now: float = float(unit["position"])
+		if position_now < -0.035:
 			continue # Units enter the battlefield gradually instead of stacking at the castle.
-		actors.append({"p": _point(int(unit["lane"]), clampf(float(unit["position"]), -0.035, 1.0), int(unit["side"])), "data": unit, "guard": false, "side": int(unit["side"])})
+		var position_before: float = float(unit.get("previous_position", position_now))
+		var alpha: float = clampf(visual_step_elapsed / SIM_STEP, 0.0, 1.0)
+		var position_drawn: float = lerpf(position_before, position_now, alpha)
+		actors.append({"p": _point(int(unit["lane"]), clampf(position_drawn, -0.035, 1.0), int(unit["side"])), "data": unit, "guard": false, "side": int(unit["side"])})
 	actors.sort_custom(func(a, b): return _iso_project(a["p"]).y < _iso_project(b["p"]).y)
 	for actor in actors:
 		var p: Vector2 = actor["p"]
