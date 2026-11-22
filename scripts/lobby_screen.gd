@@ -808,6 +808,9 @@ func _build_settings() -> void:
 	_check(comfort, L10n.t("Licznik płynności w bitwie"), "ShowFPS", game.presentation.show_fps, func(value: bool) -> void:
 		game.presentation.show_fps = value
 		game._apply_presentation(true))
+	_check(comfort, L10n.t("Pokazuj podsumowanie po każdej fali"), "AutoWaveSummary", game.presentation.wave_summary_auto, func(value: bool) -> void:
+		game.presentation.wave_summary_auto = value
+		game.presentation.save())
 	comfort.add_child(_label(L10n.t("Zmiany zapisują się od razu. Jakość efektów nie zmienia zasad, kosztów ani obrażeń."), 18))
 	var artwork := _image(MENU_ART, 190)
 	artwork.name = "SettingsIllustration"
