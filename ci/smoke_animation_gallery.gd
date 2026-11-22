@@ -73,6 +73,14 @@ func _run_smoke() -> void:
 		push_error("Interpolation must smoothly span the previous and current positions")
 		quit(1)
 		return
+	if not is_equal_approx(game._render_unit_position({"previous_position": 0.8, "position": 0.4}, 0.5), 0.6):
+		push_error("Returning gold carriers must interpolate in reverse")
+		quit(1)
+		return
+	if not is_equal_approx(game._render_unit_position(sample_unit, 2.0), 0.6):
+		push_error("Interpolated position must not extrapolate beyond combat ticks")
+		quit(1)
+		return
 	if not is_equal_approx(game._render_unit_position({"position": 0.3}, 0.5), 0.3):
 		push_error("Legacy unit interpolation needs a safe fallback")
 		quit(1)
