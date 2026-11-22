@@ -33,6 +33,7 @@ const RACE_DESCRIPTIONS := ["Krasnoludy: 24% odsetek i +25% PŻ najeźdźców", 
 const RACE_COLORS := [Color("d7a85c"), Color("78c978"), Color("a6dfff"), Color("ba8aff")]
 const PREP_TIME := 30.0
 const ATTACK_TIME := 60.0
+const SIM_STEP := 0.05 # 20Hz gameplay, independent from visual interpolation.
 const COSTS = Rules.COSTS
 const LOOTS = Rules.LOOTS
 const HP = Rules.HP
@@ -112,6 +113,7 @@ var menu_music: AudioStreamPlayer
 var performance_label: Label
 var performance_elapsed := 0.0
 var render_elapsed := 0.0
+var visual_step_elapsed := 0.0 # Since last simulation tick.
 var ui_elapsed := 0.0
 var title_label: Label
 var race_button: Button
@@ -475,7 +477,7 @@ func _ready() -> void:
 	controls.append(start)
 	start.pressed.connect(_start_pressed)
 	var clock := Timer.new()
-	clock.wait_time = 0.05
+	clock.wait_time = SIM_STEP
 	clock.timeout.connect(_tick)
 	add_child(clock)
 	clock.start()
@@ -608,9 +610,12 @@ func _process(delta: float) -> void:
 	if phase == "SELECT" or phase == "END":
 		return
 	visual_time += delta
+	visual_step_elapsed = minf(visual_step_elapsed + delta, SIM_STEP)
 	render_elapsed += delta
-	if render_elapsed >= 1.0 / presentation.battlefield_fps():
-		render_elapsed = 0.0
+	var redraw_interval: float = 1.0 / presentation.battlefield_fps()
+	if render_elapsed >= redraw_interval:
+		# Preserve fractional time for stable pacing on 30/45 FPS screens.
+		render_elapsed = fmod(render_elapsed, redraw_interval)
 		arena.queue_redraw()
 	presentation.observe_fps(delta, Engine.get_frames_per_second())
 
@@ -1163,12 +1168,12 @@ func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	var unit_health: float = stats["health"]
 	var unit_speed: float = stats["speed"]
 	var unit_capacity: int = stats["capacity"]
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "frenzy": side_ability(side) and side_race(side) == 1, "shadow_evasion": side_ability(side) and side_race(side) == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "previous_position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "frenzy": side_ability(side) and side_race(side) == 1, "shadow_evasion": side_ability(side) and side_race(side) == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
 	if tutorial_mode or is_instance_valid(tutorial_session) or (is_instance_valid(help_overlay) and help_overlay.visible):
 		return
-	performance_elapsed += 0.05
+	performance_elapsed += SIM_STEP
 	if performance_elapsed >= 1.0:
 		performance_elapsed = 0.0
 		performance_label.text = "FPS %d  |  SCRIPT %.1f ms  |  UNITS %d" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, units.size() + guards.size()]
@@ -1179,12 +1184,13 @@ func _tick() -> void:
 	if _check_vaults():
 		_refresh()
 		return
-	remaining -= 0.05
+	remaining -= SIM_STEP
 	if phase == "PREP":
 		if remaining <= 0.0:
 			_begin_attack()
 	else:
-		_simulate(0.05)
+		visual_step_elapsed = 0.0
+		_simulate(SIM_STEP)
 		if _check_vaults():
 			_refresh()
 			return
@@ -1192,7 +1198,7 @@ func _tick() -> void:
 			_end_wave()
 	# Buttons and rich text are expensive to layout on older Android devices.
 	# Update the clock and affordability 5×/sec rather than 20×/sec.
-	ui_elapsed += 0.05
+	ui_elapsed += SIM_STEP
 	if ui_elapsed >= 0.2 or phase == "END":
 		ui_elapsed = 0.0
 		_refresh()
@@ -1220,6 +1226,9 @@ func _simulate(dt: float) -> void:
 		spark["life"] = float(spark["life"]) - dt
 		if float(spark["life"]) <= 0.0:
 			hit_sparks.erase(spark)
+	# Visual snapshots do not affect gameplay, damage or movement speeds.
+	for unit in units:
+		unit["previous_position"] = float(unit["position"])
 	_guard_combat(dt)
 	# Target threats rather than the array's first free unit. Heavy transports
 	# draw armor-piercing fire; otherwise shoot the raider nearest the vault.
@@ -1999,6 +2008,11 @@ func _trap_position(trap: Dictionary, owner: int) -> Vector2:
 	var slot: int = int(trap.get("slot", 0))
 	return _point(int(trap["lane"]), 0.48 + float(slot % 5) * 0.085, 1 - owner)
 
+func _render_unit_position(unit: Dictionary, interpolation: float) -> float:
+	var current_position: float = float(unit["position"])
+	return lerpf(float(unit.get("previous_position", current_position)),
+		current_position, clampf(interpolation, 0.0, 1.0))
+
 func _unit_art_size() -> Vector2:
 	# Square source cells keep their anatomy. Enlarge gently with the map rather
 	# than suddenly shrinking when a unit dies, deposits or the phone rotates.
@@ -2078,10 +2092,12 @@ func _draw_arena() -> void:
 	var actors: Array = []
 	for guard in guards:
 		actors.append({"p": _point(int(guard["lane"]), float(guard["position"]), int(guard["side"])), "data": guard, "guard": true, "side": int(guard["side"])})
+	var draw_alpha: float = clampf(visual_step_elapsed / SIM_STEP, 0.0, 1.0)
 	for unit in units:
 		if float(unit["position"]) < -0.035:
 			continue # Units enter the battlefield gradually instead of stacking at the castle.
-		actors.append({"p": _point(int(unit["lane"]), clampf(float(unit["position"]), -0.035, 1.0), int(unit["side"])), "data": unit, "guard": false, "side": int(unit["side"])})
+		var render_position: float = _render_unit_position(unit, draw_alpha)
+		actors.append({"p": _point(int(unit["lane"]), clampf(render_position, -0.035, 1.0), int(unit["side"])), "data": unit, "guard": false, "side": int(unit["side"])})
 	actors.sort_custom(func(a, b): return _iso_project(a["p"]).y < _iso_project(b["p"]).y)
 	for actor in actors:
 		var p: Vector2 = actor["p"]
@@ -2117,32 +2133,45 @@ func _draw_arena() -> void:
 			animation_frame = mini(7, int((0.28 - float(data["hit_time"])) * 28.0))
 		if animation_row == 5:
 			animation_frame = mini(7, int((0.65 - float(data.get("steal_timer", 0.0))) * 12.0))
-		# Movement-aware animation: idle breathing, two-step gait and hit recoil.
-		var moving: bool = not bool(actor["guard"]) and phase == "ATTACK" and animation_row == 1 and float(data.get("stunned", 0.0)) <= 0.0
+		# Blend motion between authored poses. These effects never touch combat.
+		var moving: bool = not bool(actor["guard"]) and phase == "ATTACK" and animation_row == 1 and float(data.get("stunned", 0.0)) <= 0.0 and not bool(data.get("blocked", false))
 		var pace: float = 12.5 if kind == 0 else 7.5 if kind == 1 else 10.0
 		var walk_phase: float = visual_time * (pace if moving else 2.4) + float(data["position"]) * 21.0
 		var stride: float = sin(walk_phase)
 		var lift: float = 0.0
-		var squash: float = 1.0
-		var bob: float = -lift
+		var bob: float = 0.0
+		var squash_y: float = 1.0
 		var art_size: Vector2 = _unit_art_size()
 		var scale_factor: float = art_size.y / 112.0
 		var tilt: float = 0.0
 		var facing: float = _travel_facing(int(actor["side"]), not bool(actor["guard"]) and bool(data.get("returning", false)))
 		var staggered: bool = not actor["guard"] and float(data.get("stunned", 0.0)) > 0.0
-		if staggered:
-			tilt = 0.16 * sin(visual_time * 17.0)
-			bob = 1.5
+		if not presentation.reduced_motion:
+			if moving:
+				lift = 3.2 * absf(stride)
+				bob = -lift
+				squash_y = 1.0 + 0.018 * cos(walk_phase * 2.0)
+			elif animation_row == 0:
+				bob = -0.9 * sin(visual_time * 2.3 + frame_offset)
+			if staggered:
+				tilt = 0.075 * sin(visual_time * 9.0)
+				bob = 1.5
+			elif animation_row == 2:
+				var attack_progress: float = clampf(1.0 - float(data.get("attack_time", 0.0)) / 0.45, 0.0, 1.0)
+				tilt = 0.065 * sin(attack_progress * TAU)
+				bob = -2.0 * sin(attack_progress * PI)
+			elif animation_row == 3:
+				tilt = -0.055 * sin(visual_time * 16.0)
 		var shadow_scale: float = 1.0 - lift * 0.024
 		arena.draw_set_transform_matrix(_sprite_transform(p + Vector2(0, 2)).scaled_local(Vector2(1, 0.32)))
 		arena.draw_circle(Vector2.ZERO, 26.0 * scale_factor * shadow_scale, Color("030713", 0.42))
 		arena.draw_arc(Vector2.ZERO, 26.0 * scale_factor, 0, TAU, 24, Color("64eab8", 0.82) if friendly else Color("ff667b", 0.82), 2.5 / camera_zoom)
 		arena.draw_set_transform_matrix(_iso_transform())
-		if moving and stride > 0.82 and goblin_walk_prototype == null:
+		if moving and stride > 0.82 and goblin_walk_prototype == null and not presentation.reduced_motion and presentation.effective_quality != "battery":
 			var dust: float = (stride - 0.82) / 0.18
 			arena.draw_circle(p + Vector2(-facing * 15.0, 5.0), 3.0 + dust * 4.0, Color(0.85, 0.77, 0.58, dust * 0.28))
 		var animation_transform := _directional_sprite_transform(p, facing, tilt)
-		arena.draw_set_transform_matrix(animation_transform)
+		arena.draw_set_transform_matrix(animation_transform.scaled_local(Vector2(1.0, squash_y)))
 		# A genuine special sprite replaces the basic pose only for actions it
 		# visually depicts. All other states keep the upgraded six-row atlas.
 		var special_sheet: Texture2D = null
@@ -2229,23 +2258,27 @@ func _draw_arena() -> void:
 		var death_key: String = _character_key(int(fallen["side"]), int(fallen["kind"]), bool(fallen.get("guard", false)))
 		var death_atlas: Texture2D = _character_atlas(death_key)
 		var death_frame: int = mini(7, int(float(fallen["age"]) * 10.0))
-		var fallen_transform := _directional_sprite_transform(death_p, _travel_facing(int(fallen["side"]), bool(fallen.get("returning", false))))
+		var dying: float = clampf(float(fallen["age"]) / 0.8, 0.0, 1.0)
+		var death_tilt: float = 0.0 if presentation.reduced_motion else 0.12 * sin(dying * PI * 0.5)
+		var death_fade: float = 1.0 - smoothstep(0.70, 1.0, dying)
+		var fallen_transform := _directional_sprite_transform(death_p, _travel_facing(int(fallen["side"]), bool(fallen.get("returning", false))), death_tilt)
 		arena.draw_set_transform_matrix(fallen_transform)
 		if death_key == "goblin_raider" and goblin_action_strips.has("death"):
 			var death_strip: Texture2D = goblin_action_strips["death"]
 			var death_count: int = death_strip.get_width() / 192
 			var f: int = mini(death_count - 1, int(float(fallen["age"]) / 0.8 * death_count))
-			arena.draw_texture_rect_region(death_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(f * 192), 0), Vector2(192, 192)))
+			arena.draw_texture_rect_region(death_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(f * 192), 0), Vector2(192, 192)), Color(1, 1, 1, death_fade))
 		else:
-			arena.draw_texture_rect_region(death_atlas, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)))
+			arena.draw_texture_rect_region(death_atlas, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)), Color(1, 1, 1, death_fade))
 		arena.draw_set_transform_matrix(_iso_transform())
 	for spark in hit_sparks:
 		var p: Vector2 = spark["p"]
 		var life: float = float(spark["life"]) / 0.5
 		var color := Color("ffdd8c") if spark["friendly"] else Color("ff748f")
 		arena.draw_circle(p + Vector2(0, -29), 23.0 * (1.0 - life), Color(color.r, color.g, color.b, life * 0.2))
-		for k in 6:
-			var angle: float = TAU * float(k) / 6.0 + visual_time
+		var spark_count: int = 3 if presentation.effective_quality == "battery" or presentation.reduced_motion else 6
+		for k in spark_count:
+			var angle: float = TAU * float(k) / float(spark_count) + visual_time
 			var direction := Vector2(cos(angle), sin(angle))
 			arena.draw_line(p + Vector2(0, -29) + direction * 7.0, p + Vector2(0, -29) + direction * (10.0 + (1.0 - life) * 23.0), Color(color.r, color.g, color.b, life), 2.5)
 	for i in presentation.ambient_count():
