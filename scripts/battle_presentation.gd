@@ -297,11 +297,11 @@ func _process(delta: float) -> void:
 func _gold_source(side: int, path: int) -> Vector2:
 	var world: Vector2 = game._point(path, 0.0, side)
 	var arena_local: Vector2 = game._sprite_transform(world).origin
-	return effects_canvas.to_local(game.arena.to_global(arena_local))
+	return effects_canvas.get_global_transform().affine_inverse() * (game.arena.get_global_transform() * arena_local)
 
 func _gold_target(side: int) -> Vector2:
 	var target: Label = game.hud if side == 0 else enemy_gold
-	return effects_canvas.to_local(target.get_global_rect().get_center())
+	return effects_canvas.get_global_transform().affine_inverse() * target.get_global_rect().get_center()
 
 func _draw_gold_feedback() -> void:
 	if game.presentation.reduced_motion:
