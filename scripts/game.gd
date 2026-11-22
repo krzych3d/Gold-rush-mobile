@@ -14,6 +14,11 @@ const LobbyScreen = preload("res://scripts/lobby_screen.gd")
 const MobileSettings = preload("res://scripts/mobile_settings.gd")
 const AccountProgress = preload("res://scripts/account_progress.gd")
 const Catalog = preload("res://scripts/game_catalog.gd")
+const Rules = preload("res://scripts/balance_rules.gd")
+const TutorialCoach = preload("res://scripts/tutorial_coach.gd")
+var tutorial_mode := false
+var tutorial_coach
+var tutorial_session: Control
 const VAULT_TIER_ART = [
 	preload("res://assets/world/vault_tier_1.svg"),
 	preload("res://assets/world/vault_tier_2.svg"),
@@ -24,23 +29,23 @@ const VAULT_TIER_ART = [
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
 const RACE_ART_PREFIX := ["dwarf", "goblin", "elf", ""]
-const RACE_DESCRIPTIONS := ["Krasnoludy: 28% odsetek i +25% PŻ najeźdźców", "Gobliny: 18% odsetek i +20% tempa najeźdźców", "Elfy: 18% odsetek, +10% PŻ i +10 złota pojemności", "Voidborn: 18% odsetek, +10% tempa i +15 złota pojemności"]
+const RACE_DESCRIPTIONS := ["Krasnoludy: 24% odsetek i +25% PŻ najeźdźców", "Gobliny: 18% odsetek, +20% tempa i +5% pojemności", "Elfy: 18% odsetek, +10% PŻ i +5% pojemności", "Voidborn: 18% odsetek, +5% tempa i +8% pojemności"]
 const RACE_COLORS := [Color("d7a85c"), Color("78c978"), Color("a6dfff"), Color("ba8aff")]
 const PREP_TIME := 30.0
 const ATTACK_TIME := 60.0
-const COSTS := [75, 140, 110]
-const LOOTS := [50, 160, 40]
-const HP := [45.0, 180.0, 75.0]
-const SPEED := [0.21, 0.105, 0.15]
-const TRAP_COSTS := [55, 75, 155]
-const GUARD_COST := 130
-const GUARD_HP := 190.0
-const ABILITY_COST := 120
-const RAID_COST := 120
-const BANK_BASE_COST := 180
-const BANK_STEP_COST := 110
-const TRAP_DAMAGE := [40.0, 25.0, 11.0]
-const TRAP_CHARGES := [3, 2, 999]
+const COSTS = Rules.COSTS
+const LOOTS = Rules.LOOTS
+const HP = Rules.HP
+const SPEED = Rules.SPEED
+const TRAP_COSTS = Rules.TRAP_COSTS
+const GUARD_COST = Rules.GUARD_COST
+const GUARD_HP = Rules.GUARD_HP
+const ABILITY_COST = Rules.ABILITY_COST
+const RAID_COST = Rules.RAID_COST
+const BANK_BASE_COST = Rules.BANK_BASE_COST
+const BANK_STEP_COST = Rules.BANK_STEP_COST
+const TRAP_DAMAGE = Rules.TRAP_DAMAGE
+const TRAP_CHARGES = Rules.TRAP_CHARGES
 
 var presentation = MobileSettings.new()
 var account = AccountProgress.new()
@@ -55,6 +60,13 @@ var codex_overlay: Control
 var settings_overlay: Control
 
 var selected_race := 0
+var bot_race := 1
+var bot_bank_level := 0
+var bot_raid_boost := 0
+var bot_ability_used := false
+# Public history from the previous wave; the bot never reads queued player orders.
+var previous_raids: Array = [[0, 0, 0], [0, 0, 0]]
+var previous_kinds: Array = [[0, 0, 0], [0, 0, 0]]
 var wave := 1
 var phase := "SELECT"
 var remaining := PREP_TIME
@@ -214,7 +226,7 @@ func _ready() -> void:
 	menu_music.volume_db = -9.0
 	menu_music.stream_paused = not presentation.music_enabled
 	add_child(menu_music)
-	if ResourceLoader.exists("res://assets/audio/enchanted_vault_theme.wav"):
+	if not tutorial_mode and ResourceLoader.exists("res://assets/audio/enchanted_vault_theme.wav"):
 		var score := load("res://assets/audio/enchanted_vault_theme.wav") as AudioStreamWAV
 		if score != null:
 			score.loop_mode = AudioStreamWAV.LOOP_FORWARD
@@ -476,7 +488,8 @@ func _ready() -> void:
 	battle_shell.game = self
 	battle_shell.legacy_root = root
 	add_child(battle_shell)
-	_show_main_menu()
+	if not tutorial_mode:
+		_show_main_menu()
 
 func _show_main_menu() -> void:
 	if main_menu_overlay != null:
@@ -562,6 +575,8 @@ func _change_language(code: String) -> void:
 	for screen in [main_menu_overlay, selection_layer, codex_overlay, settings_overlay, help_overlay]:
 		if is_instance_valid(screen):
 			screen.rebuild_language()
+	if is_instance_valid(tutorial_session):
+		tutorial_session.rebuild_language()
 	_refresh()
 
 func _set_message(key: String, arguments: Array = []) -> void:
@@ -588,6 +603,8 @@ func _apply_presentation(persist: bool = false) -> void:
 		presentation.save()
 
 func _process(delta: float) -> void:
+	if is_instance_valid(tutorial_session):
+		return
 	if phase == "SELECT" or phase == "END":
 		return
 	visual_time += delta
@@ -617,6 +634,36 @@ func _close_how_to_play() -> void:
 		help_overlay.queue_free()
 		help_overlay = null
 	_restore_lobby()
+
+func _start_tutorial(chapter: int = 0) -> void:
+	if is_instance_valid(tutorial_session):
+		return
+	_hide_lobby()
+	tutorial_session = TutorialCoach.new()
+	tutorial_session.name = "GuidedTutorial"
+	tutorial_session.host = self
+	tutorial_session.chapter_index = chapter
+	tutorial_session.z_index = 130
+	add_child(tutorial_session)
+
+func _close_tutorial() -> void:
+	if not is_instance_valid(tutorial_session):
+		return
+	var session: Control = tutorial_session
+	session.closing = true
+	session.simulation_running = false
+	session.restore_host_controls()
+	tutorial_session = null
+	remove_child(session)
+	session.queue_free()
+	if help_overlay == null:
+		_show_how_to_play()
+	_restore_lobby()
+
+func _tutorial_allows(action: String) -> bool:
+	if is_instance_valid(tutorial_session):
+		return false
+	return not tutorial_mode or not is_instance_valid(tutorial_coach) or tutorial_coach.allows(action)
 
 func _show_race_selection() -> void:
 	if selection_layer != null:
@@ -663,6 +710,7 @@ func _choose_faction(index: int) -> void:
 	if not account.race_unlocked(index):
 		return
 	selected_race = index
+	bot_race = rng.randi_range(0, 3)
 	account_match_id = Crypto.new().generate_random_bytes(16).hex_encode()
 	account_battle_seconds = 0.0
 	account_finished_waves = 0
@@ -698,69 +746,156 @@ func _change_race() -> void:
 	_refresh()
 
 func _select_lane(index: int) -> void:
+	if not _tutorial_allows("lane:%d" % index):
+		return
 	lane = index
 	_set_message("Selected lane %d", [(lane + 1)])
 	_refresh()
 
 func _use_race_ability() -> void:
-	if phase != "PREP" or ability_used or gold[0] < ABILITY_COST:
+	if not activate_ability(0):
 		return
-	gold[0] -= ABILITY_COST
-	_check_vaults()
-	ability_used = true
-	match selected_race:
-		0:
-			for guard in guards:
-				if int(guard["side"]) == 0:
-					guard["health"] = float(guard["health"]) + 60.0
-					guard["max_health"] = float(guard["max_health"]) + 60.0
-		1:
-			pass # Frenzy applied to all friendly raiders on spawn.
-		2:
-			pass # Moon blessing adds extra capacity on spawn.
-		3:
-			pass # Shadow step grants one trap evasion on spawn.
 	_set_message("%s ACTIVATED", [ABILITY_NAMES[selected_race]])
 	_refresh()
 
-func _upgrade_bank() -> void:
-	var cost: int = BANK_BASE_COST + bank_level * BANK_STEP_COST
-	if phase != "PREP" or bank_level >= 5 or gold[0] < cost:
-		return
-	gold[0] -= cost
+func side_race(side: int) -> int:
+	return selected_race if side == 0 else bot_race
+
+func side_training(side: int) -> int:
+	return raid_boost if side == 0 else bot_raid_boost
+
+func side_bank(side: int) -> int:
+	return bank_level if side == 0 else bot_bank_level
+
+func side_ability(side: int) -> bool:
+	return ability_used if side == 0 else bot_ability_used
+
+func activate_ability(side: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("ability"):
+		return false
+	if phase != "PREP" or side_ability(side) or gold[side] < ABILITY_COST + reserve:
+		return false
+	if side_race(side) == 0 and guard_count(side) == 0:
+		return false
+	gold[side] -= ABILITY_COST
+	if side == 0:
+		ability_used = true
+	else:
+		bot_ability_used = true
+	if side_race(side) == 0:
+		for guard in guards:
+			if int(guard["side"]) == side:
+				guard["shield"] = Rules.IRON_SHIELD
 	_check_vaults()
-	bank_level += 1
+	return true
+
+func strategy_ability(side: int, reserve: int) -> bool:
+	# Speed alone has no economic value on an undefended one-trip route.
+	var useful := false
+	match side_race(side):
+		0:
+			useful = guard_count(side) >= 2
+		1:
+			useful = guard_count(1 - side) > 0
+			for trap in traps[1 - side]:
+				if int(trap["kind"]) == 2:
+					useful = true
+		2:
+			var cargo: float = float(Rules.free_units(wave) * 3 * int(raider_stats(-1, 2, false, 0)["capacity"]))
+			for order in orders[side]:
+				cargo += float(raider_stats(int(order["kind"]), 2, false, 0)["capacity"])
+			useful = cargo * 0.35 >= 100.0
+		3:
+			useful = not traps[1 - side].is_empty()
+	return activate_ability(side, reserve) if useful else false
+
+func guard_count(side: int, path: int = -1) -> int:
+	var count := 0
+	for guard in guards:
+		if int(guard["side"]) == side and (path == -1 or int(guard["lane"]) == path):
+			count += 1
+	return count
+
+func purchase_bank(side: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("bank"):
+		return false
+	var cost: int = BANK_BASE_COST + side_bank(side) * BANK_STEP_COST
+	if phase != "PREP" or side_bank(side) >= 5 or gold[side] < cost + reserve:
+		return false
+	gold[side] -= cost
+	if side == 0:
+		bank_level += 1
+	else:
+		bot_bank_level += 1
+	_check_vaults()
+	return true
+
+func purchase_training(side: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("training"):
+		return false
+	var cost: int = Rules.training_cost(side_training(side))
+	if phase != "PREP" or side_training(side) >= 3 or gold[side] < cost + reserve:
+		return false
+	gold[side] -= cost
+	if side == 0:
+		raid_boost += 1
+	else:
+		bot_raid_boost += 1
+	_check_vaults()
+	return true
+
+func _upgrade_bank() -> void:
+	if not purchase_bank(0):
+		return
 	_set_message("BANK LEVEL %d! The vault is upgraded; +4%% interest per wave.", [bank_level])
 	arena.queue_redraw()
 	_refresh()
 
 func _buy_raid_boost() -> void:
-	if phase != "PREP" or gold[0] < RAID_COST or raid_boost >= 3:
+	if not purchase_training(0):
 		return
-	gold[0] -= RAID_COST
-	_check_vaults()
-	raid_boost += 1
 	_set_message("Raid training %d/3: faster, stronger thieves.", [raid_boost])
 	_refresh()
 
 func _buy_guard() -> void:
 	if phase != "PREP":
 		return
-	var count := 0
-	for guard in guards:
-		if int(guard["side"]) == 0 and int(guard["lane"]) == lane:
-			count += 1
-	if gold[0] < GUARD_COST or count >= 3:
+	if not purchase_guard(0, lane):
 		_set_message("Need 130 vault gold; max 3 defenders per lane.")
 		_refresh()
 		return
-	gold[0] -= GUARD_COST
-	guards.append({"side": 0, "lane": lane, "position": 0.19 + float(count) * 0.11, "health": GUARD_HP, "max_health": GUARD_HP, "cooldown": 0.0})
-	_check_vaults()
 	_set_message("Defender assigned to lane %d", [(lane + 1)])
 	_refresh()
 
+func purchase_guard(side: int, path: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("guard"):
+		return false
+	var count: int = guard_count(side, path)
+	if phase != "PREP" or gold[side] < GUARD_COST + reserve or count >= 3:
+		return false
+	var slot := 0
+	while slot < 3:
+		var occupied := false
+		for guard in guards:
+			if int(guard["side"]) == side and int(guard["lane"]) == path and is_equal_approx(float(guard["position"]), 0.19 + float(slot) * 0.11):
+				occupied = true
+		if not occupied:
+			break
+		slot += 1
+	gold[side] -= GUARD_COST
+	guards.append({"side": side, "lane": path, "position": 0.19 + float(slot) * 0.11,
+		"health": GUARD_HP, "max_health": GUARD_HP, "shield": 0.0, "cooldown": 0.0})
+	_check_vaults()
+	return true
+
+func _damage_guard(guard: Dictionary, amount: float) -> void:
+	var absorbed: float = minf(float(guard.get("shield", 0.0)), amount)
+	guard["shield"] = float(guard.get("shield", 0.0)) - absorbed
+	guard["health"] = float(guard["health"]) - (amount - absorbed)
+
 func _guard_combat(dt: float) -> void:
+	for unit in units:
+		unit["blocked"] = false
 	for guard in guards.duplicate():
 		if float(guard["health"]) <= 0.0:
 			# Defenders use the same non-looping defeat animation as raiders.
@@ -771,14 +906,12 @@ func _guard_combat(dt: float) -> void:
 		guard["cooldown"] = maxf(0.0, float(guard["cooldown"]) - dt)
 		guard["attack_time"] = maxf(0.0, float(guard.get("attack_time", 0.0)) - dt)
 		guard["hit_time"] = maxf(0.0, float(guard.get("hit_time", 0.0)) - dt)
-		var gp: Vector2 = _point(int(guard["lane"]), float(guard["position"]), int(guard["side"]))
 		var target: Dictionary = {}
-		var nearest := 135.0
+		var nearest := 135.0 / (2.0 * WORLD_HALF_LENGTH)
 		for unit in units:
-			if int(unit["side"]) == int(guard["side"]) or int(unit["lane"]) != int(guard["lane"]):
+			if int(unit["side"]) == int(guard["side"]) or int(unit["lane"]) != int(guard["lane"]) or float(unit["health"]) <= 0.0:
 				continue
-			var up: Vector2 = _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"]))
-			var distance: float = gp.distance_to(up)
+			var distance: float = absf(1.0 - float(unit["position"]) - float(guard["position"]))
 			if distance < nearest:
 				nearest = distance
 				target = unit
@@ -796,15 +929,15 @@ func _guard_combat(dt: float) -> void:
 		for unit in units:
 			if int(unit["side"]) == int(guard["side"]) or int(unit["lane"]) != int(guard["lane"]):
 				continue
-			var up: Vector2 = _point(int(unit["lane"]), clampf(float(unit["position"]), 0.0, 1.0), int(unit["side"]))
-			if gp.distance_to(up) < 48.0:
-				# One discrete contact strike each 0.65s: the pose now matches damage.
-				# Preserve the previous average damage per second.
-				if float(unit.get("strike_cooldown", 0.0)) <= 0.0:
-					guard["health"] -= (9.0 if int(unit["kind"]) == -1 else 14.0) * 0.65
+			if absf(1.0 - float(unit["position"]) - float(guard["position"])) < 48.0 / (2.0 * WORLD_HALF_LENGTH):
+				unit["blocked"] = true
+				if float(unit.get("strike_cooldown", 0.0)) <= 0.0 and float(unit.get("stunned", 0.0)) <= 0.0 and float(guard["health"]) > 0.0:
+					# Carriers can break a guard; fast runners need another route.
+					var damage: float = 10.0 if int(unit["kind"]) == -1 else 22.0 if int(unit["kind"]) == 1 else 14.0
+					_damage_guard(guard, damage * 0.65)
 					guard["hit_time"] = 0.28
 					unit["attack_time"] = 0.45
-					unit["strike_cooldown"] = 0.65
+					unit["strike_cooldown"] = 0.45 if bool(unit.get("frenzy", false)) else 0.65
 
 func _record_fallen(data: Dictionary) -> void:
 	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false)), "guard": bool(data.get("guard", false))})
@@ -822,62 +955,162 @@ func _draw_health_bar(p: Vector2, health: float, max_health: float, friendly: bo
 func _buy_unit(kind: int) -> void:
 	if phase != "PREP":
 		return
-	var lane_count := 0
-	for order in orders[0]:
-		if order["lane"] == lane:
-			lane_count += 1
-	if gold[0] < COSTS[kind] or orders[0].size() >= 6 or lane_count >= 4:
+	if not purchase_unit(0, lane, kind):
 		_set_message("Not enough gold or unit limit reached.")
 		_refresh()
 		return
-	gold[0] -= COSTS[kind]
-	_check_vaults()
-	orders[0].append({"kind": kind, "lane": lane})
 	_set_message("Thief queued on lane %d", [(lane + 1)])
 	_refresh()
+
+func purchase_unit(side: int, path: int, kind: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("unit:%d" % kind):
+		return false
+	var lane_count := 0
+	for order in orders[side]:
+		if order["lane"] == path:
+			lane_count += 1
+	var cost: int = recruit_price(side, kind)
+	if phase != "PREP" or gold[side] < cost + reserve or orders[side].size() >= 6 or lane_count >= 4:
+		return false
+	gold[side] -= cost
+	_check_vaults()
+	orders[side].append({"kind": kind, "lane": path})
+	return true
+
+func recruit_price(side: int, kind: int) -> int:
+	var count := 0
+	for order in orders[side]:
+		if int(order["kind"]) == kind:
+			count += 1
+	return Rules.recruit_cost(kind, count)
 
 func _buy_trap(kind: int) -> void:
 	if phase != "PREP":
 		return
-	var lane_count := 0
-	for trap in traps[0]:
-		if trap["lane"] == lane:
-			lane_count += 1
-	if gold[0] < TRAP_COSTS[kind] or lane_count >= 5:
+	if not purchase_trap(0, lane, kind):
 		_set_message("Not enough gold or trap limit reached.")
 		_refresh()
 		return
-	gold[0] -= TRAP_COSTS[kind]
-	_check_vaults()
-	traps[0].append({"lane": lane, "kind": kind, "charges": TRAP_CHARGES[kind],
-		"slot": lane_count, "cooldown": 0.0, "fire_time": 0.0})
 	_set_message("Trap built on lane %d", [(lane + 1)])
 	_refresh()
 
+func purchase_trap(side: int, path: int, kind: int, reserve: int = 0) -> bool:
+	if not _tutorial_allows("trap:%d" % kind):
+		return false
+	var lane_count := 0
+	var occupied: Array = []
+	for trap in traps[side]:
+		if trap["lane"] == path:
+			lane_count += 1
+			occupied.append(int(trap.get("slot", 0)))
+	if phase != "PREP" or gold[side] < TRAP_COSTS[kind] + reserve or lane_count >= 5:
+		return false
+	var slot := 0
+	while occupied.has(slot):
+		slot += 1
+	gold[side] -= TRAP_COSTS[kind]
+	_check_vaults()
+	traps[side].append({"lane": path, "kind": kind, "charges": TRAP_CHARGES[kind],
+		"slot": slot, "cooldown": 0.0, "fire_time": 0.0})
+	return true
+
 func _bot_prepare() -> void:
-	var budget: int = mini(400, gold[1])
-	while budget >= 75 and orders[1].size() < 4:
-		var kind := rng.randi_range(0, 2)
-		if COSTS[kind] > budget or COSTS[kind] > gold[1]:
-			break
-		orders[1].append({"lane": rng.randi_range(0, 2), "kind": kind})
-		gold[1] -= COSTS[kind]
-		_check_vaults()
-		budget -= COSTS[kind]
-	if gold[1] >= GUARD_COST + 1 and guards.size() < mini(3 + wave, 9):
-		var bot_lane: int = rng.randi_range(0, 2)
-		var bot_count := 0
-		for guard in guards:
-			if int(guard["side"]) == 1 and int(guard["lane"]) == bot_lane:
-				bot_count += 1
-		if bot_count < 3:
-			gold[1] -= GUARD_COST
-			guards.append({"side": 1, "lane": bot_lane, "position": 0.19 + float(bot_count) * 0.11, "health": GUARD_HP, "max_health": GUARD_HP, "cooldown": 0.0})
-	if gold[1] >= 55 and traps[1].size() < wave * 2:
-		gold[1] -= 55
-		_check_vaults()
-		traps[1].append({"lane": rng.randi_range(0, 2), "kind": 0, "charges": 3,
-			"slot": traps[1].size() % 4, "cooldown": 0.0, "fire_time": 0.0})
+	prepare_strategy(1, "adaptive")
+
+func lane_defense(side: int, path: int) -> float:
+	var strength := 0.0
+	for guard in guards:
+		if int(guard["side"]) == side and int(guard["lane"]) == path and float(guard["health"]) > 0.0:
+			strength += float(guard["health"]) / GUARD_HP * 2.0
+	for trap in traps[side]:
+		if int(trap["lane"]) == path:
+			strength += 2.5 if int(trap["kind"]) == 2 else float(trap["charges"]) * 0.35
+	return strength
+
+func weakest_lane(side: int) -> int:
+	var best: int = rng.randi_range(0, 2)
+	for path in 3:
+		if lane_defense(side, path) < lane_defense(side, best):
+			best = path
+	return best
+
+func prepare_strategy(side: int, strategy: String) -> void:
+	# Also used by the tournament, with exactly the same purchase limits/prices.
+	var reserve := 300
+	var target: int = weakest_lane(1 - side)
+	var defend: int = weakest_lane(side)
+	if strategy == "save":
+		return
+	if strategy == "bank":
+		purchase_bank(side, reserve)
+		return
+	if strategy == "training":
+		purchase_training(side, reserve)
+		strategy_ability(side, reserve)
+		return
+	if strategy in ["rush", "carriers", "saboteurs"]:
+		var kind: int = {"rush": 0, "carriers": 1, "saboteurs": 2}[strategy]
+		for _n in 4:
+			purchase_unit(side, target, kind, reserve)
+		if wave >= 3:
+			strategy_ability(side, reserve)
+		return
+	if strategy in ["turrets", "spikes"]:
+		for _n in 3:
+			purchase_trap(side, weakest_lane(side), 2 if strategy == "turrets" else 0, reserve)
+		if wave >= 3:
+			strategy_ability(side, reserve)
+		return
+	if strategy == "guards":
+		for _n in 3:
+			purchase_guard(side, weakest_lane(side), reserve)
+		if wave >= 3:
+			strategy_ability(side, reserve)
+		return
+	if strategy == "mixed":
+		if lane_defense(side, defend) < 3.0:
+			purchase_guard(side, defend, reserve + 150)
+			purchase_trap(side, defend, 1, reserve + 150)
+		var raider_kind := 1
+		for trap in traps[1 - side]:
+			if int(trap["lane"]) == target:
+				raider_kind = 2
+		purchase_unit(side, target, raider_kind, reserve)
+		purchase_unit(side, target, 0, reserve)
+		if wave >= 3:
+			strategy_ability(side, reserve)
+		return
+	# Adapt to the previous raid, not to unlaunched purchases.
+	if wave == 1:
+		for path in 3:
+			purchase_trap(side, path, 0, reserve + 250)
+	var greatest_threat := -INF
+	for path in 3:
+		var threat: float = float(previous_raids[1 - side][path]) * 1.5 - lane_defense(side, path)
+		if threat > greatest_threat:
+			greatest_threat = threat
+			defend = path
+	if lane_defense(side, defend) < 3.5:
+		# Snares punish haste; guards punish sabotage; towers punish carriers.
+		var enemy_kind: int = previous_kinds[1 - side].find(previous_kinds[1 - side].max())
+		if enemy_kind == 2:
+			purchase_guard(side, defend, reserve + 150)
+		else:
+			purchase_trap(side, defend, 0 if enemy_kind == 0 else 2, reserve + 150)
+	if side_training(side) < mini(3, wave) and gold[side] > 750:
+		purchase_training(side, reserve + 150)
+	if gold[side] > Rules.INTEREST_PRINCIPAL + 250:
+		purchase_bank(side, Rules.INTEREST_PRINCIPAL)
+	var kind := 0
+	for trap in traps[1 - side]:
+		if int(trap["lane"]) == target:
+			kind = 2
+	if kind == 0 and guard_count(1 - side, target) > 0:
+		kind = 1
+	purchase_unit(side, target, kind, reserve + 150)
+	purchase_unit(side, target, 1 if kind == 2 else 0, reserve)
+	if wave >= 3:
+		strategy_ability(side, reserve + 100)
 
 func _start_pressed() -> void:
 	if phase == "END":
@@ -886,6 +1119,13 @@ func _start_pressed() -> void:
 		_begin_attack()
 
 func _begin_attack() -> void:
+	if is_instance_valid(tutorial_session):
+		return
+	if tutorial_mode:
+		if _tutorial_allows("attack") and phase == "PREP":
+			tutorial_coach.launch_demo()
+			_refresh()
+		return
 	if phase != "PREP":
 		return
 	_bot_prepare()
@@ -894,51 +1134,40 @@ func _begin_attack() -> void:
 	phase = "ATTACK"
 	account_wave_active = true
 	remaining = ATTACK_TIME
-	units.clear()
-	for side in 2:
-		for path in 3:
-			for n in (wave + 1 if wave < 5 else 7):
-				_spawn(side, path, -1, -float(n) * 0.07)
-		for order in orders[side]:
-			_spawn(side, order["lane"], order["kind"], -rng.randf_range(0.0, 0.15))
+	launch_wave()
 	_set_message("Attack phase! Steal gold and return home.")
 	_refresh()
 
+func launch_wave() -> void:
+	units.clear()
+	previous_raids = [[0, 0, 0], [0, 0, 0]]
+	previous_kinds = [[0, 0, 0], [0, 0, 0]]
+	for side in 2:
+		for path in 3:
+			for n in Rules.free_units(wave):
+				_spawn(side, path, -1, -float(n) * 0.07)
+		for index in orders[side].size():
+			var order: Dictionary = orders[side][index]
+			_spawn(side, order["lane"], order["kind"], -float(index) * 0.035)
+			previous_raids[side][int(order["lane"])] += 1
+			previous_kinds[side][int(order["kind"])] += 1
+
 func raider_stats(kind: int, race: int, with_ability: bool, training: int) -> Dictionary:
-	var unit_health: float = 60.0 if kind == -1 else HP[kind]
-	var unit_speed: float = 0.145 if kind == -1 else SPEED[kind]
-	var unit_capacity: int = 25 if kind == -1 else LOOTS[kind]
-	if with_ability:
-		match race:
-			1: unit_speed *= 1.35
-			2: unit_capacity += 35
-			3: unit_speed *= 1.18
-	match race:
-		0: unit_health *= 1.25
-		1: unit_speed *= 1.2
-		2:
-			unit_health *= 1.1
-			unit_capacity += 10
-		3:
-			unit_speed *= 1.1
-			unit_capacity += 15
-	unit_health *= 1.0 + float(training) * 0.12
-	unit_speed *= 1.0 + float(training) * 0.08
-	return {"health": unit_health, "speed": unit_speed, "capacity": unit_capacity}
+	return Rules.raider_stats(kind, race, with_ability, training)
 
 func interest_rate(race: int, level: int) -> float:
-	return (0.28 if race == 0 else 0.18) + float(level) * 0.04
+	return Rules.interest_rate(race, level)
 
 func _spawn(side: int, path: int, kind: int, offset: float) -> void:
-	# A negative race selects the unmodified bot stats. The guide calls this
-	# same calculator without changing selection, gold or simulation state.
-	var stats: Dictionary = raider_stats(kind, selected_race if side == 0 else -1, side == 0 and ability_used, raid_boost if side == 0 else 0)
+	var stats: Dictionary = raider_stats(kind, side_race(side), side_ability(side), side_training(side))
 	var unit_health: float = stats["health"]
 	var unit_speed: float = stats["speed"]
 	var unit_capacity: int = stats["capacity"]
-	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "shadow_evasion": side == 0 and ability_used and selected_race == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
+	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "frenzy": side_ability(side) and side_race(side) == 1, "shadow_evasion": side_ability(side) and side_race(side) == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
+	if tutorial_mode or is_instance_valid(tutorial_session) or (is_instance_valid(help_overlay) and help_overlay.visible):
+		return
 	performance_elapsed += 0.05
 	if performance_elapsed >= 1.0:
 		performance_elapsed = 0.0
@@ -992,6 +1221,18 @@ func _simulate(dt: float) -> void:
 		if float(spark["life"]) <= 0.0:
 			hit_sparks.erase(spark)
 	_guard_combat(dt)
+	# Target threats rather than the array's first free unit. Heavy transports
+	# draw armor-piercing fire; otherwise shoot the raider nearest the vault.
+	var turret_targets: Array = [{}, {}, {}, {}, {}, {}]
+	for target in units:
+		if bool(target["returning"]) or float(target["position"]) < 0.35 or float(target["position"]) >= 0.85 or float(target["health"]) <= 0.0:
+			continue
+		var key: int = (1 - int(target["side"])) * 3 + int(target["lane"])
+		var current: Dictionary = turret_targets[key]
+		var priority: float = (2.0 if int(target["kind"]) == 1 else 0.0) + float(target["position"])
+		var current_priority: float = -1.0 if current.is_empty() else (2.0 if int(current["kind"]) == 1 else 0.0) + float(current["position"])
+		if priority > current_priority:
+			turret_targets[key] = target
 	for unit in units.duplicate():
 		unit["action_time"] = float(unit.get("action_time", 0.0)) + dt
 		unit["hit_time"] = maxf(0.0, float(unit.get("hit_time", 0.0)) - dt)
@@ -1008,17 +1249,27 @@ func _simulate(dt: float) -> void:
 			for trap in traps[defender].duplicate():
 				if trap["lane"] != unit["lane"] or trap["charges"] <= 0:
 					continue
-				if bool(unit.get("shadow_evasion", false)):
-					unit["shadow_evasion"] = false
-					unit["triggered"].append(trap)
+				if int(trap["kind"]) != 2 and (unit["triggered"].has(trap) or float(unit["position"]) < 0.48 + float(trap.get("slot", 0)) * 0.085):
+					continue
+				# One sabotage per trip, including a tower. A pure tower wall now
+				# has an affordable counter, while mixed defenses consume sabotage.
+				if int(unit["kind"]) == 2 and not bool(unit["disarmed"]):
+					unit["disarmed"] = true
+					trap["charges"] = 0
+					traps[defender].erase(trap)
+					unit["attack_time"] = 0.45
 					break
 				if trap["kind"] == 2:
 					# Each tower is its own animated structure with an individual
 					# reload timer, rather than invisible continuous DPS.
-					if float(trap.get("cooldown", 0.0)) <= 0.0:
-						unit["health"] -= TRAP_DAMAGE[2]
-						unit["hit_time"] = 0.2
+					if unit == turret_targets[defender * 3 + int(unit["lane"])] and float(trap.get("cooldown", 0.0)) <= 0.0:
 						trap["cooldown"] = 0.6
+						if bool(unit.get("shadow_evasion", false)):
+							# Evade an actual shot, not a tower waiting to reload.
+							unit["shadow_evasion"] = false
+							continue
+						unit["health"] -= TRAP_DAMAGE[2] * (2.0 if int(unit["kind"]) == 1 else 1.0)
+						unit["hit_time"] = 0.2
 						trap["fire_time"] = 0.28
 						var muzzle: Vector2 = _trap_position(trap, defender) + Vector2(0, -65)
 						var hit_at: Vector2 = _point(int(unit["lane"]), float(unit["position"]), int(unit["side"])) + Vector2(0, -70)
@@ -1027,15 +1278,14 @@ func _simulate(dt: float) -> void:
 							turret_bolts.pop_front()
 				elif not unit["triggered"].has(trap):
 					unit["triggered"].append(trap)
-					if unit["kind"] == 2 and not unit["disarmed"]:
-						unit["disarmed"] = true
-						trap["charges"] = 0
-					else:
-						unit["health"] -= TRAP_DAMAGE[int(trap["kind"])]
-						unit["hit_time"] = 0.28
-						if trap["kind"] == 1:
-							unit["stunned"] = 2.5
-						trap["charges"] -= 1
+					if bool(unit.get("shadow_evasion", false)):
+						unit["shadow_evasion"] = false
+						break
+					unit["health"] -= TRAP_DAMAGE[int(trap["kind"])]
+					unit["hit_time"] = 0.28
+					if trap["kind"] == 1:
+						unit["stunned"] = 2.5
+					trap["charges"] -= 1
 					if trap["charges"] <= 0:
 						traps[defender].erase(trap)
 					break
@@ -1046,26 +1296,31 @@ func _simulate(dt: float) -> void:
 			units.erase(unit)
 			continue
 		if not unit["returning"]:
-			unit["position"] += unit["speed"] * dt
+			if not bool(unit.get("blocked", false)):
+				unit["position"] += unit["speed"] * dt
 			if unit["position"] >= 1.0:
 				var amount: int = mini(unit["capacity"], gold[defender])
 				gold[defender] -= amount
 				unit["carried"] = amount
 				unit["steal_timer"] = 0.65
 				unit["action_time"] = 0.0
-				if _check_vaults():
-					return
 				unit["returning"] = true
 				# Reset pose phase exactly on direction reversal; return uses mirrored frames.
 				unit["action_time"] = 0.0
 		else:
-			unit["position"] -= unit["speed"] * dt
+			if not bool(unit.get("blocked", false)):
+				unit["position"] -= unit["speed"] * dt
 			if unit["position"] <= 0.0:
 				gold[unit["side"]] += unit["carried"]
 				deposit_actors.append({"side": int(unit["side"]), "lane": int(unit["lane"]), "kind": int(unit["kind"]), "age": 0.0, "amount": int(unit["carried"])})
 				units.erase(unit)
+	# Resolve both sides' actions before checking the result, removing the
+	# side-zero advantage when the last coins are stolen on the same tick.
+	_check_vaults()
 
 func _check_vaults() -> bool:
+	if tutorial_mode:
+		return false
 	if phase == "END" or phase == "SELECT":
 		return phase == "END"
 	if gold[0] > 0 and gold[1] > 0:
@@ -1191,6 +1446,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _navigate_back() -> void:
+	if is_instance_valid(tutorial_session):
+		_close_tutorial()
+		return
+	if tutorial_mode and is_instance_valid(tutorial_coach):
+		tutorial_coach.exit_to_lessons()
+		return
 	var studio := get_node_or_null("AnimationStudio")
 	if studio != null:
 		studio.queue_free()
@@ -1222,19 +1483,27 @@ func _end_wave() -> void:
 	orders[1].clear()
 	if _check_vaults():
 		return
-	# Vault savings compound; dwarves receive a substantial faction bonus.
+	# Only the first 1000 coins earn interest: wealth cannot grow exponentially.
 	for side in 2:
-		var rate: float = 0.18
-		if side == 0:
-			rate = interest_rate(selected_race, bank_level)
-		var payout: int = maxi(20, int(floor(float(gold[side]) * rate)))
+		var payout: int = Rules.interest_payout(gold[side], side_race(side), side_bank(side))
 		interest_last[side] = payout
 		gold[side] += payout
+	for guard in guards:
+		guard["shield"] = 0.0
+	# Public, symmetric late pressure ends permanent camping without a score win.
+	var pressure: int = Rules.vault_pressure(wave)
+	for side in 2:
+		gold[side] = maxi(0, gold[side] - pressure)
+	if _check_vaults():
+		return
 	wave += 1
 	ability_used = false
+	bot_ability_used = false
 	phase = "PREP"
 	remaining = PREP_TIME
 	_set_message("INTEREST +%d GOLD! Protect savings or invest in your army.", [interest_last[0]])
+	if wave >= Rules.PRESSURE_START:
+		_set_message("Odsetki +%d. Presja skarbców po tej fali: -%d dla obu stron.", [interest_last[0], Rules.vault_pressure(wave)])
 
 func _refresh() -> void:
 	race_button.text = L10n.t("RACE: %s") % L10n.t(RACE_NAMES[selected_race])
@@ -1242,7 +1511,7 @@ func _refresh() -> void:
 	hud.text = "✦ YOUR GOLD %d   ◆   ENEMY %d ✦" % [gold[0], gold[1]]
 	timer_label.text = "WAVE %d   |   %s   |   %02d s   |   INTEREST %d%%" % [
 		wave, "PREPARE" if phase == "PREP" else "BATTLE" if phase == "ATTACK" else phase,
-		int(maxf(0.0, ceilf(remaining))), (28 if selected_race == 0 else 18) + bank_level * 4]
+		int(maxf(0.0, ceilf(remaining))), roundi(interest_rate(selected_race, bank_level) * 100.0)]
 	var active_friendly: int = 0
 	for unit in units:
 		if int(unit["side"]) == 0:
@@ -1264,23 +1533,26 @@ func _refresh() -> void:
 		if int(guard["side"]) == 0 and int(guard["lane"]) == lane:
 			guards_in_lane += 1
 	for i in 3:
-		var available_unit: bool = phase == "PREP" and gold[0] >= COSTS[i] and orders[0].size() < 6 and queued_in_lane < 4
+		var available_unit: bool = phase == "PREP" and gold[0] >= recruit_price(0, i) and orders[0].size() < 6 and queued_in_lane < 4
 		var unit_card := controls[3 + i]
 		unit_card.disabled = not available_unit
 		unit_card.modulate = Color.WHITE
+		var price := unit_card.get_node_or_null("Price") as Label
+		if price != null:
+			price.text = str(recruit_price(0, i))
 		var available_trap: bool = phase == "PREP" and gold[0] >= TRAP_COSTS[i] and traps_in_lane < 5
 		var trap_card := controls[6 + i]
 		trap_card.disabled = not available_trap
 		trap_card.modulate = Color.WHITE
 	guard_button.disabled = phase != "PREP" or gold[0] < GUARD_COST or guards_in_lane >= 3
-	ability_button.disabled = phase != "PREP" or ability_used or gold[0] < 120
+	ability_button.disabled = phase != "PREP" or ability_used or gold[0] < ABILITY_COST or (selected_race == 0 and guard_count(0) == 0)
 	ability_button.text = L10n.t("✦ %s  •  120 GOLD") % L10n.t(ABILITY_NAMES[selected_race]) if not ability_used else L10n.t("✓ %s ACTIVE") % L10n.t(ABILITY_NAMES[selected_race])
 	if original_png_ui and _race_has_illustrated_asset("ability"):
 		ability_button.text = ""
 	invest_button.disabled = phase != "PREP" or bank_level >= 5 or gold[0] < 180 + bank_level * 110
-	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < 120
+	raid_button.disabled = phase != "PREP" or raid_boost >= 3 or gold[0] < Rules.training_cost(raid_boost)
 	invest_button.text = L10n.t("🏛 BANK LV%d  •  %d") % [bank_level, 180 + bank_level * 110] if bank_level < 5 else L10n.t("🏛 BANK LV5 • MAX")
-	raid_button.text = L10n.t("⚔ RAID LV%d  •  120") % raid_boost if raid_boost < 3 else L10n.t("⚔ RAID MAX")
+	raid_button.text = L10n.t("⚔ TRENING %d  •  %d") % [raid_boost, Rules.training_cost(raid_boost)] if raid_boost < 3 else L10n.t("⚔ RAID MAX")
 	if original_png_ui:
 		var bank_text := invest_button.get_node_or_null("OriginalDynamicText") as Label
 		var raid_text := raid_button.get_node_or_null("OriginalDynamicText") as Label
@@ -1302,6 +1574,8 @@ func _refresh() -> void:
 	_refresh_localized_cards()
 	if is_instance_valid(battle_shell):
 		battle_shell.sync()
+	if tutorial_mode and is_instance_valid(tutorial_coach):
+		tutorial_coach.sync_controls()
 	arena.queue_redraw()
 
 func _refresh_localized_cards() -> void:
@@ -1311,11 +1585,11 @@ func _refresh_localized_cards() -> void:
 		var item: String = ["runner", "carrier", "saboteur", "spikes", "snare", "turret"][index]
 		var title: String = ["RUNNER", "CARRIER", "SABOTEUR", "SPIKES", "SNARE", "TURRET"][index]
 		var card: Button = controls[3 + index]
-		LocalizedCard.apply(card, ornate_ui.original_texture(_race_art_name(item)), L10n.t(title), "✦ %d" % (COSTS[index] if index < 3 else TRAP_COSTS[index - 3]))
+		LocalizedCard.apply(card, ornate_ui.original_texture(_race_art_name(item)), L10n.t(title), "✦ %d" % (recruit_price(0, index) if index < 3 else TRAP_COSTS[index - 3]))
 	LocalizedCard.apply(guard_button, ornate_ui.original_texture(_race_art_name("defender")), L10n.t("DEFENDER"), "✦ %d" % GUARD_COST, true)
 	LocalizedCard.apply(ability_button, ornate_ui.original_texture(_race_art_name("ability")), L10n.t(ABILITY_NAMES[selected_race]), L10n.t("AKTYWNA") if ability_used else "✦ %d" % ABILITY_COST, true)
 	LocalizedCard.apply(invest_button, ornate_ui.original_texture(_race_art_name("bank")), L10n.t("SKARBIEC %d/5") % bank_level, "MAX" if bank_level >= 5 else "✦ %d" % (BANK_BASE_COST + bank_level * BANK_STEP_COST), true)
-	LocalizedCard.apply(raid_button, ornate_ui.original_texture(_race_art_name("raid")), L10n.t("TRENING %d/3") % raid_boost, "MAX" if raid_boost >= 3 else "✦ %d" % RAID_COST, true)
+	LocalizedCard.apply(raid_button, ornate_ui.original_texture(_race_art_name("raid")), L10n.t("TRENING %d/3") % raid_boost, "MAX" if raid_boost >= 3 else "✦ %d" % Rules.training_cost(raid_boost), true)
 
 func _point(path: int, progress: float, side: int) -> Vector2:
 	var t: float = progress if side == 0 else 1.0 - progress
@@ -1673,12 +1947,7 @@ func _in_camera(p: Vector2, margin: float = 100.0) -> bool:
 func _character_key(side: int, kind: int, is_guard: bool = false) -> String:
 	# One authoritative map for battle, gold deposit, death and Animation Studio.
 	# Do not reuse a wolf as Voidborn or a generic mage as a Voidborn saboteur.
-	var role: int = clampi(kind, 0, 2)
-	if side != 0:
-		if is_guard:
-			return "goblin_raider"
-		return ["goblin_raider", "shadow_wolf", "goblin_saboteur"][role]
-	return _character_key_for_race(selected_race, kind, is_guard)
+	return _character_key_for_race(side_race(side), kind, is_guard)
 
 func _character_key_for_race(race: int, kind: int, is_guard: bool = false) -> String:
 	var role: int = clampi(kind, 0, 2)
@@ -1918,6 +2187,10 @@ func _draw_arena() -> void:
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, (52.0 if actor["guard"] else 46.0) * scale_factor, art_size.y * 0.88 + 8.0 / camera_zoom)
+		if actor["guard"] and float(data.get("shield", 0.0)) > 0.0:
+			var shield_width: float = 52.0 * scale_factor * float(data["shield"]) / Rules.IRON_SHIELD
+			var shield_top := p + Vector2(-26.0 * scale_factor, bob - art_size.y * 0.88 - 12.0 / camera_zoom)
+			arena.draw_rect(Rect2(shield_top, Vector2(shield_width, 3.0 / camera_zoom)), Color("9ae6ff"))
 		# All seven character sheets now have their own attack visual language.
 		if phase == "ATTACK" and animation_row == 2:
 			arena.draw_set_transform_matrix(_sprite_transform(p).scaled_local(Vector2.ONE * scale_factor))
@@ -2133,7 +2406,7 @@ func _draw_fort_body(p: Vector2, color: Color, glow: Color) -> void:
 
 func _draw_character(p: Vector2, color: Color, unit: Dictionary) -> void:
 	var friendly: bool = unit["side"] == 0
-	var faction: int = selected_race if friendly else 1
+	var faction: int = selected_race if friendly else bot_race
 	var radius: float = 15.0 if unit["kind"] == 1 else 12.0
 	var moving: float = sin(visual_time * 10.0 + float(unit["position"]) * 13.0)
 	var cloak := color.darkened(0.48)

@@ -3,7 +3,7 @@ name: Android debug APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, 'codex/race-balance-2026-11-20']
     paths:
       - 'project.godot'
       - 'export_presets.cfg'
@@ -17,7 +17,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-debug
+  group: android-debug-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -111,6 +111,12 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_reward_presentation.gd 2>&1 | tee reward-ui.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" reward-ui.log; then exit 1; fi
           grep -q "Reward presentation PASSED" reward-ui.log
+          ./godot --headless --path . --script res://ci/smoke_guided_tutorial.gd 2>&1 | tee tutorial.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" tutorial.log; then exit 1; fi
+          grep -q "Guided tutorial PASSED" tutorial.log
+          ./godot --headless --path . --script res://ci/smoke_balance.gd 2>&1 | tee balance.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" balance.log; then exit 1; fi
+          grep -q "Balance regression PASSED" balance.log
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           echo "Export templates:"
           ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
@@ -152,20 +158,29 @@ jobs:
           path: build/gold-rush-debug.apk
           retention-days: 3
           if-no-files-found: error
-      - name: Publish direct APK in rolling GitHub Release
+      - name: Publish a direct APK for this source revision
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test -s build/gold-rush-debug.apk
-          git fetch --no-tags origin main
           SHA="$(git rev-parse HEAD)"
-          if gh release view debug-latest >/dev/null 2>&1; then
-            gh release delete debug-latest --yes --cleanup-tag
+          # Preview builds have their own tag; main keeps its rolling release.
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            RELEASE_TAG="debug-latest"
+            if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+              gh release delete "$RELEASE_TAG" --yes --cleanup-tag
+            fi
+          else
+            RELEASE_TAG="preview-${SHA:0:12}"
           fi
-          gh release create debug-latest build/gold-rush-debug.apk#gold-rush-debug.apk \
-            --target "$SHA" \
-            --title "Gold Rush: Vault Wars — latest Android debug APK" \
-            --notes "Automatic debug build from commit $SHA. For testing only; not a production release." \
-            --prerelease
-          gh release view debug-latest --json url,assets
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" build/gold-rush-debug.apk#gold-rush-debug.apk --clobber
+          else
+            gh release create "$RELEASE_TAG" build/gold-rush-debug.apk#gold-rush-debug.apk \
+              --target "$SHA" \
+              --title "Vault Wars — Android test build ${SHA:0:12}" \
+              --notes "Test APK built from commit $SHA on $GITHUB_REF. For testing only; not a production release." \
+              --prerelease
+          fi
+          gh release view "$RELEASE_TAG" --json url,assets

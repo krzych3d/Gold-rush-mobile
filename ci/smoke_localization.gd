@@ -89,7 +89,7 @@ func _run() -> void:
 		if not require(game.phase == "PREP" and game.gold == saved_gold and game.orders[0] == saved_orders and game.lane == 2, "Language switching resets the match"):
 			return
 		var surface = game.controls[3].get_node("LocalizedSurface")
-		if not require(surface.caption.text == L10n.t("RUNNER") and surface.cost.text.contains("75"), "Unit art does not have localized native labels and live cost"):
+		if not require(surface.caption.text == L10n.t("RUNNER") and surface.cost.text.contains(str(game.recruit_price(0, 0))), "Unit art does not have localized native labels and live cost"):
 			return
 		if not require(game.guard_button.get_node("LocalizedSurface").caption.text == L10n.t("DEFENDER"), "Defender keeps baked English text"):
 			return
