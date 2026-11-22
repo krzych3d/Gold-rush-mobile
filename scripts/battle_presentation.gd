@@ -9,6 +9,7 @@ var drawer: ScrollContainer
 var dock: PanelContainer
 var drawer_button: Button
 var enemy_gold: Label
+var summary_button: Button
 var header: MarginContainer
 var overview := true
 var drawer_open := false
@@ -128,6 +129,9 @@ func _build_header() -> void:
 	game.timer_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	game.timer_label.add_theme_font_size_override("font_size", 19)
 	game.timer_label.add_theme_color_override("font_color", Color.WHITE)
+	summary_button = _button(navigation, L10n.t("WYNIK"), game._show_wave_summary, 92)
+	summary_button.name = "ViewWaveSummary"
+	summary_button.custom_minimum_size.y = 56
 	# Rotation chooses the layout; zoom/follow controls would crop the map.
 	game.map_mode_button.reparent(navigation)
 	game.map_mode_button.hide()
@@ -239,6 +243,8 @@ func sync() -> void:
 		game.timer_label.text += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
 	if game.tutorial_mode:
 		game.timer_label.text = L10n.t("SAMOUCZEK • BEZ LIMITU CZASU")
+	summary_button.text = L10n.t("WYNIK")
+	summary_button.disabled = game.last_wave_summary.is_empty() or game.tutorial_mode or game.phase != "PREP"
 	drawer_button.text = L10n.t("SCHOWAJ ↓") if drawer_open else L10n.t("ARSENAŁ ↑")
 	game.controls[9].text = L10n.t("GRAJ PONOWNIE") if game.phase == "END" else L10n.t("ROZPOCZNIJ ATAK") if game.phase == "PREP" else L10n.t("BITWA TRWA")
 	if game.tutorial_mode:

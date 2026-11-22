@@ -1,5 +1,18 @@
 # Gold Rush Mobile — Vault Wars
 
+## Optional wave summaries (2026-11-22)
+
+After a completed wave, the **WYNIK / REPORT** button opens a summary with
+delivered and lost gold, interest, vault pressure, raider and defender casualties
+on both sides and ending vault balances. **Settings → Show summary after every
+wave** enables automatic summaries (off by default, saved locally).
+The next preparation countdown pauses while a report is visible. Android Back
+or Resume Preparation dismisses it. Reports do not grant rewards or modify the
+game's economy or faction balance. Polish, English and portrait/landscape
+layouts are supported.
+
+[Optional summary behavior and tests](docs/Wave-Summary.md).
+
 ## Tactical battle feedback (22 November 2026)
 
 Returning gold now triggers a short flight toward the corresponding HUD counter, while
