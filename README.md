@@ -1,5 +1,22 @@
 # Gold Rush Mobile — Vault Wars
 
+## Android FPS and battle trap animation (2026-11-23)
+
+Combat keeps its existing 20 Hz simulation and balance. Repeated HUD updates
+now reuse faction card art crops and lane styles unless a real state change
+occurs; shell text, theme colors and font fitting are updated only when
+necessary. FPS overlay distinguishes whole-frame CPU cost from measured UI and
+arena draw-command costs, instead of incorrectly naming CPU time "SCRIPT".
+Low-power mode omits the second scenic backdrop and decorative trap rings.
+
+Spikes erupt and retract; snares snap closed and recover with a short magical
+impact ring. The last consumed charge still leaves a visible impact. Effects
+use a bounded, fast-expiring array and respect graphics quality. Damage,
+stun duration, prices, race balance, tutorial and gold are unchanged.
+
+[Optimization and trap visual QA](docs/Android-Perf-Trap-Animations.md).
+
+
 ## Optional wave summaries (2026-11-22)
 
 After a completed wave, the **WYNIK / REPORT** button opens a summary with
