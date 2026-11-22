@@ -138,6 +138,33 @@ func run() -> void:
 		game._simulate(0.05)
 	require(unit["health"] < unit["max_health"], "Shadow Step grants permanent turret immunity")
 	game.free()
+	# Both single-use traps must visibly fire without changing the old damage or stun.
+	game = fixture(0, 0)
+	require(game.purchase_trap(1, 1, 0), "Spike trap purchase rejected")
+	game.traps[1][0]["charges"] = 1
+	game.phase = "ATTACK"
+	game._spawn(0, 1, 1, 0.5)
+	var carrier_hp: float = float(game.units[0]["health"])
+	game._simulate(0.05)
+	require(game.traps[1].is_empty() and game.trap_bursts.size() == 1,
+		"Last spike charge failed to leave its impact on screen")
+	require(is_equal_approx(float(game.units[0]["health"]), carrier_hp - game.TRAP_DAMAGE[0]),
+		"Spikes visual animation changed damage")
+	require(Game._trap_impulse(0.46) == 0.0 and Game._trap_impulse(0.36) > 0.8 and Game._trap_impulse(0.0) == 0.0,
+		"Spike and snare trigger keyframes have invalid timing")
+	for step in 11:
+		game._simulate(0.05)
+	require(game.trap_bursts.is_empty(), "Expired trap particle events remain in memory")
+	game.free()
+	game = fixture(0, 0)
+	require(game.purchase_trap(1, 1, 1), "Snare purchase rejected")
+	game.phase = "ATTACK"
+	game._spawn(0, 1, 0, 0.5)
+	game._simulate(0.05)
+	require(game.trap_bursts.size() == 1 and float(game.traps[1][0]["fire_time"]) > 0.0,
+		"Snare trigger does not animate")
+	require(float(game.units[0]["stunned"]) > 2.0, "Snare effect lost its stun")
+	game.free()
 	# Snares stop a frenzy unit, and guards engage raiders instead of being run through.
 	game = fixture(1, 1)
 	game.purchase_trap(1, 1, 1)

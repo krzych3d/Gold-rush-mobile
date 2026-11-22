@@ -119,6 +119,11 @@ var performance_label: Label
 var performance_elapsed := 0.0
 var render_elapsed := 0.0
 var visual_step_elapsed := 0.0 # Since last simulation tick.
+# Only rebuild localized card textures/layouts when actual card contents change.
+var last_localized_card_signature := ""
+var last_epic_lane_skin := -1
+var refresh_cost_ms := 0.0
+var draw_cost_ms := 0.0
 var ui_elapsed := 0.0
 var title_label: Label
 var race_button: Button
@@ -155,6 +160,7 @@ var touch_points: Dictionary = {}
 var last_pinch_distance := 0.0
 var terrain_details: Array = []
 var hit_sparks: Array = []
+var trap_bursts: Array = [] # Capped, render-only spike/snare activation events.
 var turret_bolts: Array = []
 var turret_texture: Texture2D = preload("res://assets/ui/turret.svg")
 var spikes_texture: Texture2D = preload("res://assets/ui/spikes.svg")
@@ -1186,7 +1192,10 @@ func _tick() -> void:
 	performance_elapsed += SIM_STEP
 	if performance_elapsed >= 1.0:
 		performance_elapsed = 0.0
-		performance_label.text = "FPS %d  |  SCRIPT %.1f ms  |  UNITS %d" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, units.size() + guards.size()]
+		# TIME_PROCESS is whole process-frame CPU time, not pure script time.
+		performance_label.text = "FPS %d | CPU %.0f ms | UI %.1f ms | DRAW %.1f ms | UNITS %d" % [
+			Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+			refresh_cost_ms, draw_cost_ms, units.size() + guards.size()]
 	if phase == "SELECT":
 		return
 	if phase == "END":
@@ -1236,6 +1245,11 @@ func _simulate(dt: float) -> void:
 		spark["life"] = float(spark["life"]) - dt
 		if float(spark["life"]) <= 0.0:
 			hit_sparks.erase(spark)
+	for index in range(trap_bursts.size() - 1, -1, -1):
+		var burst: Dictionary = trap_bursts[index]
+		burst["age"] = float(burst["age"]) + dt
+		if float(burst["age"]) >= 0.46:
+			trap_bursts.remove_at(index)
 	# Visual snapshots do not affect gameplay, damage or movement speeds.
 	for unit in units:
 		unit["previous_position"] = float(unit["position"])
@@ -1300,6 +1314,8 @@ func _simulate(dt: float) -> void:
 					if bool(unit.get("shadow_evasion", false)):
 						unit["shadow_evasion"] = false
 						break
+					# Real activation is visualized even when this spends the last charge.
+					_spawn_trap_burst(trap, defender)
 					unit["health"] -= TRAP_DAMAGE[int(trap["kind"])]
 					unit["hit_time"] = 0.28
 					if trap["kind"] == 1:
@@ -1552,6 +1568,7 @@ func _end_wave() -> void:
 		call_deferred("_show_wave_summary")
 
 func _refresh() -> void:
+	var refresh_started: int = Time.get_ticks_usec() if presentation.show_fps else 0
 	race_button.text = L10n.t("RACE: %s") % L10n.t(RACE_NAMES[selected_race])
 	race_button.disabled = true
 	hud.text = "✦ YOUR GOLD %d   ◆   ENEMY %d ✦" % [gold[0], gold[1]]
@@ -1615,18 +1632,31 @@ func _refresh() -> void:
 	for i in 3:
 		controls[i].text = ("◆  " if i == lane else "") + L10n.t("LANE %d") % (i + 1)
 		controls[i].modulate = Color.WHITE
-	for lane_index in 3:
-		Epic.button(controls[lane_index], lane_index == lane, 18)
+	# Epic.button allocates several StyleBoxTextures and recalculates fonts.
+	# The selected lane is the only time these three skins actually change.
+	if last_epic_lane_skin != lane:
+		last_epic_lane_skin = lane
+		for lane_index in 3:
+			Epic.button(controls[lane_index], lane_index == lane, 18)
 	_refresh_localized_cards()
 	if is_instance_valid(battle_shell):
 		battle_shell.sync()
 	if tutorial_mode and is_instance_valid(tutorial_coach):
 		tutorial_coach.sync_controls()
 	arena.queue_redraw()
+	if presentation.show_fps:
+		refresh_cost_ms = float(Time.get_ticks_usec() - refresh_started) / 1000.0
 
 func _refresh_localized_cards() -> void:
 	if not original_png_ui:
 		return
+	var signature: String = str([
+		selected_race, L10n.language, phase, bank_level, raid_boost, ability_used,
+		recruit_price(0, 0), recruit_price(0, 1), recruit_price(0, 2)
+	])
+	if signature == last_localized_card_signature:
+		return
+	last_localized_card_signature = signature
 	for index in 6:
 		var item: String = ["runner", "carrier", "saboteur", "spikes", "snare", "turret"][index]
 		var title: String = ["RUNNER", "CARRIER", "SABOTEUR", "SPIKES", "SNARE", "TURRET"][index]
@@ -2041,6 +2071,24 @@ func _directional_sprite_transform(p: Vector2, facing: float, tilt: float = 0.0)
 	var origin := arena.size * 0.5 + camera_offset + _iso_project(p) * zoom
 	return Transform2D(Vector2(c * zoom * direction, sn * zoom * direction), Vector2(-sn * zoom, c * zoom), origin)
 
+static func _trap_impulse(remaining: float) -> float:
+	if remaining <= 0.0:
+		return 0.0
+	var elapsed: float = 0.46 - remaining
+	# Fast 0.09s rise / snap, then a visible but brief release.
+	return clampf(elapsed / 0.09, 0.0, 1.0) * clampf(remaining / 0.22, 0.0, 1.0)
+
+func _spawn_trap_burst(trap: Dictionary, side: int) -> void:
+	# Called only after a genuine trap hit. Storing an independent impact means
+	# even a trap consumed by its last charge still visibly activates.
+	var kind: int = int(trap["kind"])
+	if kind < 0 or kind > 1:
+		return
+	trap["fire_time"] = 0.46
+	trap_bursts.append({"p": _trap_position(trap, side), "kind": kind, "age": 0.0, "side": side})
+	while trap_bursts.size() > (8 if presentation.effective_quality == "battery" else 14):
+		trap_bursts.pop_front()
+
 func _trap_position(trap: Dictionary, owner: int) -> Vector2:
 	var slot: int = int(trap.get("slot", 0))
 	return _point(int(trap["lane"]), 0.48 + float(slot % 5) * 0.085, 1 - owner)
@@ -2075,13 +2123,15 @@ func _incoming_threats() -> Array[int]:
 	return counts
 
 func _draw_arena() -> void:
+	var draw_started: int = Time.get_ticks_usec() if presentation.show_fps else 0
 	var center := arena.size * 0.5
 	var w: float = arena.size.x * 0.85
 	var h: float = arena.size.y * 0.68
 	# Fill the tall phone viewport with a dimmed scenic continuation.
 	# The crisp, fully visible battlefield is drawn above in world coordinates.
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("071421"))
-	if is_instance_valid(battle_shell) and battle_shell.overview:
+	# The full-resolution second scenic layer is optional on slow GPUs.
+	if is_instance_valid(battle_shell) and battle_shell.overview and presentation.effective_quality != "battery":
 		arena.draw_texture_rect(BATTLE_SCENERY, Rect2(Vector2.ZERO, arena.size), false, Color(0.23, 0.24, 0.32))
 	# The focused view fills the viewport; overview keeps both vaults in view.
 	arena.draw_set_transform_matrix(_iso_transform())
@@ -2121,14 +2171,41 @@ func _draw_arena() -> void:
 			var p: Vector2 = _trap_position(trap, side)
 			var trap_kind: int = int(trap["kind"])
 			var icon_texture: Texture2D = turret_texture if trap_kind == 2 else snare_texture if trap_kind == 1 else spikes_texture
-			var shimmer: float = 0.55 + 0.25 * sin(visual_time * 4.0 + float(trap.get("slot", 0)))
+			var fire_time: float = float(trap.get("fire_time", 0.0))
+			var shimmer: float = 0.65 if presentation.effective_quality == "battery" else 0.55 + 0.25 * sin(visual_time * 4.0 + float(trap.get("slot", 0)))
 			arena.draw_circle(p + Vector2(0, 7), 29.0, Color("05091d", 0.55))
 			var glow: Color = Color("5bcfff", 0.40 * shimmer) if trap_kind == 2 else Color("b568ff", 0.4 * shimmer) if trap_kind == 1 else Color("ffae60", 0.3 * shimmer)
-			arena.draw_arc(p + Vector2(0, -32), 32.0 + 3.0 * shimmer, 0.0, TAU, 24, glow, 3.0)
-			arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-45, -87), Vector2(90, 90)), false)
-			if trap_kind == 2 and float(trap.get("fire_time", 0.0)) > 0.0:
-				var fire: float = float(trap["fire_time"]) / 0.28
-				arena.draw_circle(p + Vector2(0, -66), 13.0 + 6.0 * (1.0 - fire), Color("9aeaff", fire * 0.8))
+			if presentation.effective_quality != "battery" or fire_time > 0.0:
+				arena.draw_arc(p + Vector2(0, -32), 32.0 + 3.0 * shimmer, 0.0, TAU, 18, glow, 3.0)
+			if trap_kind == 0:
+				# Spikes sit low until triggered; then rise sharply and retract.
+				var emergence: float = _trap_impulse(fire_time)
+				var spike_height: float = 32.0 + 58.0 * emergence
+				arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-45, -7.0 - spike_height), Vector2(90, spike_height)), false)
+			elif trap_kind == 1:
+				# The jaws visibly snap together on the target and spring back.
+				var snap: float = _trap_impulse(fire_time)
+				var jaw_width: float = 90.0 - 40.0 * snap
+				arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-jaw_width * 0.5, -87.0 + 18.0 * snap), Vector2(jaw_width, 90.0 - 18.0 * snap)), false)
+			else:
+				arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-45, -87), Vector2(90, 90)), false)
+				if fire_time > 0.0:
+					var fire: float = fire_time / 0.28
+					arena.draw_circle(p + Vector2(0, -66), 13.0 + 6.0 * (1.0 - fire), Color("9aeaff", fire * 0.8))
+	# Residual impact is independent of trap lifespan (last charge/consumption).
+	for burst in trap_bursts:
+		var age: float = float(burst["age"])
+		var progress: float = clampf(age / 0.46, 0.0, 1.0)
+		var strength: float = 1.0 - progress
+		var origin: Vector2 = burst["p"] + Vector2(0, -20)
+		var spikes: bool = int(burst["kind"]) == 0
+		var tint: Color = Color("ffd08f") if spikes else Color("ce8dff")
+		arena.draw_arc(origin, 16.0 + 35.0 * progress, 0.0, TAU, 16, Color(tint.r, tint.g, tint.b, strength * 0.82), 3.5)
+		var rays: int = 3 if presentation.effective_quality == "battery" else 5
+		for ray in rays:
+			var angle: float = TAU * float(ray) / float(rays) + (0.0 if presentation.reduced_motion else visual_time * 0.65)
+			var edge: Vector2 = Vector2(cos(angle), sin(angle) * 0.45)
+			arena.draw_line(origin + edge * 12.0, origin + edge * (20.0 + 21.0 * progress), Color(tint.r, tint.g, tint.b, strength), 2.7)
 	# Animated turret bolts move between the tower and the target.
 	for bolt in turret_bolts:
 		var t: float = clampf(float(bolt["age"]) / 0.36, 0.0, 1.0)
@@ -2350,6 +2427,8 @@ func _draw_arena() -> void:
 			arena.draw_circle(alert, 15.5, Color("491e28", 0.87))
 			arena.draw_arc(alert, 17.0, 0.0, TAU, 20, Color("ff8265", pulse), 2.5)
 			arena.draw_string(arena.get_theme_default_font(), alert + Vector2(-9, 5), str(threatened_lanes[path]), HORIZONTAL_ALIGNMENT_CENTER, 18, 14, Color.WHITE)
+	if presentation.show_fps:
+		draw_cost_ms = float(Time.get_ticks_usec() - draw_started) / 1000.0
 	# No minimap: the entire battlefield is always visible.
 
 func _draw_attack_effect(p: Vector2, character_key: String, facing: float, friendly: bool, remaining_attack: float) -> void:

@@ -20,6 +20,8 @@ var pointer_down := false
 var travel := 0.0
 var phase_seen := ""
 var last_language := ""
+var last_player_gold_risk := -1
+var last_enemy_gold_risk := -1
 var command_top := 0.0
 var usable := Rect2()
 # Visual-only events; currency and combat state are always committed in game.gd.
@@ -233,24 +235,45 @@ func sync() -> void:
 	if last_language != L10n.language:
 		last_language = L10n.language
 		_refresh_navigation(self)
-	game.hud.text = L10n.t("ZŁOTO %d") % game.gold[0]
-	enemy_gold.text = "%s %d" % [L10n.t(game.RACE_NAMES[game.bot_race]), game.gold[1]]
-	# Critical gold amounts remain unmistakable even without motion effects.
-	game.hud.add_theme_color_override("font_color", Color("ff8d84") if game.gold[0] <= 250 else Color("f6d68c"))
-	enemy_gold.add_theme_color_override("font_color", Color("ffe1a4") if game.gold[1] <= 250 else Color("ffb7a8"))
-	game.timer_label.text = L10n.t("FALA %d • %s\n%d s • odsetki %d%%") % [game.wave, L10n.t("PRZYGOTOWANIE") if game.phase == "PREP" else L10n.t("BITWA"), int(maxf(0, ceilf(game.remaining))), int(game.interest_rate(game.selected_race, game.bank_level) * 100)]
+	# Only mutate real controls when values actually change. Theme mutations and
+	# repeated font measurements were expensive on entry-level Android devices.
+	var player_caption: String = L10n.t("ZŁOTO %d") % game.gold[0]
+	if game.hud.text != player_caption:
+		game.hud.text = player_caption
+	var enemy_caption: String = "%s %d" % [L10n.t(game.RACE_NAMES[game.bot_race]), game.gold[1]]
+	if enemy_gold.text != enemy_caption:
+		enemy_gold.text = enemy_caption
+	var player_risk: int = 1 if game.gold[0] <= 250 else 0
+	var enemy_risk: int = 1 if game.gold[1] <= 250 else 0
+	if player_risk != last_player_gold_risk:
+		last_player_gold_risk = player_risk
+		game.hud.add_theme_color_override("font_color", Color("ff8d84") if player_risk == 1 else Color("f6d68c"))
+	if enemy_risk != last_enemy_gold_risk:
+		last_enemy_gold_risk = enemy_risk
+		enemy_gold.add_theme_color_override("font_color", Color("ffe1a4") if enemy_risk == 1 else Color("ffb7a8"))
+	var timer_caption: String = L10n.t("FALA %d • %s\n%d s • odsetki %d%%") % [
+		game.wave, L10n.t("PRZYGOTOWANIE") if game.phase == "PREP" else L10n.t("BITWA"),
+		int(maxf(0, ceilf(game.remaining))), int(game.interest_rate(game.selected_race, game.bank_level) * 100)]
 	if game.wave >= game.Rules.PRESSURE_START:
-		game.timer_label.text += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
+		timer_caption += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
 	if game.tutorial_mode:
-		game.timer_label.text = L10n.t("SAMOUCZEK • BEZ LIMITU CZASU")
-	summary_button.text = L10n.t("WYNIK")
+		timer_caption = L10n.t("SAMOUCZEK • BEZ LIMITU CZASU")
+	if game.timer_label.text != timer_caption:
+		game.timer_label.text = timer_caption
+	var report_caption: String = L10n.t("WYNIK")
+	if summary_button.text != report_caption:
+		summary_button.text = report_caption
 	summary_button.disabled = game.last_wave_summary.is_empty() or game.tutorial_mode or game.phase != "PREP"
-	drawer_button.text = L10n.t("SCHOWAJ ↓") if drawer_open else L10n.t("ARSENAŁ ↑")
-	game.controls[9].text = L10n.t("GRAJ PONOWNIE") if game.phase == "END" else L10n.t("ROZPOCZNIJ ATAK") if game.phase == "PREP" else L10n.t("BITWA TRWA")
+	var drawer_caption: String = L10n.t("SCHOWAJ ↓") if drawer_open else L10n.t("ARSENAŁ ↑")
+	if drawer_button.text != drawer_caption:
+		drawer_button.text = drawer_caption
+		Epic._fit_button(drawer_button)
+	var action_caption: String = L10n.t("GRAJ PONOWNIE") if game.phase == "END" else L10n.t("ROZPOCZNIJ ATAK") if game.phase == "PREP" else L10n.t("BITWA TRWA")
 	if game.tutorial_mode:
-		game.controls[9].text = L10n.t("POKAŻ PRZYKŁAD")
-	for node in [drawer_button, game.controls[9]]:
-		Epic._fit_button(node)
+		action_caption = L10n.t("POKAŻ PRZYKŁAD")
+	if game.controls[9].text != action_caption:
+		game.controls[9].text = action_caption
+		Epic._fit_button(game.controls[9])
 	if phase_seen != game.phase:
 		phase_seen = game.phase
 		if game.phase == "ATTACK" and landscape:

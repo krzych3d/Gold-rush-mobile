@@ -98,6 +98,24 @@ func _run() -> void:
 		if price.text != str(game.COSTS[button_index - 3] if button_index < 6 else game.TRAP_COSTS[button_index - 6]):
 			_fail("Price text is disconnected from game economy at card %d" % button_index)
 			return
+	# Idle HUD refresh must reuse its existing card atlas crops and button
+	# StyleBoxes; recreating those assets five times per second hurt Android FPS.
+	if game.original_png_ui:
+		var first_surface = game.controls[3].get_node_or_null("LocalizedSurface")
+		if first_surface == null:
+			_fail("Localized character card was not installed")
+			return
+		game._refresh()
+		var initial_crop: Texture2D = first_surface.illustration.texture
+		var initial_lane_skin: StyleBox = game.controls[0].get_theme_stylebox("normal")
+		for pass_index in 4:
+			game._refresh()
+		if first_surface.illustration.texture != initial_crop:
+			_fail("Unchanged cards reallocate AtlasTexture during idle HUD refresh")
+			return
+		if game.controls[0].get_theme_stylebox("normal") != initial_lane_skin:
+			_fail("Unchanged lane reallocated decorated button styles")
+			return
 	print("Illustrated UI QA: gold-frame image skins, live prices and four plaques loaded")
 	# Choose Voidborn, verifying the card artwork changes to an actual role atlas.
 	game._choose_faction(3)
