@@ -1,5 +1,15 @@
 # Gold Rush Mobile — Vault Wars
 
+## Tactical battle feedback (22 November 2026)
+
+Returning gold now triggers a short flight toward the corresponding HUD counter, while
+steals trigger a brief loss flash. Near-vault enemy pressure is signalled per lane,
+including a live count that excludes friendly and returning units. Low gold is more
+clearly highlighted. Effects follow phone rotation, respect reduced motion and impose
+tight battery-mode rendering caps. All gameplay and economy values are unchanged.
+
+[Effects, accessibility and regression tests](docs/Tactical-Battle-Feedback.md).
+
 Mobile-first Godot **4.2.2** fantasy lane strategy prototype with automatic portrait/landscape layouts.
 
 ## Guided tutorial without a countdown
