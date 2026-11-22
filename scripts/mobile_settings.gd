@@ -61,7 +61,8 @@ func observe_fps(delta: float, fps: float) -> bool:
 	if sample_time < 4.0:
 		return false
 	sample_time = 0.0
-	slow_samples = slow_samples + 1 if fps > 0.0 and fps < 25.0 else 0
+	var drop_threshold: float = maxf(22.0, battlefield_fps() * 0.75)
+	slow_samples = slow_samples + 1 if fps > 0.0 and fps < drop_threshold else 0
 	if slow_samples < 3:
 		return false
 	effective_quality = "battery"
@@ -69,11 +70,10 @@ func observe_fps(delta: float, fps: float) -> bool:
 	return true
 
 func battlefield_fps() -> float:
-	# More fluid combat without forcing 60 FPS on entry-level phones.
+	# Smooth motion while reserving a budget for older Android phones.
 	return 24.0 if effective_quality == "battery" else 45.0 if effective_quality == "high" else 30.0
 
 func preview_fps() -> float:
-	# Match the battle presentation while retaining adaptive quality settings.
 	return 24.0 if effective_quality == "battery" else 45.0 if effective_quality == "high" else 30.0
 
 func ambient_count() -> int:

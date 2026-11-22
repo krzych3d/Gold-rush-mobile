@@ -68,6 +68,24 @@ func _run_smoke() -> void:
 	root.add_child(game)
 	game.size = Vector2(720, 1280)
 	await process_frame
+	var sample_unit: Dictionary = {"previous_position": 0.2, "position": 0.6}
+	if not is_equal_approx(game._render_unit_position(sample_unit, 0.0), 0.2) or not is_equal_approx(game._render_unit_position(sample_unit, 0.5), 0.4) or not is_equal_approx(game._render_unit_position(sample_unit, 1.0), 0.6):
+		push_error("Interpolation must smoothly span the previous and current positions")
+		quit(1)
+		return
+	if not is_equal_approx(game._render_unit_position({"position": 0.3}, 0.5), 0.3):
+		push_error("Legacy unit interpolation needs a safe fallback")
+		quit(1)
+		return
+	for quality_mode in ["battery", "balanced", "high"]:
+		game.presentation.effective_quality = quality_mode
+		var expected_fps: float = 24.0 if quality_mode == "battery" else 45.0 if quality_mode == "high" else 30.0
+		if not is_equal_approx(game.presentation.battlefield_fps(), expected_fps):
+			push_error("Animation profile mismatch: " + quality_mode)
+			quit(1)
+			return
+	game.presentation.resolve_profile()
+	print("Animation interpolation and quality profile checks PASSED")
 	game._choose_faction(1)
 	game._buy_guard()
 	game._begin_attack()

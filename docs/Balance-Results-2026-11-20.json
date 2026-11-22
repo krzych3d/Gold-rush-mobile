@@ -1,0 +1,923 @@
+{
+  "counters": {
+    "adaptive": {
+      "points_against": 0,
+      "strategy": "save"
+    },
+    "bank": {
+      "points_against": 0,
+      "strategy": "save"
+    },
+    "carriers": {
+      "points_against": 0,
+      "strategy": "rush"
+    },
+    "guards": {
+      "points_against": 0.3125,
+      "strategy": "carriers"
+    },
+    "mixed": {
+      "points_against": 0.09375,
+      "strategy": "guards"
+    },
+    "rush": {
+      "points_against": 0.140625,
+      "strategy": "turrets"
+    },
+    "saboteurs": {
+      "points_against": 0,
+      "strategy": "save"
+    },
+    "save": {
+      "points_against": 0,
+      "strategy": "turrets"
+    },
+    "spikes": {
+      "points_against": 0,
+      "strategy": "save"
+    },
+    "training": {
+      "points_against": 0,
+      "strategy": "rush"
+    },
+    "turrets": {
+      "points_against": 0.25,
+      "strategy": "adaptive"
+    }
+  },
+  "draws": 49,
+  "elapsed_seconds": 233.055,
+  "engine": "4.2.2-stable (official)",
+  "head_to_head": {
+    "adaptive": {
+      "adaptive": {
+        "games": 48,
+        "points": 24
+      },
+      "bank": {
+        "games": 64,
+        "points": 60
+      },
+      "carriers": {
+        "games": 64,
+        "points": 19
+      },
+      "guards": {
+        "games": 64,
+        "points": 6
+      },
+      "mixed": {
+        "games": 64,
+        "points": 41
+      },
+      "rush": {
+        "games": 64,
+        "points": 51
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 61
+      },
+      "save": {
+        "games": 64,
+        "points": 0
+      },
+      "spikes": {
+        "games": 64,
+        "points": 62
+      },
+      "training": {
+        "games": 64,
+        "points": 56
+      },
+      "turrets": {
+        "games": 64,
+        "points": 48
+      }
+    },
+    "bank": {
+      "adaptive": {
+        "games": 64,
+        "points": 4
+      },
+      "bank": {
+        "games": 48,
+        "points": 24
+      },
+      "carriers": {
+        "games": 64,
+        "points": 0
+      },
+      "guards": {
+        "games": 64,
+        "points": 0
+      },
+      "mixed": {
+        "games": 64,
+        "points": 0
+      },
+      "rush": {
+        "games": 64,
+        "points": 0
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 56
+      },
+      "save": {
+        "games": 64,
+        "points": 0
+      },
+      "spikes": {
+        "games": 64,
+        "points": 0
+      },
+      "training": {
+        "games": 64,
+        "points": 0
+      },
+      "turrets": {
+        "games": 64,
+        "points": 0
+      }
+    },
+    "carriers": {
+      "adaptive": {
+        "games": 64,
+        "points": 45
+      },
+      "bank": {
+        "games": 64,
+        "points": 64
+      },
+      "carriers": {
+        "games": 48,
+        "points": 24
+      },
+      "guards": {
+        "games": 64,
+        "points": 44
+      },
+      "mixed": {
+        "games": 64,
+        "points": 22.5
+      },
+      "rush": {
+        "games": 64,
+        "points": 0
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 64
+      },
+      "save": {
+        "games": 64,
+        "points": 10
+      },
+      "spikes": {
+        "games": 64,
+        "points": 64
+      },
+      "training": {
+        "games": 64,
+        "points": 64
+      },
+      "turrets": {
+        "games": 64,
+        "points": 0
+      }
+    },
+    "guards": {
+      "adaptive": {
+        "games": 64,
+        "points": 58
+      },
+      "bank": {
+        "games": 64,
+        "points": 64
+      },
+      "carriers": {
+        "games": 64,
+        "points": 20
+      },
+      "guards": {
+        "games": 48,
+        "points": 24
+      },
+      "mixed": {
+        "games": 64,
+        "points": 58
+      },
+      "rush": {
+        "games": 64,
+        "points": 26
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 63
+      },
+      "save": {
+        "games": 64,
+        "points": 28
+      },
+      "spikes": {
+        "games": 64,
+        "points": 64
+      },
+      "training": {
+        "games": 64,
+        "points": 52
+      },
+      "turrets": {
+        "games": 64,
+        "points": 44
+      }
+    },
+    "mixed": {
+      "adaptive": {
+        "games": 64,
+        "points": 23
+      },
+      "bank": {
+        "games": 64,
+        "points": 64
+      },
+      "carriers": {
+        "games": 64,
+        "points": 41.5
+      },
+      "guards": {
+        "games": 64,
+        "points": 6
+      },
+      "mixed": {
+        "games": 48,
+        "points": 24
+      },
+      "rush": {
+        "games": 64,
+        "points": 33
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 64
+      },
+      "save": {
+        "games": 64,
+        "points": 28
+      },
+      "spikes": {
+        "games": 64,
+        "points": 51
+      },
+      "training": {
+        "games": 64,
+        "points": 60
+      },
+      "turrets": {
+        "games": 64,
+        "points": 42
+      }
+    },
+    "rush": {
+      "adaptive": {
+        "games": 64,
+        "points": 13
+      },
+      "bank": {
+        "games": 64,
+        "points": 64
+      },
+      "carriers": {
+        "games": 64,
+        "points": 64
+      },
+      "guards": {
+        "games": 64,
+        "points": 38
+      },
+      "mixed": {
+        "games": 64,
+        "points": 31
+      },
+      "rush": {
+        "games": 48,
+        "points": 24
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 64
+      },
+      "save": {
+        "games": 64,
+        "points": 46
+      },
+      "spikes": {
+        "games": 64,
+        "points": 16
+      },
+      "training": {
+        "games": 64,
+        "points": 64
+      },
+      "turrets": {
+        "games": 64,
+        "points": 9
+      }
+    },
+    "saboteurs": {
+      "adaptive": {
+        "games": 64,
+        "points": 3
+      },
+      "bank": {
+        "games": 64,
+        "points": 8
+      },
+      "carriers": {
+        "games": 64,
+        "points": 0
+      },
+      "guards": {
+        "games": 64,
+        "points": 1
+      },
+      "mixed": {
+        "games": 64,
+        "points": 0
+      },
+      "rush": {
+        "games": 64,
+        "points": 0
+      },
+      "saboteurs": {
+        "games": 48,
+        "points": 24
+      },
+      "save": {
+        "games": 64,
+        "points": 0
+      },
+      "spikes": {
+        "games": 64,
+        "points": 26
+      },
+      "training": {
+        "games": 64,
+        "points": 32
+      },
+      "turrets": {
+        "games": 64,
+        "points": 22
+      }
+    },
+    "save": {
+      "adaptive": {
+        "games": 64,
+        "points": 64
+      },
+      "bank": {
+        "games": 64,
+        "points": 64
+      },
+      "carriers": {
+        "games": 64,
+        "points": 54
+      },
+      "guards": {
+        "games": 64,
+        "points": 36
+      },
+      "mixed": {
+        "games": 64,
+        "points": 36
+      },
+      "rush": {
+        "games": 64,
+        "points": 18
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 64
+      },
+      "save": {
+        "games": 48,
+        "points": 24
+      },
+      "spikes": {
+        "games": 64,
+        "points": 64
+      },
+      "training": {
+        "games": 64,
+        "points": 48
+      },
+      "turrets": {
+        "games": 64,
+        "points": 0
+      }
+    },
+    "spikes": {
+      "adaptive": {
+        "games": 64,
+        "points": 2
+      },
+      "bank": {
+        "games": 64,
+        "points": 64
+      },
+      "carriers": {
+        "games": 64,
+        "points": 0
+      },
+      "guards": {
+        "games": 64,
+        "points": 0
+      },
+      "mixed": {
+        "games": 64,
+        "points": 13
+      },
+      "rush": {
+        "games": 64,
+        "points": 48
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 38
+      },
+      "save": {
+        "games": 64,
+        "points": 0
+      },
+      "spikes": {
+        "games": 48,
+        "points": 24
+      },
+      "training": {
+        "games": 64,
+        "points": 28
+      },
+      "turrets": {
+        "games": 64,
+        "points": 0
+      }
+    },
+    "training": {
+      "adaptive": {
+        "games": 64,
+        "points": 8
+      },
+      "bank": {
+        "games": 64,
+        "points": 64
+      },
+      "carriers": {
+        "games": 64,
+        "points": 0
+      },
+      "guards": {
+        "games": 64,
+        "points": 12
+      },
+      "mixed": {
+        "games": 64,
+        "points": 4
+      },
+      "rush": {
+        "games": 64,
+        "points": 0
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 32
+      },
+      "save": {
+        "games": 64,
+        "points": 16
+      },
+      "spikes": {
+        "games": 64,
+        "points": 36
+      },
+      "training": {
+        "games": 48,
+        "points": 24
+      },
+      "turrets": {
+        "games": 64,
+        "points": 20
+      }
+    },
+    "turrets": {
+      "adaptive": {
+        "games": 64,
+        "points": 16
+      },
+      "bank": {
+        "games": 64,
+        "points": 64
+      },
+      "carriers": {
+        "games": 64,
+        "points": 64
+      },
+      "guards": {
+        "games": 64,
+        "points": 20
+      },
+      "mixed": {
+        "games": 64,
+        "points": 22
+      },
+      "rush": {
+        "games": 64,
+        "points": 55
+      },
+      "saboteurs": {
+        "games": 64,
+        "points": 42
+      },
+      "save": {
+        "games": 64,
+        "points": 64
+      },
+      "spikes": {
+        "games": 64,
+        "points": 64
+      },
+      "training": {
+        "games": 64,
+        "points": 44
+      },
+      "turrets": {
+        "games": 48,
+        "points": 24
+      }
+    }
+  },
+  "longest_waves": 15,
+  "match_count": 3784,
+  "mode": "full",
+  "profiles": {
+    "0/adaptive": {
+      "games": 172,
+      "losses": 58,
+      "points": 113
+    },
+    "0/bank": {
+      "games": 172,
+      "losses": 156,
+      "points": 16
+    },
+    "0/carriers": {
+      "games": 172,
+      "losses": 90,
+      "points": 81.5
+    },
+    "0/guards": {
+      "games": 172,
+      "losses": 36,
+      "points": 136
+    },
+    "0/mixed": {
+      "games": 172,
+      "losses": 82,
+      "points": 86.5
+    },
+    "0/rush": {
+      "games": 172,
+      "losses": 50,
+      "points": 117.5
+    },
+    "0/saboteurs": {
+      "games": 172,
+      "losses": 155,
+      "points": 13
+    },
+    "0/save": {
+      "games": 172,
+      "losses": 44,
+      "points": 126
+    },
+    "0/spikes": {
+      "games": 172,
+      "losses": 126,
+      "points": 44
+    },
+    "0/training": {
+      "games": 172,
+      "losses": 100,
+      "points": 72
+    },
+    "0/turrets": {
+      "games": 172,
+      "losses": 48,
+      "points": 122
+    },
+    "1/adaptive": {
+      "games": 172,
+      "losses": 62,
+      "points": 110
+    },
+    "1/bank": {
+      "games": 172,
+      "losses": 140,
+      "points": 32
+    },
+    "1/carriers": {
+      "games": 172,
+      "losses": 61,
+      "points": 110.5
+    },
+    "1/guards": {
+      "games": 172,
+      "losses": 52,
+      "points": 120
+    },
+    "1/mixed": {
+      "games": 172,
+      "losses": 46,
+      "points": 123
+    },
+    "1/rush": {
+      "games": 172,
+      "losses": 55,
+      "points": 113.5
+    },
+    "1/saboteurs": {
+      "games": 172,
+      "losses": 129,
+      "points": 43
+    },
+    "1/save": {
+      "games": 172,
+      "losses": 52,
+      "points": 118
+    },
+    "1/spikes": {
+      "games": 172,
+      "losses": 120,
+      "points": 51
+    },
+    "1/training": {
+      "games": 172,
+      "losses": 130,
+      "points": 42
+    },
+    "1/turrets": {
+      "games": 172,
+      "losses": 50,
+      "points": 122
+    },
+    "2/adaptive": {
+      "games": 172,
+      "losses": 68,
+      "points": 103
+    },
+    "2/bank": {
+      "games": 172,
+      "losses": 152,
+      "points": 20
+    },
+    "2/carriers": {
+      "games": 172,
+      "losses": 82,
+      "points": 86.5
+    },
+    "2/guards": {
+      "games": 172,
+      "losses": 34,
+      "points": 137
+    },
+    "2/mixed": {
+      "games": 172,
+      "losses": 62,
+      "points": 108
+    },
+    "2/rush": {
+      "games": 172,
+      "losses": 60,
+      "points": 111
+    },
+    "2/saboteurs": {
+      "games": 172,
+      "losses": 148,
+      "points": 24
+    },
+    "2/save": {
+      "games": 172,
+      "losses": 68,
+      "points": 100
+    },
+    "2/spikes": {
+      "games": 172,
+      "losses": 100,
+      "points": 72
+    },
+    "2/training": {
+      "games": 172,
+      "losses": 100,
+      "points": 72
+    },
+    "2/turrets": {
+      "games": 172,
+      "losses": 55,
+      "points": 117
+    },
+    "3/adaptive": {
+      "games": 172,
+      "losses": 70,
+      "points": 102
+    },
+    "3/bank": {
+      "games": 172,
+      "losses": 156,
+      "points": 16
+    },
+    "3/carriers": {
+      "games": 172,
+      "losses": 48,
+      "points": 123
+    },
+    "3/guards": {
+      "games": 172,
+      "losses": 61,
+      "points": 108
+    },
+    "3/mixed": {
+      "games": 172,
+      "losses": 50,
+      "points": 119
+    },
+    "3/rush": {
+      "games": 172,
+      "losses": 81,
+      "points": 91
+    },
+    "3/saboteurs": {
+      "games": 172,
+      "losses": 136,
+      "points": 36
+    },
+    "3/save": {
+      "games": 172,
+      "losses": 44,
+      "points": 128
+    },
+    "3/spikes": {
+      "games": 172,
+      "losses": 122,
+      "points": 50
+    },
+    "3/training": {
+      "games": 172,
+      "losses": 142,
+      "points": 30
+    },
+    "3/turrets": {
+      "games": 172,
+      "losses": 54,
+      "points": 118
+    }
+  },
+  "race_point_rates": [
+    0.490221987315011,
+    0.52061310782241,
+    0.50237843551797,
+    0.486786469344609
+  ],
+  "seeds": [
+    1701,
+    42
+  ],
+  "strategy_point_rates": {
+    "adaptive": 0.622093023255814,
+    "bank": 0.122093023255814,
+    "carriers": 0.583575581395349,
+    "guards": 0.728197674418605,
+    "mixed": 0.634447674418605,
+    "rush": 0.629360465116279,
+    "saboteurs": 0.168604651162791,
+    "save": 0.686046511627907,
+    "spikes": 0.315406976744186,
+    "training": 0.313953488372093,
+    "turrets": 0.696220930232558
+  },
+  "timeouts": 0,
+  "per_seed": {
+    "1701": {
+      "matches": 1892,
+      "strategy_point_rates": {
+        "adaptive": 0.6162790697674418,
+        "bank": 0.12209302325581395,
+        "carriers": 0.5813953488372093,
+        "guards": 0.7267441860465116,
+        "mixed": 0.6308139534883721,
+        "rush": 0.626453488372093,
+        "saboteurs": 0.16569767441860464,
+        "save": 0.686046511627907,
+        "spikes": 0.31540697674418605,
+        "training": 0.313953488372093,
+        "turrets": 0.7151162790697675
+      }
+    },
+    "42": {
+      "matches": 1892,
+      "strategy_point_rates": {
+        "adaptive": 0.627906976744186,
+        "bank": 0.12209302325581395,
+        "carriers": 0.5857558139534884,
+        "guards": 0.7296511627906976,
+        "mixed": 0.6380813953488372,
+        "rush": 0.6322674418604651,
+        "saboteurs": 0.17151162790697674,
+        "save": 0.686046511627907,
+        "spikes": 0.31540697674418605,
+        "training": 0.313953488372093,
+        "turrets": 0.6773255813953488
+      }
+    }
+  },
+  "raw_matches_sha256": "9d97b89ee960e972d66fb2ac99dfeaefdc98a818c39809100634a272ac40c0d1",
+  "source_sha256": {
+    "scripts/balance_rules.gd": "a86695e45bd5f3fdad7c8ebe6d3add8c8a8f3fe7684d3011feb2efb566f8f199",
+    "scripts/game.gd": "2a7ef7a6cba998548226379f740ed53b71394aed793f18b417013a0e23793765",
+    "ci/balance_tournament.gd": "567aac798c69074a83e3b8a8004aec2a6ea4a8235f5da1c80e5b9e23c9ea3df1"
+  },
+  "date": "2026-11-20",
+  "validation_passed": true,
+  "integration_checks": [
+    {
+      "test": "ci/smoke_account_progress.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_animation_gallery.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_balance.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_battle_presentation.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_battlefield_choices.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_cinematic_ui.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_epic_hud.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_lobby_codex.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_localization.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_original_hud.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    },
+    {
+      "test": "ci/smoke_reward_presentation.gd",
+      "exit_code": 0,
+      "errors": [],
+      "passed": true
+    }
+  ],
+  "turret_damage_change_rechecks": [
+    "ci/smoke_balance.gd",
+    "ci/smoke_epic_hud.gd",
+    "ci/smoke_localization.gd"
+  ]
+}

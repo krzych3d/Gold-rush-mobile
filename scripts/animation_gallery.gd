@@ -1,6 +1,7 @@
 extends Control
 const L10n = preload("res://scripts/localization.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
+const MobileSettings = preload("res://scripts/mobile_settings.gd")
 ## In-game QA viewer for the actual animation atlases used by the battlefield.
 ## No additional image generation, network requests, or paid APIs.
 
@@ -51,6 +52,8 @@ var selected_unit := 4
 var selected_action := 0
 var facing_right := true
 var elapsed := 0.0
+var paint_elapsed := 0.0
+var presentation_settings = MobileSettings.new()
 var preview: Control
 var unit_label: Label
 var action_label: Label
@@ -204,7 +207,11 @@ func _refresh_labels() -> void:
 
 func _process(delta: float) -> void:
 	elapsed += delta
-	preview.queue_redraw()
+	paint_elapsed += delta
+	var draw_interval: float = 1.0 / presentation_settings.preview_fps()
+	if paint_elapsed >= draw_interval:
+		paint_elapsed = fmod(paint_elapsed, draw_interval)
+		preview.queue_redraw()
 
 func _draw_preview() -> void:
 	var center := Vector2(preview.size.x * 0.5, preview.size.y * 0.67)
@@ -232,7 +239,9 @@ func _draw_preview() -> void:
 		Rect2(Vector2(-hero_width * 0.5, -hero_height), Vector2(hero_width, hero_height)),
 		Rect2(Vector2(float(frame * cell), float(row * cell)), Vector2(cell, cell)))
 	preview.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	frame_label.text = L10n.t("FRAME %d/%d • %s • %s") % [
+	var new_caption: String = L10n.t("FRAME %d/%d • %s • %s") % [
 		frame + 1, frame_count, L10n.t("SPECIAL ATLAS") if is_special else L10n.t("EXTRA STRIP") if strip != null else L10n.t("6-ROW ATLAS"),
 		L10n.t("RIGHT") if facing_right else L10n.t("LEFT")
 	]
+	if frame_label.text != new_caption:
+		frame_label.text = new_caption

@@ -27,7 +27,7 @@ func _run() -> void:
 	var start: Button = game.main_menu_overlay.find_child("StartGame", true, false)
 	if not _require(start.text == "ROZPOCZNIJ GRĘ", "Missing Polish primary start action"):
 		return
-	if not _require(game.main_menu_overlay.footer.find_children("*", "Button", true, false).size() == 3, "Home must have just play, guide and settings"):
+	if not _require(game.main_menu_overlay.footer.find_children("*", "Button", true, false).size() == 4 and game.main_menu_overlay.find_child("OpenTutorial", true, false) != null, "Home must expose play, tutorial, guide and settings"):
 		return
 	if not _require(game.main_menu_overlay.find_child("HomeLivePreview", true, false) == null and game.main_menu_overlay.find_child("ScreenScroll", true, false) == null, "Home regressed into a scrolling character dashboard"):
 		return
