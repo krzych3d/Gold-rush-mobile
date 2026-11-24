@@ -162,9 +162,9 @@ var terrain_details: Array = []
 var hit_sparks: Array = []
 var trap_bursts: Array = [] # Capped, render-only spike/snare activation events.
 var turret_bolts: Array = []
-var turret_texture: Texture2D = preload("res://assets/ui/turret.svg")
-var spikes_texture: Texture2D = preload("res://assets/ui/spikes.svg")
-var snare_texture: Texture2D = preload("res://assets/ui/snare.svg")
+const TRAP_ATLAS: Texture2D = preload("res://assets/world/defense_factions.svg")
+const TRAP_CELL := 192
+var trap_card_cache: Dictionary = {}
 var fallen_actors: Array = []
 var deposit_actors: Array = []
 var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
@@ -433,9 +433,8 @@ func _ready() -> void:
 	trap_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	gameplay_panel.add_child(trap_row)
 	for index in 3:
-		var icon_path: String = ["res://assets/ui/spikes.svg", "res://assets/ui/snare.svg", "res://assets/ui/turret.svg"][index]
 		var trap_button := _epic_card([L10n.t("SPIKES"), L10n.t("SNARE"), L10n.t("TURRET")][index],
-			TRAP_COSTS[index], load(icon_path) as Texture2D, 108)
+			TRAP_COSTS[index], _trap_card_texture(selected_race, index), 108)
 		trap_row.add_child(trap_button)
 		controls.append(trap_button)
 		trap_button.pressed.connect(_buy_trap.bind(index))
@@ -1661,7 +1660,10 @@ func _refresh_localized_cards() -> void:
 		var item: String = ["runner", "carrier", "saboteur", "spikes", "snare", "turret"][index]
 		var title: String = ["RUNNER", "CARRIER", "SABOTEUR", "SPIKES", "SNARE", "TURRET"][index]
 		var card: Button = controls[3 + index]
-		LocalizedCard.apply(card, ornate_ui.original_texture(_race_art_name(item)), L10n.t(title), "✦ %d" % (recruit_price(0, index) if index < 3 else TRAP_COSTS[index - 3]))
+		if index >= 3:
+			LocalizedCard.apply(card, _trap_card_texture(selected_race, index - 3), L10n.t(title), "✦ %d" % TRAP_COSTS[index - 3], false, true)
+		else:
+			LocalizedCard.apply(card, ornate_ui.original_texture(_race_art_name(item)), L10n.t(title), "✦ %d" % recruit_price(0, index))
 	LocalizedCard.apply(guard_button, ornate_ui.original_texture(_race_art_name("defender")), L10n.t("DEFENDER"), "✦ %d" % GUARD_COST, true)
 	LocalizedCard.apply(ability_button, ornate_ui.original_texture(_race_art_name("ability")), L10n.t(ABILITY_NAMES[selected_race]), L10n.t("AKTYWNA") if ability_used else "✦ %d" % ABILITY_COST, true)
 	LocalizedCard.apply(invest_button, ornate_ui.original_texture(_race_art_name("bank")), L10n.t("SKARBIEC %d/5") % bank_level, "MAX" if bank_level >= 5 else "✦ %d" % (BANK_BASE_COST + bank_level * BANK_STEP_COST), true)
@@ -1914,6 +1916,11 @@ func _refresh_unit_icons() -> void:
 		var icon_rect := controls[kind + 3].get_node_or_null("Artwork") as TextureRect
 		if icon_rect != null:
 			icon_rect.texture = _preview_frame(_character_atlas(_character_key(0, kind)))
+	for kind in 3:
+		if controls.size() > 6 + kind:
+			var trap_icon := controls[6 + kind].get_node_or_null("Artwork") as TextureRect
+			if trap_icon != null:
+				trap_icon.texture = _trap_card_texture(selected_race, kind)
 
 func _style_button(button: Button, is_lane: bool) -> void:
 	button.add_theme_font_size_override("font_size", 17 if is_lane else 19)
@@ -2071,6 +2078,42 @@ func _directional_sprite_transform(p: Vector2, facing: float, tilt: float = 0.0)
 	var origin := arena.size * 0.5 + camera_offset + _iso_project(p) * zoom
 	return Transform2D(Vector2(c * zoom * direction, sn * zoom * direction), Vector2(-sn * zoom, c * zoom), origin)
 
+static func _trap_sprite_region(race: int, kind: int, frame: int) -> Rect2:
+	return Rect2(Vector2((clampi(kind, 0, 2) * 4 + clampi(frame, 0, 3)) * TRAP_CELL,
+		clampi(race, 0, 3) * TRAP_CELL), Vector2(TRAP_CELL, TRAP_CELL))
+
+func _trap_card_texture(race: int, kind: int) -> Texture2D:
+	var key: int = race * 3 + kind
+	if not trap_card_cache.has(key):
+		var crop := AtlasTexture.new()
+		crop.atlas = TRAP_ATLAS
+		# Illustrate the full deployed spike silhouette, open snare and tower.
+		crop.region = _trap_sprite_region(race, kind, 2 if kind == 0 else 0)
+		crop.filter_clip = true
+		trap_card_cache[key] = crop
+	return trap_card_cache[key]
+
+static func _trap_animation_frame(kind: int, fire_time: float, cooldown: float) -> int:
+	if kind == 2:
+		if fire_time > 0.17:
+			return 2
+		if fire_time > 0.0:
+			return 3
+		return 1 if cooldown > 0.0 and cooldown <= 0.17 else 0
+	if fire_time <= 0.0:
+		return 0
+	if fire_time > 0.37:
+		return 1
+	if fire_time > 0.17:
+		return 2
+	return 3
+
+func _draw_trap_sprite(p: Vector2, race: int, kind: int, frame: int, opacity: float = 1.0) -> void:
+	# Art is already shaded. One atlas quad per object, no runtime SVG or shader.
+	var extent: float = 162.0 if kind == 2 else 138.0
+	var rect := Rect2(p + Vector2(-extent * 0.5, -extent * 0.84), Vector2.ONE * extent)
+	arena.draw_texture_rect_region(TRAP_ATLAS, rect, _trap_sprite_region(race, kind, frame), Color(1, 1, 1, opacity), false, true)
+
 static func _trap_impulse(remaining: float) -> float:
 	if remaining <= 0.0:
 		return 0.0
@@ -2085,7 +2128,7 @@ func _spawn_trap_burst(trap: Dictionary, side: int) -> void:
 	if kind < 0 or kind > 1:
 		return
 	trap["fire_time"] = 0.46
-	trap_bursts.append({"p": _trap_position(trap, side), "kind": kind, "age": 0.0, "side": side})
+	trap_bursts.append({"p": _trap_position(trap, side), "kind": kind, "age": 0.0, "side": side, "exhausted": int(trap["charges"]) <= 1})
 	while trap_bursts.size() > (8 if presentation.effective_quality == "battery" else 14):
 		trap_bursts.pop_front()
 
@@ -2170,36 +2213,25 @@ func _draw_arena() -> void:
 		for trap in traps[side]:
 			var p: Vector2 = _trap_position(trap, side)
 			var trap_kind: int = int(trap["kind"])
-			var icon_texture: Texture2D = turret_texture if trap_kind == 2 else snare_texture if trap_kind == 1 else spikes_texture
 			var fire_time: float = float(trap.get("fire_time", 0.0))
-			var shimmer: float = 0.65 if presentation.effective_quality == "battery" else 0.55 + 0.25 * sin(visual_time * 4.0 + float(trap.get("slot", 0)))
-			arena.draw_circle(p + Vector2(0, 7), 29.0, Color("05091d", 0.55))
-			var glow: Color = Color("5bcfff", 0.40 * shimmer) if trap_kind == 2 else Color("b568ff", 0.4 * shimmer) if trap_kind == 1 else Color("ffae60", 0.3 * shimmer)
-			if presentation.effective_quality != "battery" or fire_time > 0.0:
-				arena.draw_arc(p + Vector2(0, -32), 32.0 + 3.0 * shimmer, 0.0, TAU, 18, glow, 3.0)
-			if trap_kind == 0:
-				# Spikes sit low until triggered; then rise sharply and retract.
-				var emergence: float = _trap_impulse(fire_time)
-				var spike_height: float = 32.0 + 58.0 * emergence
-				arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-45, -7.0 - spike_height), Vector2(90, spike_height)), false)
-			elif trap_kind == 1:
-				# The jaws visibly snap together on the target and spring back.
-				var snap: float = _trap_impulse(fire_time)
-				var jaw_width: float = 90.0 - 40.0 * snap
-				arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-jaw_width * 0.5, -87.0 + 18.0 * snap), Vector2(jaw_width, 90.0 - 18.0 * snap)), false)
-			else:
-				arena.draw_texture_rect(icon_texture, Rect2(p + Vector2(-45, -87), Vector2(90, 90)), false)
-				if fire_time > 0.0:
-					var fire: float = fire_time / 0.28
-					arena.draw_circle(p + Vector2(0, -66), 13.0 + 6.0 * (1.0 - fire), Color("9aeaff", fire * 0.8))
+			var cooldown: float = float(trap.get("cooldown", 0.0))
+			var frame: int = _trap_animation_frame(trap_kind, fire_time, cooldown if phase == "ATTACK" else 0.0)
+			if presentation.reduced_motion:
+				frame = 2 if fire_time > 0.0 else 0
+			_draw_trap_sprite(p, side_race(side), trap_kind, frame)
+
 	# Residual impact is independent of trap lifespan (last charge/consumption).
 	for burst in trap_bursts:
 		var age: float = float(burst["age"])
 		var progress: float = clampf(age / 0.46, 0.0, 1.0)
 		var strength: float = 1.0 - progress
 		var origin: Vector2 = burst["p"] + Vector2(0, -20)
-		var spikes: bool = int(burst["kind"]) == 0
-		var tint: Color = Color("ffd08f") if spikes else Color("ce8dff")
+		var burst_kind: int = int(burst["kind"])
+		var race: int = side_race(int(burst["side"]))
+		var tint: Color = RACE_COLORS[race]
+		if bool(burst.get("exhausted", false)):
+			# The consumed mechanism remains visible through the last animation.
+			_draw_trap_sprite(burst["p"], race, burst_kind, _trap_animation_frame(burst_kind, 0.46 - age, 0.0), strength)
 		arena.draw_arc(origin, 16.0 + 35.0 * progress, 0.0, TAU, 16, Color(tint.r, tint.g, tint.b, strength * 0.82), 3.5)
 		var rays: int = 3 if presentation.effective_quality == "battery" else 5
 		for ray in rays:

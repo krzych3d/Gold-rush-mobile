@@ -37,21 +37,25 @@ func _ready() -> void:
 	add_child(cost)
 	resized.connect(_layout)
 
-func configure(source: Texture2D, title: String, price: String, is_banner: bool = false) -> void:
+func configure(source: Texture2D, title: String, price: String, is_banner: bool = false, full_art: bool = false) -> void:
 	banner = is_banner
-	var crop := illustration.texture as AtlasTexture
-	if crop == null:
-		crop = AtlasTexture.new()
-	crop.atlas = source
-	if source != null:
-		var dimensions: Vector2 = source.get_size()
-		if banner and dimensions.x > dimensions.y * 2.0:
-			crop.region = Rect2(dimensions * Vector2(0.03, 0.16), dimensions * Vector2(0.29, 0.70))
-		else:
-			# Portrait cards and wide trap cards have different label baselines.
-			var wide: bool = dimensions.x > dimensions.y * 1.5
-			crop.region = Rect2(dimensions * Vector2(0.04, 0.06 if wide else 0.05), dimensions * Vector2(0.92, 0.66 if wide else 0.73))
-	illustration.texture = crop
+	if full_art:
+		# Ready-to-use battlefield AtlasTexture, no nested atlas or label crop.
+		illustration.texture = source
+	else:
+		var crop := illustration.texture as AtlasTexture
+		if crop == null or bool(get_meta("full_art", false)):
+			crop = AtlasTexture.new()
+		crop.atlas = source
+		if source != null:
+			var dimensions: Vector2 = source.get_size()
+			if banner and dimensions.x > dimensions.y * 2.0:
+				crop.region = Rect2(dimensions * Vector2(0.03, 0.16), dimensions * Vector2(0.29, 0.70))
+			else:
+				var wide: bool = dimensions.x > dimensions.y * 1.5
+				crop.region = Rect2(dimensions * Vector2(0.04, 0.06 if wide else 0.05), dimensions * Vector2(0.92, 0.66 if wide else 0.73))
+		illustration.texture = crop
+	set_meta("full_art", full_art)
 	caption.text = title
 	cost.text = price
 	var button := get_parent() as Button
@@ -85,7 +89,7 @@ func _draw() -> void:
 	if frame != null:
 		draw_style_box(frame, Rect2(Vector2.ZERO, size))
 
-static func apply(button: Button, source: Texture2D, title: String, price: String, banner_mode: bool = false) -> void:
+static func apply(button: Button, source: Texture2D, title: String, price: String, banner_mode: bool = false, full_art: bool = false) -> void:
 	for name in ["IllustratedSurface", "DynamicPriceMask", "OriginalDynamicText"]:
 		var baked := button.get_node_or_null(name) as CanvasItem
 		if baked != null:
@@ -95,4 +99,4 @@ static func apply(button: Button, source: Texture2D, title: String, price: Strin
 		surface = load("res://scripts/localized_card.gd").new()
 		surface.name = "LocalizedSurface"
 		button.add_child(surface)
-	surface.configure(source, title, price, banner_mode)
+	surface.configure(source, title, price, banner_mode, full_art)
