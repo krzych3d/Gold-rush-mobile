@@ -83,6 +83,27 @@ func _run() -> void:
 			return
 		if not _require(codex.find_child("EntryIllustration", true, false).texture != null, "Guide lacks image"):
 			return
+	# Every defense preview must use the new battle atlas, not removed legacy
+	# game properties. Exercise each race, actual animation, and reduced motion.
+	var Preview = preload("res://scripts/menu_preview.gd")
+	var defense_preview = Preview.new()
+	game.add_child(defense_preview)
+	defense_preview.size = Vector2(300, 220)
+	for race in 4:
+		for kind in 3:
+			defense_preview.configure(game, {"race": race, "demo": ["spikes", "snare", "turret"][kind]})
+			if not _require(defense_preview.defense_kind == kind and defense_preview.object_art == game._trap_card_texture(race, kind), "Guide defense preview does not match the battle atlas"):
+				return
+			defense_preview.playing = true
+			game.presentation.reduced_motion = false
+			defense_preview.elapsed = 0.01 if kind == 2 else 2.15
+			if not _require(defense_preview._defense_frame() == 2, "Guide defense animation is missing its active frame"):
+				return
+			game.presentation.reduced_motion = true
+			if not _require(defense_preview._defense_frame() == 0, "Guide ignores reduced motion"):
+				return
+	game.presentation.reduced_motion = false
+	defense_preview.queue_free()
 	# Search, category filtering and an empty result can all recover.
 	codex.search.text = "Kolce"
 	codex._filter_entries()

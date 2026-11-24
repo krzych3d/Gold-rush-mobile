@@ -1055,6 +1055,11 @@
       "git_blob_sha1": "d3d3f57798a3d29361e1d9b0814ec796c81d0da2",
       "sha256": "5f0e1377b0798c5bb5fc4daa83464d916727fa40ffc18377dde8bd1fedcb673b"
     },
+    "assets/world/defense_factions.svg": {
+      "bytes": 229108,
+      "git_blob_sha1": "965c8c57db378b8026921ceef35a35535b88b6d3",
+      "sha256": "0648ec42bc2e7d05712d6dac6865a55bc9aa7c56550792d4f1668e5acdcf262f"
+    },
     "assets/world/dwarf_guard.svg": {
       "bytes": 1321,
       "git_blob_sha1": "a94622e62cb152489d20e492945bcfd247bebd91",

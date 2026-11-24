@@ -126,6 +126,33 @@ func _run() -> void:
 	if icon0 == null or icon0.atlas != game._character_atlas("void_stalker"):
 		_fail("Voidborn runner card displays an unrelated character")
 		return
+	# All twelve defense card textures must share the exact battle atlas, with
+	# different faction rows and unique mechanism/animation regions.
+	if game.TRAP_ATLAS.get_size() != Vector2(2304, 768):
+		_fail("Defense atlas dimensions changed")
+		return
+	for race in 4:
+		for kind in 3:
+			var texture: AtlasTexture = game._trap_card_texture(race, kind) as AtlasTexture
+			if texture == null or texture.atlas != game.TRAP_ATLAS or texture.region != game._trap_sprite_region(race, kind, 2 if kind == 0 else 0):
+				_fail("Defense card uses wrong battle atlas region")
+				return
+			if texture != game._trap_card_texture(race, kind):
+				_fail("Defense card atlas cache reallocated")
+				return
+			for frame in 4:
+				if not Rect2(Vector2.ZERO, game.TRAP_ATLAS.get_size()).encloses(game._trap_sprite_region(race, kind, frame)):
+					_fail("Defense sprite frame leaves atlas")
+					return
+	if game._trap_animation_frame(0, 0.46, 0.0) != 1 or game._trap_animation_frame(1, 0.30, 0.0) != 2 or game._trap_animation_frame(2, 0.0, 0.10) != 1 or game._trap_animation_frame(2, 0.27, 0.6) != 2 or game._trap_animation_frame(2, 0.1, 0.4) != 3:
+		_fail("Defense animation frames are out of order")
+		return
+	if game.original_png_ui:
+		for kind in 3:
+			var surface = game.controls[6 + kind].get_node_or_null("LocalizedSurface")
+			if surface == null or surface.illustration.texture != game._trap_card_texture(3, kind):
+				_fail("Void defense card does not match battlefield sprite")
+				return
 	# Verify lane and purchases through the actual button signal rather than a
 	# direct game method call; this checks the user's real menu wiring.
 	game.controls[2].pressed.emit()
