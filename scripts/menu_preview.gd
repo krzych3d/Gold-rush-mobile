@@ -7,6 +7,7 @@ var game
 var entry: Dictionary = {}
 var atlas: Texture2D
 var object_art: Texture2D
+var defense_kind := -1
 var elapsed := 0.0
 var redraw_elapsed := 0.0
 var playing := true
@@ -32,11 +33,11 @@ func configure(owner_game, data: Dictionary) -> void:
 	var key: String = game._character_key_for_race(race, role, preview_mode == "defender" or (preview_mode == "ability" and race == 0))
 	atlas = game._character_atlas(key)
 	object_art = null
-	match preview_mode:
-		"spikes": object_art = game.spikes_texture
-		"snare": object_art = game.snare_texture
-		"turret": object_art = game.turret_texture
-		"bank": object_art = game.VAULT_TIER_ART[0]
+	defense_kind = ["spikes", "snare", "turret"].find(preview_mode)
+	if defense_kind >= 0:
+		object_art = game._trap_card_texture(race, defense_kind)
+	elif preview_mode == "bank":
+		object_art = game.VAULT_TIER_ART[0]
 	elapsed = 0.0
 	redraw_elapsed = 0.0
 	action = -1
@@ -101,6 +102,15 @@ func _draw_actor(at: Vector2, scale_factor: float = 1.0, actor_row: int = -1) ->
 	draw_texture_rect_region(atlas, Rect2(Vector2(-side * 0.5, -side), Vector2(side, side)), Rect2(Vector2(frame * 128, (row if actor_row < 0 else actor_row) * 128), Vector2(128, 128)))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
+func _defense_frame() -> int:
+	if defense_kind < 0 or not playing or game.presentation.reduced_motion:
+		return 0
+	if defense_kind == 2:
+		var shot_cycle: float = fmod(elapsed, 0.6)
+		return game._trap_animation_frame(defense_kind, maxf(0.0, 0.28 - shot_cycle), 0.6 - shot_cycle)
+	var trigger_cycle: float = fmod(elapsed, 4.0)
+	return game._trap_animation_frame(defense_kind, clampf(2.46 - trigger_cycle, 0.0, 0.46) if trigger_cycle >= 2.0 else 0.0, 0.0)
+
 func _draw() -> void:
 	if game == null or entry.is_empty():
 		return
@@ -120,7 +130,10 @@ func _draw() -> void:
 	elif preview_mode in ["spikes", "snare", "turret"]:
 		var object_pos := Vector2(size.x * 0.28, ground)
 		var side: float = minf(size.y * 0.56, 130.0)
-		draw_texture_rect(object_art, Rect2(object_pos - Vector2(side * 0.5, side), Vector2(side, side)), false)
+		# Use the same four drawn states and faction row as the actual battlefield.
+		if defense_kind >= 0 and object_art != null:
+			draw_texture_rect_region(game.TRAP_ATLAS, Rect2(object_pos - Vector2(side * 0.5, side), Vector2(side, side)),
+				game._trap_sprite_region(race, defense_kind, _defense_frame()), Color.WHITE, false, true)
 		var actor_pos := Vector2(size.x * 0.72, ground)
 		var cycle: float = fmod(elapsed, 4.0)
 		_draw_actor(actor_pos, 0.75, 3 if cycle > 2.0 and cycle < 2.6 else 1)
