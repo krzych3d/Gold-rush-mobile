@@ -282,6 +282,10 @@ func _test_campaign() -> void:
 
 func _test_campaign_routes() -> void:
 	for mission in 2:
+		var art: Texture2D = CampaignMaps.texture(mission)
+		require(art != null, "Missing imported original campaign art: %d" % mission)
+		if art != null:
+			require(art.get_width() == 1672 and art.get_height() == 941, "Campaign art cropped or resized unexpectedly")
 		for lane in 3:
 			var last: Vector2 = CampaignMaps.point(mission, lane, 0.0, 0)
 			require(CampaignMaps.road_length(mission, lane) > 1800.0, "Campaign route too short")

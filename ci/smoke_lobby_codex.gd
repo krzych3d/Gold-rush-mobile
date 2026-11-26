@@ -232,7 +232,68 @@ func _run() -> void:
 	game._use_race_ability()
 	if not _require(game.phase == "END", "Ability spending can leave zero vault in an active match"):
 		return
-	print("Lobby and codex PASSED: 21 entries, 4 races × 4 roles, shared stats, search, navigation, 4 portrait sizes, simplified cinematic home, mobile profiles")
 	game.queue_free()
 	await process_frame
+	if not await _check_campaign_maps():
+		return
+	print("Lobby and codex PASSED: 21 entries, 4 races × 4 roles, shared stats, search, navigation, 4 portrait sizes, simplified cinematic home, mobile profiles")
 	quit(0)
+
+
+func _check_campaign_maps() -> bool:
+	# Start each actual chapter through the home/chronicle buttons. Verify
+	# imported art, fit, touch picking, and travel in the shipping simulator.
+	for mission in 2:
+		root.size = Vector2i(720, 1280)
+		game = load("res://main.tscn").instantiate()
+		game.presentation.language = "pl"
+		game.account = game.AccountProgress.new("user://qa-campaign-map-navigation.cfg")
+		game.account.campaign_completed.clear()
+		if mission == 1:
+			game.account.campaign_completed.append("dwarf_bells")
+		root.add_child(game)
+		await process_frame
+		game.main_menu_overlay.find_child("OpenCampaign", true, false).pressed.emit()
+		await process_frame
+		var chapter := game.campaign_overlay.find_child("CampaignMission%d" % mission, true, false) as Button
+		if not _require(is_instance_valid(chapter) and not chapter.disabled, "Campaign map chapter cannot be launched"):
+			return false
+		chapter.pressed.emit()
+		await process_frame
+		if not _require(game.campaign_map_art and game.epic_battlefield_texture.resource_path == game.CampaignMaps.ASSETS[mission] and game.phase == "PREP", "Campaign start did not select its original artwork"):
+			return false
+		game._close_campaign_overlay()
+		for dimensions in [Vector2i(720, 1280), Vector2i(1280, 720)]:
+			root.size = dimensions
+			game.size = Vector2(dimensions)
+			await process_frame
+			await process_frame
+			game._fit_map()
+			var world_size: Vector2 = game._battlefield_world_size()
+			var visible_size: Vector2 = world_size * game.camera_zoom
+			if not _require(visible_size.x <= game.arena.size.x + 1 and visible_size.y <= game.arena.size.y + 1, "Original campaign battlefield clipped at " + str(dimensions)):
+				return false
+			for road in 3:
+				var p: Vector2 = game._point(road, 0.5, 0)
+				var screen: Vector2 = game._sprite_transform(p).origin
+				if not _require(game._nearest_lane(screen) == road, "Tap selects the wrong campaign road"):
+					return false
+		game.phase = "ATTACK"
+		game.units.clear()
+		game.guards.clear()
+		game.traps = [[], []]
+		game._spawn(0, 1, 0, 0.2)
+		var unit: Dictionary = game.units[0]
+		var before: float = float(unit["position"])
+		game._simulate(0.05)
+		var outbound: float = float(unit["position"])
+		if not _require(outbound > before, "Campaign raider failed to advance"):
+			return false
+		unit["returning"] = true
+		game._simulate(0.05)
+		if not _require(float(unit["position"]) < outbound, "Campaign raider failed to reverse on its route"):
+			return false
+		game.queue_free()
+		await process_frame
+	print("Original campaign maps PASSED: actual chapter launch, textures, landscape/portrait fit, lane selection, outbound and return travel")
+	return true
