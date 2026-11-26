@@ -11,6 +11,7 @@ const HISTORY_LIMIT := 64
 var config_path := "user://account_progress.cfg"
 var total_xp := 0
 var claimed_matches := PackedStringArray()
+var campaign_completed := PackedStringArray()
 var primary_valid := false
 var load_failed := false
 
@@ -83,8 +84,15 @@ func _load_file(path: String) -> bool:
 	for match_id in history:
 		if match_id.is_empty() or match_id.length() > 128:
 			return false
+	var completed = config.get_value("account", "campaign_completed", PackedStringArray())
+	if not completed is PackedStringArray or completed.size() > 256:
+		return false
+	for mission_id in completed:
+		if mission_id.is_empty() or mission_id.length() > 100:
+			return false
 	total_xp = value
 	claimed_matches = history
+	campaign_completed = completed
 	return true
 
 func _save() -> bool:
@@ -94,6 +102,7 @@ func _save() -> bool:
 	config.set_value("account", "version", 1)
 	config.set_value("account", "total_xp", total_xp)
 	config.set_value("account", "claimed_matches", claimed_matches)
+	config.set_value("account", "campaign_completed", campaign_completed)
 	var temporary: String = config_path + ".pending"
 	if config.save(temporary) != OK:
 		return false
@@ -140,3 +149,16 @@ func claim_match(match_id: String, victory: bool, finished_waves: int, battle_se
 			result["unlocked"].append(race)
 	changed.emit()
 	return result
+
+
+func claim_campaign(mission_id: String, finished_waves: int, battle_seconds: float) -> Dictionary:
+	# Completion and XP share the same atomic account save. Replays grant no XP.
+	if campaign_completed.has(mission_id):
+		return {"status": "already_completed", "gained": 0}
+	if mission_id.is_empty() or mission_id.length() > 100 or campaign_completed.size() >= 256:
+		return {"status": "ineligible", "gained": 0}
+	campaign_completed.append(mission_id)
+	var reward: Dictionary = claim_match("campaign:" + mission_id, true, finished_waves, battle_seconds)
+	if reward.get("status") != "saved":
+		campaign_completed.remove_at(campaign_completed.size() - 1)
+	return reward
