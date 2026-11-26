@@ -256,6 +256,8 @@ func sync() -> void:
 		int(maxf(0, ceilf(game.remaining))), int(game.interest_rate(game.selected_race, game.bank_level) * 100)]
 	if game.wave >= game.Rules.PRESSURE_START:
 		timer_caption += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
+	if game.campaign_index >= 0:
+		timer_caption = game._campaign_hud() + "\n" + timer_caption
 	if game.tutorial_mode:
 		timer_caption = L10n.t("SAMOUCZEK • BEZ LIMITU CZASU")
 	if game.timer_label.text != timer_caption:
