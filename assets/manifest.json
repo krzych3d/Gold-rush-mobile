@@ -305,6 +305,16 @@
         836
       ]
     },
+    "assets/epic/world/campaign_breathing_mountain.jpg": {
+      "bytes": 573658,
+      "git_blob_sha1": "9825324bf85179e89391a19434ef91200dcc938f",
+      "sha256": "a6f0ee104be9e5fccfb3935d071eb93fbbab9118bfbafec0524c3b721ee3e29f"
+    },
+    "assets/epic/world/campaign_vargheim.jpg": {
+      "bytes": 503444,
+      "git_blob_sha1": "15b4c74e8a9177f8c495681b5c9bbc96552a3739",
+      "sha256": "bbf3779799338c1db18f06b7caec5bbeb78afe9b2e44c4c2a395a693de8ce8fb"
+    },
     "assets/factions/dwarves.svg": {
       "bytes": 3651,
       "git_blob_sha1": "73ab42de14df17ce3d07b2c94c44c142c7494711",
