@@ -27,7 +27,32 @@ func _run() -> void:
 	var start: Button = game.main_menu_overlay.find_child("StartGame", true, false)
 	if not _require(start.text == "ROZPOCZNIJ GRĘ", "Missing Polish primary start action"):
 		return
-	if not _require(game.main_menu_overlay.footer.find_children("*", "Button", true, false).size() == 4 and game.main_menu_overlay.find_child("OpenTutorial", true, false) != null, "Home must expose play, tutorial, guide and settings"):
+	# The chronicle adds a fifth action. Verify actual named buttons rather
+	# than merely relaxing the previous exact-count regression.
+	var home = game.main_menu_overlay
+	if not _require(home.footer.find_children("*", "Button", true, false).size() == 5, "Home must expose exactly five gameplay/navigation actions"):
+		return
+	for action in ["StartGame", "OpenCampaign", "OpenTutorial", "OpenCodex", "OpenSettings"]:
+		var button := home.find_child(action, true, false) as Button
+		if not _require(is_instance_valid(button) and not button.disabled, "Home action missing or disabled: " + action):
+			return
+	var campaign_button := home.find_child("OpenCampaign", true, false) as Button
+	if not _require(campaign_button.text == "KAMPANIA", "Missing Polish campaign action"):
+		return
+	# Opening the campaign must not start a match or consume gold.
+	game.account.campaign_completed.clear()
+	var starting_gold: Array = game.gold.duplicate()
+	campaign_button.pressed.emit()
+	await process_frame
+	if not _require(is_instance_valid(game.campaign_overlay) and not home.visible and game.phase == "SELECT" and game.gold == starting_gold, "Campaign must open a separate chronicle without changing battle state"):
+		return
+	var first := game.campaign_overlay.find_child("CampaignMission0", true, false) as Button
+	var second := game.campaign_overlay.find_child("CampaignMission1", true, false) as Button
+	if not _require(is_instance_valid(first) and not first.disabled and is_instance_valid(second) and second.disabled, "Campaign chapter prerequisite is not enforced in the menu"):
+		return
+	game._navigate_back()
+	await process_frame
+	if not _require(game.campaign_overlay == null and home.visible, "Back must close chronicle and restore home"):
 		return
 	if not _require(game.main_menu_overlay.find_child("HomeLivePreview", true, false) == null and game.main_menu_overlay.find_child("ScreenScroll", true, false) == null, "Home regressed into a scrolling character dashboard"):
 		return
@@ -43,6 +68,9 @@ func _run() -> void:
 		await process_frame
 		var bounds: Rect2 = start.get_global_rect()
 		if not _require(bounds.end.y <= dimensions.y and bounds.position.y > dimensions.y * 0.72 and bounds.end.x <= dimensions.x and bounds.size.y >= 80, "Home actions overflow or cover character faces at " + str(dimensions)):
+			return
+		var story_bounds: Rect2 = campaign_button.get_global_rect()
+		if not _require(story_bounds.end.y <= dimensions.y and story_bounds.position.y > dimensions.y * 0.72 and story_bounds.end.x <= dimensions.x and story_bounds.size.y >= 80 and not story_bounds.intersects(bounds), "Campaign button overlaps or overflows at " + str(dimensions)):
 			return
 	root.size = Vector2i(720, 1280)
 	game.size = Vector2(720, 1280)
