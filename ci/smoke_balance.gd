@@ -2,6 +2,7 @@ extends SceneTree
 const Game = preload("res://scripts/game.gd")
 const Rules = preload("res://scripts/balance_rules.gd")
 const Story = preload("res://scripts/story_campaign.gd")
+const CampaignMaps = preload("res://scripts/campaign_maps.gd")
 const Profile = preload("res://scripts/account_progress.gd")
 var failures: Array[String] = []
 
@@ -220,6 +221,7 @@ func run() -> void:
 	bot_a.free()
 	bot_b.free()
 	_test_campaign()
+	_test_campaign_routes()
 	if failures.is_empty():
 		print("Balance regression PASSED: side parity, bounded income, temporary shields, purchase caps, sabotage, evasion, melee, simultaneous theft, pressure and honest bot")
 	quit(0 if failures.is_empty() else 1)
@@ -276,3 +278,30 @@ func _test_campaign() -> void:
 	for suffix in ["", ".bak", ".pending"]:
 		if FileAccess.file_exists(path + suffix):
 			DirAccess.remove_absolute(path + suffix)
+
+
+func _test_campaign_routes() -> void:
+	for mission in 2:
+		for lane in 3:
+			var last: Vector2 = CampaignMaps.point(mission, lane, 0.0, 0)
+			require(CampaignMaps.road_length(mission, lane) > 1800.0, "Campaign route too short")
+			for step in range(1, 101):
+				var t: float = float(step) / 100.0
+				var p: Vector2 = CampaignMaps.point(mission, lane, t, 0)
+				require(p.x > last.x and absf(p.x) < CampaignMaps.SIZE.x * 0.5 and absf(p.y) < CampaignMaps.SIZE.y * 0.5, "Campaign route out of map or non-monotonic")
+				require(p.is_equal_approx(CampaignMaps.point(mission, lane, 1.0 - t, 1)), "Factions do not share the same reversed road")
+				last = p
+			for step in range(21):
+				var t: float = float(step) / 20.0
+				if lane < 2:
+					require(CampaignMaps.point(mission, lane, t, 0).y < CampaignMaps.point(mission, lane + 1, t, 0).y, "Campaign lanes cross")
+	var game = fixture()
+	var old: Vector2 = game._point(1, 0.5, 0)
+	require(game._battlefield_world_size() == Vector2(2400.0, 1060.0), "Normal map dimensions changed")
+	game.campaign_index = 1
+	game.campaign_map_art = true
+	require(game._point(1, 0.5, 0).is_equal_approx(CampaignMaps.point(1, 1, 0.5, 0)), "Game actor path not connected to authored route")
+	require(game._battlefield_world_size() == CampaignMaps.SIZE, "Campaign art loses aspect ratio")
+	game.campaign_map_art = false
+	require(game._point(1, 0.5, 0) == old, "Campaign route leaks into regular match")
+	game.free()

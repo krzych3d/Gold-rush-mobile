@@ -2,6 +2,7 @@ extends Control
 ## Dwarven story episodes. UI is modal; simulation is owned by game.gd.
 const Epic = preload("res://scripts/epic_theme.gd")
 const Battlefields = preload("res://scripts/battlefields.gd")
+const CampaignMaps = preload("res://scripts/campaign_maps.gd")
 const MobileLayout = preload("res://scripts/mobile_layout.gd")
 const L10n = preload("res://scripts/localization.gd")
 const MISSIONS = [
@@ -46,7 +47,9 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var bg := TextureRect.new()
-	bg.texture = Battlefields.texture("dwarves" if mode == "menu" else str(MISSIONS[index]["map"]))
+	bg.texture = CampaignMaps.texture(0 if mode == "menu" else index)
+	if bg.texture == null:
+		bg.texture = Battlefields.texture("dwarves" if mode == "menu" else str(MISSIONS[index]["map"]))
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

@@ -167,7 +167,10 @@ func _layout() -> void:
 		drawer.size = Vector2(minf(710, usable.size.x - 20), maxf(120, command_bottom - command_top))
 		drawer.position.x = usable.end.x - drawer.size.x - 10
 	else:
-		var map_height: float = (usable.size.x - 20) * 1060.0 / 2400.0 + 24.0
+		var legacy_height: float = (usable.size.x - 20) * 1060.0 / 2400.0 + 24.0
+		var world_size: Vector2 = game._battlefield_world_size()
+		var natural_height: float = (usable.size.x - 20) * world_size.y / world_size.x + 24.0
+		var map_height: float = minf(natural_height, maxf(legacy_height, usable.end.y - map_top - 300.0))
 		game.battlefield_frame.position = Vector2(usable.position.x + 10, map_top)
 		game.battlefield_frame.size = Vector2(usable.size.x - 20, map_height)
 		command_top = map_top + map_height + 10
@@ -203,7 +206,8 @@ func fit_camera() -> void:
 	follow_action = false
 	game.overview_mode = true
 	game.expanded_map = landscape
-	game.camera_zoom = maxf(0.01, minf(game.arena.size.x / 2400.0, game.arena.size.y / 1060.0))
+	var world_size: Vector2 = game._battlefield_world_size()
+	game.camera_zoom = maxf(0.01, minf(game.arena.size.x / world_size.x, game.arena.size.y / world_size.y))
 	game.camera_offset = Vector2.ZERO
 	game.arena.queue_redraw()
 

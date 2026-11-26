@@ -19,6 +19,9 @@ const TutorialCoach = preload("res://scripts/tutorial_coach.gd")
 const WaveLedger = preload("res://scripts/wave_ledger.gd")
 const WaveSummaryPanel = preload("res://scripts/wave_summary_panel.gd")
 const StoryCampaign = preload("res://scripts/story_campaign.gd")
+const CampaignMaps = preload("res://scripts/campaign_maps.gd")
+var campaign_map_art := false
+var campaign_path_speed: Array[float] = [1.0, 1.0, 1.0]
 var campaign_index := -1
 var campaign_delivered := 0
 var campaign_overlay: Control
@@ -563,7 +566,15 @@ func _start_campaign(index: int) -> void:
 	bot_race = int(mission["enemy"])
 	gold = [int(mission["gold"]), 950]
 	# The campaign board is a temporary override, not a saved map preference.
-	epic_battlefield_texture = Battlefields.texture(str(mission["map"]))
+	var original_art: Texture2D = CampaignMaps.texture(index)
+	campaign_map_art = original_art != null
+	epic_battlefield_texture = original_art if campaign_map_art else Battlefields.texture(str(mission["map"]))
+	if campaign_map_art:
+		for path in 3:
+			campaign_path_speed[path] = 2.0 * WORLD_HALF_LENGTH / CampaignMaps.road_length(index, path)
+	if is_instance_valid(battle_shell):
+		battle_shell._layout()
+	_fit_map()
 	_set_message("Protect your vault!")
 	_present_campaign("intro")
 	_refresh()
@@ -1414,7 +1425,7 @@ func _simulate(dt: float) -> void:
 			continue
 		if not unit["returning"]:
 			if not bool(unit.get("blocked", false)):
-				unit["position"] += unit["speed"] * dt * StoryCampaign.speed_factor(campaign_index, wave, int(unit["lane"]))
+				unit["position"] += unit["speed"] * dt * _campaign_speed_factor(int(unit["lane"]))
 			if unit["position"] >= 1.0:
 				var amount: int = mini(unit["capacity"], gold[defender])
 				gold[defender] -= amount
@@ -1429,7 +1440,7 @@ func _simulate(dt: float) -> void:
 				unit["action_time"] = 0.0
 		else:
 			if not bool(unit.get("blocked", false)):
-				unit["position"] -= unit["speed"] * dt * StoryCampaign.speed_factor(campaign_index, wave, int(unit["lane"]))
+				unit["position"] -= unit["speed"] * dt * _campaign_speed_factor(int(unit["lane"]))
 			if unit["position"] <= 0.0:
 				wave_ledger.record_delivery(int(unit["side"]), int(unit["carried"]))
 				if campaign_index >= 0 and int(unit["side"]) == 0:
@@ -1780,7 +1791,16 @@ func _refresh_localized_cards() -> void:
 	LocalizedCard.apply(invest_button, ornate_ui.original_texture(_race_art_name("bank")), L10n.t("SKARBIEC %d/5") % bank_level, "MAX" if bank_level >= 5 else "✦ %d" % (BANK_BASE_COST + bank_level * BANK_STEP_COST), true)
 	LocalizedCard.apply(raid_button, ornate_ui.original_texture(_race_art_name("raid")), L10n.t("TRENING %d/3") % raid_boost, "MAX" if raid_boost >= 3 else "✦ %d" % Rules.training_cost(raid_boost), true)
 
+func _battlefield_world_size() -> Vector2:
+	return CampaignMaps.SIZE if campaign_map_art else Vector2(2400.0, 1060.0)
+
+func _campaign_speed_factor(path: int) -> float:
+	var factor: float = campaign_path_speed[path] if campaign_map_art else 1.0
+	return factor * StoryCampaign.speed_factor(campaign_index, wave, path)
+
 func _point(path: int, progress: float, side: int) -> Vector2:
+	if campaign_map_art:
+		return CampaignMaps.point(campaign_index, path, progress, side)
 	var t: float = progress if side == 0 else 1.0 - progress
 	var x: float = lerpf(-WORLD_HALF_LENGTH, WORLD_HALF_LENGTH, t)
 	var lane_y: float = -200.0 + float(path) * 245.0
@@ -2072,7 +2092,8 @@ func _fit_map() -> void:
 		battle_shell.fit_camera()
 		return
 	# Fixed camera: fit the complete painted map, including both castles.
-	camera_zoom = maxf(0.01, minf(arena.size.x / 2400.0, arena.size.y / 1060.0))
+	var world_size: Vector2 = _battlefield_world_size()
+	camera_zoom = maxf(0.01, minf(arena.size.x / world_size.x, arena.size.y / world_size.y))
 	camera_offset = Vector2.ZERO
 	overview_mode = true
 	arena.queue_redraw()
@@ -2286,22 +2307,26 @@ func _draw_arena() -> void:
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("071421"))
 	# The full-resolution second scenic layer is optional on slow GPUs.
 	if is_instance_valid(battle_shell) and battle_shell.overview and presentation.effective_quality != "battery":
-		arena.draw_texture_rect(BATTLE_SCENERY, Rect2(Vector2.ZERO, arena.size), false, Color(0.23, 0.24, 0.32))
+		var scenery: Texture2D = epic_battlefield_texture if campaign_map_art else BATTLE_SCENERY
+		arena.draw_texture_rect(scenery, Rect2(Vector2.ZERO, arena.size), false, Color(0.23, 0.24, 0.32))
 	# The focused view fills the viewport; overview keeps both vaults in view.
 	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
 	# The battlefield is now one high-detail painting. Never draw the old
 	# geometric river, bridges, trees, roads or duplicate castles over it.
-	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2(-1200, -530), Vector2(2400, 1060)), false)
+	var world_size: Vector2 = _battlefield_world_size()
+	arena.draw_texture_rect(epic_battlefield_texture, Rect2(-world_size * 0.5, world_size), false)
 	var fissure: int = StoryCampaign.hazard_lane(campaign_index, wave)
 	if fissure >= 0:
-		var a: Vector2 = _point(fissure, 0.15, 0)
-		var b: Vector2 = _point(fissure, 0.85, 0)
-		arena.draw_line(a, b, Color(0.65, 0.22, 1.0, 0.28), 54.0)
-		arena.draw_line(a, b, Color(0.82, 0.52, 1.0, 0.72), 7.0)
+		var points := PackedVector2Array()
+		for step in range(25):
+			points.append(_point(fissure, lerpf(0.10, 0.90, float(step) / 24.0), 0))
+		var pulse: float = 0.8 if presentation.reduced_motion else 0.7 + 0.15 * sin(visual_time * 2.0)
+		arena.draw_polyline(points, Color(0.65, 0.22, 1.0, 0.28 * pulse), 54.0, true)
+		arena.draw_polyline(points, Color(0.82, 0.52, 1.0, pulse), 7.0, true)
 	# Mobile: use a few inexpensive ambient highlights instead of dozens of
 	# per-frame animated primitives across the entire battlefield.
-	for i in presentation.ambient_count():
+	for i in (0 if campaign_map_art else presentation.ambient_count()):
 		var water_y: float = -380.0 + float(i) * 150.0
 		var water_pos := Vector2(sin(water_y * 0.008) * 36.0, water_y)
 		var shimmer: float = 0.14 + 0.10 * sin(visual_time * 1.5 + float(i))
