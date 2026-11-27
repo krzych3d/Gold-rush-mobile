@@ -74,10 +74,10 @@ func observe_fps(delta: float, fps: float) -> bool:
 
 func battlefield_fps() -> float:
 	# Smooth motion while reserving a budget for older Android phones.
-	return 24.0 if effective_quality == "battery" else 45.0 if effective_quality == "high" else 30.0
+	return 60.0 if effective_quality == "high" else 30.0
 
 func preview_fps() -> float:
-	return 24.0 if effective_quality == "battery" else 45.0 if effective_quality == "high" else 30.0
+	return 60.0 if effective_quality == "high" else 30.0
 
 func ambient_count() -> int:
 	return 0 if reduced_motion or effective_quality == "battery" else 6 if effective_quality == "high" else 3

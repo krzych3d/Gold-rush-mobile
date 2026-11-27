@@ -104,3 +104,18 @@ static func find(game, race: int, id: String) -> Dictionary:
 		if entry["id"] == id:
 			return entry
 	return {}
+
+static func illustration(game, entry: Dictionary) -> Texture2D:
+	var id: String = str(entry["id"])
+	var race: int = int(entry["race"])
+	if id in ["free_wave", "runner", "carrier", "saboteur", "defender"]:
+		return game._unit_card_texture(race, int(entry.get("role", 0)), id == "defender")
+	if id in ["spikes", "snare", "turret"]:
+		return game._trap_card_texture(race, ["spikes", "snare", "turret"].find(id))
+	if id == "bank":
+		return game.VAULT_TIER_ART[0]
+	if id == "raid":
+		return game.TRAINING_ART
+	if id.begins_with("ability_"):
+		return game._ability_card_texture(race)
+	return null

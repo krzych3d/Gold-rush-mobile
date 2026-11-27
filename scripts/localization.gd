@@ -4,6 +4,7 @@ extends RefCounted
 static var language := "pl"
 const LANGUAGES := ["pl", "en"]
 const MESSAGES := {
+	"Protect your vault!": ["Chroń swój skarbiec!", "Protect your vault!"],
 	"Pokazuj podsumowanie po każdej fali": ["Pokazuj podsumowanie po każdej fali", "Show summary after every wave"],
 	"WYNIK": ["WYNIK", "REPORT"],
 	"FALA %d — PODSUMOWANIE": ["FALA %d — PODSUMOWANIE", "WAVE %d — SUMMARY"],

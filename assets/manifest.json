@@ -191,6 +191,11 @@
       "git_blob_sha1": "ff9d9fa796f07f6fc29fe235714efd3ef74b1f79",
       "sha256": "0fa5f789a47e8de7a6659e1a52879b77ecfa2e8560f3b955249d2bc86a3e5fac"
     },
+    "assets/epic/story/abilities.webp": {
+      "bytes": 443162,
+      "git_blob_sha1": "77375573cc08195218b7aa3f5b9b8794f43184d3",
+      "sha256": "022ec11885c2b0a18520ec0eaf6ef95908812e5400016ea7bb79763d7db594bf"
+    },
     "assets/epic/story/borin.jpg": {
       "bytes": 131125,
       "git_blob_sha1": "932408641d3c8508a30fdceed6b6ac278b030cad",
@@ -225,6 +230,11 @@
       "bytes": 530323,
       "git_blob_sha1": "b173e179e484190c86a93d46c14b0187bad49778",
       "sha256": "e5ca20e4083ec0586c4116a8cd95312503612e63b85b079deeb20a0891f795d7"
+    },
+    "assets/epic/story/vault_tiers.webp": {
+      "bytes": 522814,
+      "git_blob_sha1": "ef0252520127a8466c92b2726c63dfc8c4add182",
+      "sha256": "ddced1bcac1bf69fa166941097fd9545ba1b8992472f2ae705ee9b1ec7800fd8"
     },
     "assets/epic/units/arcane_mage.png": {
       "bytes": 26367,
@@ -295,9 +305,9 @@
       "sha256": "ee7898e936da13f26dae675e156619bd45e49c28e2bd8d16e95737e67a1bb1c7"
     },
     "assets/epic/world/battlefield_clean.jpg": {
-      "bytes": 650767,
-      "git_blob_sha1": "e9da707150c1cd92f8ee7f32058817347dee8107",
-      "sha256": "fedd3e5e71a86696346a1d44734f81f1f0fc99db656e2f9d65da8e747962e6da"
+      "bytes": 863433,
+      "git_blob_sha1": "41a3261949b5b5dcef2261c97bd466d0b45d0c8d",
+      "sha256": "b18d9a71197a734bd7c321a02649faefa0cc5bee26076663e30899e13215fead"
     },
     "assets/epic/world/battlefield_dwarves.png": {
       "bytes": 3728737,
@@ -931,6 +941,11 @@
         1280,
         317
       ]
+    },
+    "assets/ui/lobby/epic_panel.webp": {
+      "bytes": 11992,
+      "git_blob_sha1": "e8b12076eb7deeb2a46473db051798308597639b",
+      "sha256": "5b1abb3c67da487c70b599b97ec8be5974b28d39e811f23c279ecb95bf229afd"
     },
     "assets/ui/lobby/epic_vault_menu.png": {
       "bytes": 2630588,

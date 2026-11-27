@@ -42,7 +42,7 @@ func _run() -> void:
 			return
 		var viewport := Rect2(Vector2.ZERO, Vector2(dimensions))
 		for node in [game.hud, shell.enemy_gold, game.main_menu_button, shell.dock]:
-			if not _require(viewport.grow(2).encloses(node.get_global_rect()), "HUD or actions leave viewport at " + str(dimensions)):
+			if not _require(viewport.grow(2).encloses(node.get_global_rect()), "HUD or action %s leaves viewport %s: %s" % [node.name, dimensions, node.get_global_rect()]):
 				return
 		if not _require(game.hud.get_global_rect().end.x <= shell.enemy_gold.get_global_rect().position.x, "Player and enemy gold overlap"):
 			return

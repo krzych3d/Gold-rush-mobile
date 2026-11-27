@@ -1,6 +1,7 @@
 extends Control
 const L10n = preload("res://scripts/localization.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
+const Pose = preload("res://scripts/unit_animation.gd")
 ## One lightweight live preview. Uses the same atlases as the battlefield.
 ## Trap diagrams explain mechanics; they never run or purchase actual game units.
 var game
@@ -18,6 +19,7 @@ var facing := 1.0
 var preview_mode := "unit"
 var race := 0
 var role := 0
+var character_key := ""
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -31,6 +33,7 @@ func configure(owner_game, data: Dictionary) -> void:
 	role = int(data.get("role", 0))
 	preview_mode = str(data.get("demo", "unit"))
 	var key: String = game._character_key_for_race(race, role, preview_mode == "defender" or (preview_mode == "ability" and race == 0))
+	character_key = key
 	atlas = game._character_atlas(key)
 	object_art = null
 	defense_kind = ["spikes", "snare", "turret"].find(preview_mode)
@@ -99,7 +102,15 @@ func _draw_actor(at: Vector2, scale_factor: float = 1.0, actor_row: int = -1) ->
 	# Keep the complete cell above the caption, even in a short phone panel.
 	var side: float = minf(maxf(32.0, size.y - 54.0), 270.0) * scale_factor
 	draw_set_transform(at, 0.0, Vector2(facing, 1.0))
-	draw_texture_rect_region(atlas, Rect2(Vector2(-side * 0.5, -side), Vector2(side, side)), Rect2(Vector2(frame * 128, (row if actor_row < 0 else actor_row) * 128), Vector2(128, 128)))
+	var source: Texture2D = atlas
+	var selected_row: int = row if actor_row < 0 else actor_row
+	var selected_frame: int = frame
+	var live_row: int = Pose.special_row(character_key, selected_row, selected_row == 1, facing < 0.0)
+	if live_row >= 0 and game.special_animation_atlases.has(character_key):
+		source = game.special_animation_atlases[character_key]
+		selected_row = live_row
+		selected_frame = int(floor(elapsed * 12.0)) % 8
+	draw_texture_rect_region(source, Rect2(Vector2(-side * 0.5, -side), Vector2(side, side)), Rect2(Vector2(selected_frame * 128, selected_row * 128), Vector2(128, 128)))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _defense_frame() -> int:
@@ -132,7 +143,8 @@ func _draw() -> void:
 		var side: float = minf(size.y * 0.56, 130.0)
 		# Use the same illustrated object and deployment/recoil as the battlefield.
 		if defense_kind >= 0 and object_art != null:
-			var stretch: float = 1.0 if game.presentation.reduced_motion else [1.0, 0.91, 1.06, 0.98][_defense_frame()]
+			var remaining_fire: float = maxf(0.0, 0.28 - fmod(elapsed, 0.6)) if defense_kind == 2 else clampf(2.46 - fmod(elapsed, 4.0), 0.0, 0.46)
+			var stretch: float = 1.0 if game.presentation.reduced_motion else Pose.recoil(remaining_fire, 0.28 if defense_kind == 2 else 0.46)
 			draw_texture_rect_region(game.TRAP_ATLAS, Rect2(object_pos - Vector2(side * 0.5, side * stretch), Vector2(side, side * stretch)),
 				game._trap_sprite_region(race, defense_kind, _defense_frame()), Color.WHITE, false, true)
 		var actor_pos := Vector2(size.x * 0.72, ground)

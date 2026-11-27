@@ -59,6 +59,8 @@ func configure(source: Texture2D, title: String, price: String, is_banner: bool 
 	caption.text = title
 	cost.text = price
 	var button := get_parent() as Button
+	if banner:
+		button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 84.0)
 	modulate = Color(0.62, 0.64, 0.72) if button.disabled else Color.WHITE
 	_layout()
 	queue_redraw()
@@ -67,19 +69,23 @@ func _layout() -> void:
 	if illustration == null:
 		return
 	var slot: float = minf(180, size.x * 0.28)
+	var price_height: float = maxf(23.0, cost.get_combined_minimum_size().y)
+	var caption_height: float = maxf(26.0, caption.get_combined_minimum_size().y)
+	var price_y: float = size.y - 16.0 - price_height
+	var caption_y: float = price_y - caption_height - 2.0
 	if banner:
-		illustration.size = Vector2(maxf(16, slot - 16), minf(62, maxf(20, size.y - 16)))
-		illustration.position = Vector2(8, (size.y - illustration.size.y) * 0.5)
+		illustration.size = Vector2(maxf(16, slot - 16), minf(62, maxf(20, size.y - 28)))
+		illustration.position = Vector2(16, (size.y - illustration.size.y) * 0.5)
 	else:
-		var available_height: float = maxf(20, size.y - 62)
+		var available_height: float = maxf(20, caption_y - 12.0)
 		illustration.size = Vector2(minf(190, maxf(20, size.x - 28)), minf(126, available_height))
 		illustration.position = Vector2((size.x - illustration.size.x) * 0.5, 8 + (available_height - illustration.size.y) * 0.5)
 	var text_x: float = slot + 4 if banner else 6
 	var text_width: float = size.x - text_x - 8
-	caption.position = Vector2(text_x, 8 if banner else maxf(20, size.y - 55))
-	caption.size = Vector2(text_width, (size.y - 16) * 0.60 if banner else 28)
-	cost.position = Vector2(text_x, size.y * 0.58 if banner else size.y - 29)
-	cost.size = Vector2(text_width, 23)
+	caption.position = Vector2(text_x, 12 if banner else caption_y)
+	caption.size = Vector2(text_width, caption_height)
+	cost.position = Vector2(text_x, price_y)
+	cost.size = Vector2(text_width, price_height)
 	var font_size: int = 19 if banner else 17
 	while font_size > 11 and Epic.DISPLAY_FONT.get_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > text_width:
 		font_size -= 1
