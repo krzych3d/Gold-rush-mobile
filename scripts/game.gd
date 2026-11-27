@@ -1,5 +1,6 @@
 extends Control
 const L10n = preload("res://scripts/localization.gd")
+const Pose = preload("res://scripts/unit_animation.gd")
 const LocalizedCard = preload("res://scripts/localized_card.gd")
 
 const AnimationGallery = preload("res://scripts/animation_gallery.gd")
@@ -35,11 +36,11 @@ var tutorial_mode := false
 var tutorial_coach
 var tutorial_session: Control
 const VAULT_TIER_ART = [
-	preload("res://assets/world/vault_tier_1.svg"),
-	preload("res://assets/world/vault_tier_2.svg"),
-	preload("res://assets/world/vault_tier_3.svg"),
-	preload("res://assets/world/vault_tier_4.svg"),
-	preload("res://assets/world/vault_tier_5.svg")
+	preload("res://assets/epic/story/vault_tier_1.tres"),
+	preload("res://assets/epic/story/vault_tier_2.tres"),
+	preload("res://assets/epic/story/vault_tier_3.tres"),
+	preload("res://assets/epic/story/vault_tier_4.tres"),
+	preload("res://assets/epic/story/vault_tier_5.tres")
 ]
 const MAX_WAVES := 999
 const RACE_NAMES := ["DWARVES", "GOBLINS", "ELVES", "VOIDBORN"]
@@ -178,6 +179,10 @@ var turret_bolts: Array = []
 const TRAP_ATLAS: Texture2D = preload("res://assets/epic/story/defenses.webp")
 const TRAP_CELL := 384
 var trap_card_cache: Dictionary = {}
+var unit_card_cache: Dictionary = {}
+var ability_card_cache: Dictionary = {}
+const ABILITY_ART: Texture2D = preload("res://assets/epic/story/abilities.webp")
+const TRAINING_ART: Texture2D = preload("res://assets/epic/story/training_monument.tres")
 var fallen_actors: Array = []
 var deposit_actors: Array = []
 var pine_texture: Texture2D = preload("res://assets/world/enchanted_pine.svg")
@@ -447,7 +452,7 @@ func _ready() -> void:
 	gameplay_panel.add_child(trap_row)
 	for index in 3:
 		var trap_button := _epic_card([L10n.t("SPIKES"), L10n.t("SNARE"), L10n.t("TURRET")][index],
-			TRAP_COSTS[index], _trap_card_texture(selected_race, index), 108)
+			TRAP_COSTS[index], _trap_card_texture(selected_race, index), 132)
 		trap_row.add_child(trap_button)
 		controls.append(trap_button)
 		trap_button.pressed.connect(_buy_trap.bind(index))
@@ -766,7 +771,7 @@ func _apply_presentation(persist: bool = false) -> void:
 		presentation.save()
 
 func _process(delta: float) -> void:
-	if is_instance_valid(tutorial_session):
+	if is_instance_valid(tutorial_session) or is_instance_valid(campaign_overlay) or is_instance_valid(wave_summary_overlay):
 		return
 	if phase == "SELECT" or phase == "END":
 		return
@@ -1083,8 +1088,8 @@ func _guard_combat(dt: float) -> void:
 				target = unit
 		if not target.is_empty() and float(guard["cooldown"]) <= 0.0:
 			target["health"] -= 26.0
-			target["hit_time"] = 0.24
-			guard["attack_time"] = 0.38
+			Pose.trigger(target, "hit", 0.24)
+			Pose.trigger(guard, "attack", 0.38)
 			hit_sparks.append({"p": _point(int(target["lane"]), clampf(float(target["position"]), 0.0, 1.0), int(target["side"])), "life": 0.5, "friendly": int(guard["side"]) == 0})
 			guard["cooldown"] = 0.9
 			if float(target["health"]) <= 0.0:
@@ -1101,8 +1106,8 @@ func _guard_combat(dt: float) -> void:
 					# Carriers can break a guard; fast runners need another route.
 					var damage: float = 10.0 if int(unit["kind"]) == -1 else 22.0 if int(unit["kind"]) == 1 else 14.0
 					_damage_guard(guard, damage * 0.65)
-					guard["hit_time"] = 0.28
-					unit["attack_time"] = 0.45
+					Pose.trigger(guard, "hit", 0.28)
+					Pose.trigger(unit, "attack", 0.45)
 					unit["strike_cooldown"] = 0.45 if bool(unit.get("frenzy", false)) else 0.65
 
 func _record_fallen(data: Dictionary) -> void:
@@ -1418,6 +1423,9 @@ func _simulate(dt: float) -> void:
 	# Visual snapshots do not affect gameplay, damage or movement speeds.
 	for unit in units:
 		unit["previous_position"] = float(unit["position"])
+		Pose.advance(unit, dt)
+	for guard in guards:
+		Pose.advance(guard, dt)
 	_guard_combat(dt)
 	# Target threats rather than the array's first free unit. Heavy transports
 	# draw armor-piercing fire; otherwise shoot the raider nearest the vault.
@@ -1455,7 +1463,7 @@ func _simulate(dt: float) -> void:
 					unit["disarmed"] = true
 					trap["charges"] = 0
 					traps[defender].erase(trap)
-					unit["attack_time"] = 0.45
+					Pose.trigger(unit, "attack", 0.45)
 					break
 				if trap["kind"] == 2:
 					# Each tower is its own animated structure with an individual
@@ -1467,7 +1475,7 @@ func _simulate(dt: float) -> void:
 							unit["shadow_evasion"] = false
 							continue
 						unit["health"] -= TRAP_DAMAGE[2] * (2.0 if int(unit["kind"]) == 1 else 1.0)
-						unit["hit_time"] = 0.2
+						Pose.trigger(unit, "hit", 0.2)
 						trap["fire_time"] = 0.28
 						var muzzle: Vector2 = _trap_position(trap, defender) + Vector2(0, -65)
 						var hit_at: Vector2 = _point(int(unit["lane"]), float(unit["position"]), int(unit["side"])) + Vector2(0, -70)
@@ -1482,7 +1490,7 @@ func _simulate(dt: float) -> void:
 					# Real activation is visualized even when this spends the last charge.
 					_spawn_trap_burst(trap, defender)
 					unit["health"] -= TRAP_DAMAGE[int(trap["kind"])]
-					unit["hit_time"] = 0.28
+					Pose.trigger(unit, "hit", 0.28)
 					if trap["kind"] == 1:
 						unit["stunned"] = 2.5
 					trap["charges"] -= 1
@@ -1862,11 +1870,11 @@ func _refresh_localized_cards() -> void:
 		if index >= 3:
 			LocalizedCard.apply(card, _trap_card_texture(selected_race, index - 3), L10n.t(title), "✦ %d" % TRAP_COSTS[index - 3], false, true)
 		else:
-			LocalizedCard.apply(card, ornate_ui.original_texture(_race_art_name(item)), L10n.t(title), "✦ %d" % recruit_price(0, index))
-	LocalizedCard.apply(guard_button, ornate_ui.original_texture(_race_art_name("defender")), L10n.t("DEFENDER"), "✦ %d" % GUARD_COST, true)
-	LocalizedCard.apply(ability_button, ornate_ui.original_texture(_race_art_name("ability")), L10n.t(ABILITY_NAMES[selected_race]), L10n.t("AKTYWNA") if ability_used else "✦ %d" % ABILITY_COST, true)
-	LocalizedCard.apply(invest_button, ornate_ui.original_texture(_race_art_name("bank")), L10n.t("SKARBIEC %d/5") % bank_level, "MAX" if bank_level >= 5 else "✦ %d" % (BANK_BASE_COST + bank_level * BANK_STEP_COST), true)
-	LocalizedCard.apply(raid_button, ornate_ui.original_texture(_race_art_name("raid")), L10n.t("TRENING %d/3") % raid_boost, "MAX" if raid_boost >= 3 else "✦ %d" % Rules.training_cost(raid_boost), true)
+			LocalizedCard.apply(card, _unit_card_texture(selected_race, index), L10n.t(title), "✦ %d" % recruit_price(0, index), false, true)
+	LocalizedCard.apply(guard_button, _unit_card_texture(selected_race, 0, true), L10n.t("DEFENDER"), "✦ %d" % GUARD_COST, true, true)
+	LocalizedCard.apply(ability_button, _ability_card_texture(selected_race), L10n.t(ABILITY_NAMES[selected_race]), L10n.t("AKTYWNA") if ability_used else "✦ %d" % ABILITY_COST, true, true)
+	LocalizedCard.apply(invest_button, VAULT_TIER_ART[clampi(bank_level, 0, 4)], L10n.t("SKARBIEC %d/5") % bank_level, "MAX" if bank_level >= 5 else "✦ %d" % (BANK_BASE_COST + bank_level * BANK_STEP_COST), true, true)
+	LocalizedCard.apply(raid_button, TRAINING_ART, L10n.t("TRENING %d/3") % raid_boost, "MAX" if raid_boost >= 3 else "✦ %d" % Rules.training_cost(raid_boost), true, true)
 
 func _battlefield_world_size() -> Vector2:
 	return CampaignMaps.SIZE if campaign_map_art else Vector2(2400.0, 1060.0)
@@ -2293,6 +2301,25 @@ static func _trap_sprite_region(race: int, kind: int, frame: int) -> Rect2:
 	return Rect2(Vector2(clampi(kind, 0, 2) * TRAP_CELL,
 		clampi(race, 0, 3) * TRAP_CELL), Vector2(TRAP_CELL, TRAP_CELL))
 
+func _ability_card_texture(race: int) -> Texture2D:
+	if not ability_card_cache.has(race):
+		var crop := AtlasTexture.new()
+		crop.atlas = ABILITY_ART
+		crop.region = Rect2((race % 2) * 512, (race / 2) * 512, 512, 512)
+		crop.filter_clip = true
+		ability_card_cache[race] = crop
+	return ability_card_cache[race]
+
+func _unit_card_texture(race: int, kind: int, is_guard: bool = false) -> Texture2D:
+	var key: String = _character_key_for_race(race, kind, is_guard)
+	if not unit_card_cache.has(key):
+		var crop := AtlasTexture.new()
+		crop.atlas = _character_atlas(key)
+		crop.region = Rect2(0, 0, 128, 128)
+		crop.filter_clip = true
+		unit_card_cache[key] = crop
+	return unit_card_cache[key]
+
 func _trap_card_texture(race: int, kind: int) -> Texture2D:
 	var key: int = race * 3 + kind
 	if not trap_card_cache.has(key):
@@ -2319,11 +2346,11 @@ static func _trap_animation_frame(kind: int, fire_time: float, cooldown: float) 
 		return 2
 	return 3
 
-func _draw_trap_sprite(p: Vector2, race: int, kind: int, frame: int, opacity: float = 1.0) -> void:
+func _draw_trap_sprite(p: Vector2, race: int, kind: int, frame: int, opacity: float = 1.0, remaining_fire: float = 0.0) -> void:
 	# Art is already shaded. One atlas quad per object, no runtime SVG or shader.
 	var extent: float = 182.0 if kind == 2 else 146.0
-	# Recoil, deployment and closing use real trigger keyframes, with fixed feet.
-	var stretch: float = 1.0 if presentation.reduced_motion else ([1.0, 0.91, 1.06, 0.98][frame] if kind == 2 else [0.80, 0.92, 1.10, 0.96][frame])
+	# The illustration has fixed feet; its trigger recovery is continuous.
+	var stretch: float = 1.0 if presentation.reduced_motion else Pose.recoil(remaining_fire, 0.28 if kind == 2 else 0.46, 0.91 if kind == 2 else 0.85, 1.06 if kind == 2 else 1.12)
 	var rect := Rect2(p + Vector2(-extent * 0.5, -extent * 0.84 * stretch), Vector2(extent, extent * stretch))
 	arena.draw_texture_rect_region(TRAP_ATLAS, rect, _trap_sprite_region(race, kind, frame), Color(1, 1, 1, opacity), false, true)
 
@@ -2442,7 +2469,7 @@ func _draw_arena() -> void:
 			var frame: int = _trap_animation_frame(trap_kind, fire_time, cooldown if phase == "ATTACK" else 0.0)
 			if presentation.reduced_motion:
 				frame = 2 if fire_time > 0.0 else 0
-			_draw_trap_sprite(p, side_race(side), trap_kind, frame)
+			_draw_trap_sprite(p, side_race(side), trap_kind, frame, 1.0, maxf(0.0, fire_time - minf(visual_step_elapsed, SIM_STEP)))
 
 	# Residual impact is independent of trap lifespan (last charge/consumption).
 	for burst in trap_bursts:
@@ -2455,7 +2482,7 @@ func _draw_arena() -> void:
 		var tint: Color = RACE_COLORS[race]
 		if bool(burst.get("exhausted", false)):
 			# The consumed mechanism remains visible through the last animation.
-			_draw_trap_sprite(burst["p"], race, burst_kind, _trap_animation_frame(burst_kind, 0.46 - age, 0.0), strength)
+			_draw_trap_sprite(burst["p"], race, burst_kind, _trap_animation_frame(burst_kind, 0.46 - age, 0.0), strength, maxf(0.0, 0.46 - age - minf(visual_step_elapsed, SIM_STEP)))
 		arena.draw_arc(origin, 16.0 + 35.0 * progress, 0.0, TAU, 16, Color(tint.r, tint.g, tint.b, strength * 0.82), 3.5)
 		var rays: int = 3 if presentation.effective_quality == "battery" else 5
 		for ray in rays:
@@ -2493,35 +2520,14 @@ func _draw_arena() -> void:
 		var kind: int = 0 if actor["guard"] else int(data["kind"])
 		var character_key: String = _character_key(int(actor["side"]), kind, bool(actor["guard"]))
 		var atlas: Texture2D = _character_atlas(character_key)
-		# Each playable role maps to one actual sprite atlas, never a static placeholder.
-		# 6 rows × 8 distinct pose frames: idle, run, attack, hit, defeat, loot.
-		var animation_row: int = 0
-		if not actor["guard"] and phase == "ATTACK":
-			animation_row = 1
-		if float(data.get("steal_timer", 0.0)) > 0.0:
-			animation_row = 5
-		elif not actor["guard"] and bool(data.get("returning", false)) and int(data.get("carried", 0)) > 0:
-			# Carry is a moving state, not a repeated deposit animation.
-			animation_row = 1
-		if float(data.get("hit_time", 0.0)) > 0.0 or float(data.get("stunned", 0.0)) > 0.0:
-			animation_row = 3
-		if float(data.get("attack_time", 0.0)) > 0.0 and animation_row != 3 and animation_row != 5:
-			animation_row = 2
-		var fps: float = 5.0 if animation_row == 0 else 10.0 if animation_row == 1 else 11.0 if animation_row == 2 else 10.0
+		var render_delta: float = minf(visual_step_elapsed, SIM_STEP)
+		var animation_row: int = Pose.row(data, bool(actor["guard"]), phase == "ATTACK", render_delta)
 		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
-		var animation_frame: int = int(floor(float(data.get("action_time", visual_time)) * fps + frame_offset)) % 8
-		# Combat poses play from start to finish rather than randomly cycling.
-		if animation_row == 2:
-			animation_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * 18.0), 0, 7)
-		# Advance the atlas frames; individual poses are supplied by the artwork.
-		if animation_row == 3 and float(data.get("hit_time", 0.0)) > 0.0:
-			animation_frame = mini(7, int((0.28 - float(data["hit_time"])) * 28.0))
-		if animation_row == 5:
-			animation_frame = mini(7, int((0.65 - float(data.get("steal_timer", 0.0))) * 12.0))
+		var animation_frame: int = Pose.frame(data, animation_row, bool(actor["guard"]), render_delta, frame_offset, 8, 10.0, visual_time)
 		# Blend motion between authored poses. These effects never touch combat.
 		var moving: bool = not bool(actor["guard"]) and phase == "ATTACK" and animation_row == 1 and float(data.get("stunned", 0.0)) <= 0.0 and not bool(data.get("blocked", false))
 		var pace: float = 12.5 if kind == 0 else 7.5 if kind == 1 else 10.0
-		var walk_phase: float = visual_time * (pace if moving else 2.4) + float(data["position"]) * 21.0
+		var walk_phase: float = visual_time * (pace if moving else 2.4) + _render_unit_position(data, draw_alpha) * 21.0
 		var stride: float = sin(walk_phase)
 		var lift: float = 0.0
 		var bob: float = 0.0
@@ -2565,34 +2571,19 @@ func _draw_arena() -> void:
 		var special_row: int = -1
 		if special_animation_atlases.has(character_key):
 			special_sheet = special_animation_atlases[character_key]
-			if animation_row == 2:
-				match character_key:
-					"arcane_mage": special_row = 3 # Beam
-					"dwarf_carrier": special_row = 3 # Bashing dodge
-					_: special_row = 2 # Distinct class attack (blade/arrow/hammer/bomb)
-			elif moving:
-				if character_key == "dwarf_carrier" and int(data.get("carried", 0)) > 0:
-					special_row = 2 # Returning with actual gold animation
-				elif bool(data.get("returning", false)) or float(data.get("speed", 0.0)) > 0.17:
-					special_row = 0 # Distinct sprint/run poses
+			special_row = Pose.special_row(character_key, animation_row, moving, int(data.get("carried", 0)) > 0)
 		# Voidborn uses its own six-row atlases, never the mage/wolf specials.
 		var goblin_action: String = GOBLIN_ACTIONS[animation_row]
 		if character_key == "goblin_raider" and animation_row == 1 and bool(data.get("returning", false)) and int(data.get("carried", 0)) > 0:
 			goblin_action = "carry"
 		if special_sheet != null and special_row >= 0:
-			var special_frame: int = int(floor(float(data.get("action_time", visual_time)) * 12.0 + frame_offset)) % 8
-			if animation_row == 2:
-				special_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * 8.0 / 0.45), 0, 7)
+			var special_frame: int = Pose.frame(data, animation_row, bool(actor["guard"]), render_delta, frame_offset, 8, 12.0, visual_time)
 			arena.draw_texture_rect_region(special_sheet, _unit_art_rect(art_size, bob),
 				Rect2(Vector2(float(special_frame * 128), float(special_row * 128)), Vector2(128, 128)))
 		elif character_key == "goblin_raider" and goblin_action_strips.has(goblin_action):
 			var strip: Texture2D = goblin_action_strips[goblin_action]
 			var count: int = strip.get_width() / 192
-			var strip_frame: int = int(floor(float(data.get("action_time", visual_time)) * GOBLIN_ACTION_FPS[animation_row] + frame_offset)) % count
-			if animation_row == 2:
-				strip_frame = clampi(int((0.45 - float(data.get("attack_time", 0.0))) * float(count) / 0.45), 0, count - 1)
-			elif animation_row == 3:
-				strip_frame = clampi(int((0.28 - float(data.get("hit_time", 0.0))) * float(count) / 0.28), 0, count - 1)
+			var strip_frame: int = Pose.frame(data, animation_row, bool(actor["guard"]), render_delta, frame_offset, count, GOBLIN_ACTION_FPS[animation_row], visual_time)
 			arena.draw_texture_rect_region(strip, _unit_art_rect(art_size, bob), Rect2(Vector2(float(strip_frame * 192), 0.0), Vector2(192, 192)))
 		elif goblin_walk_prototype != null and not special_animation_atlases.has("goblin_raider") and character_key == "goblin_raider" and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
 			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12 if animation_row == 1 else 0
@@ -2627,11 +2618,12 @@ func _draw_arena() -> void:
 		# Deposit occurs at the HOME vault, after the actor has turned around.
 		var dtf := _directional_sprite_transform(dp, _travel_facing(int(deposit["side"]), true))
 		arena.draw_set_transform_matrix(dtf)
-		var deposit_frame: int = mini(7, int(float(deposit["age"]) * 11.0))
+		var deposit_age: float = float(deposit["age"]) + minf(visual_step_elapsed, SIM_STEP)
+		var deposit_frame: int = Pose.once(deposit_age, 0.75)
 		if deposit_key == "goblin_raider" and goblin_action_strips.has("deposit"):
 			var deposit_strip: Texture2D = goblin_action_strips["deposit"]
 			var deposit_count: int = deposit_strip.get_width() / 192
-			var df: int = mini(deposit_count - 1, int(float(deposit["age"]) / 0.75 * deposit_count))
+			var df: int = mini(deposit_count - 1, int(deposit_age / 0.75 * deposit_count))
 			arena.draw_texture_rect_region(deposit_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(df * 192), 0), Vector2(192, 192)))
 		else:
 			arena.draw_texture_rect_region(da, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)))
@@ -2646,8 +2638,9 @@ func _draw_arena() -> void:
 			continue
 		var death_key: String = _character_key(int(fallen["side"]), int(fallen["kind"]), bool(fallen.get("guard", false)))
 		var death_atlas: Texture2D = _character_atlas(death_key)
-		var death_frame: int = mini(7, int(float(fallen["age"]) * 10.0))
-		var dying: float = clampf(float(fallen["age"]) / 0.8, 0.0, 1.0)
+		var death_age: float = float(fallen["age"]) + minf(visual_step_elapsed, SIM_STEP)
+		var death_frame: int = Pose.once(death_age, 0.8)
+		var dying: float = clampf(death_age / 0.8, 0.0, 1.0)
 		var death_tilt: float = 0.0 if presentation.reduced_motion else 0.12 * sin(dying * PI * 0.5)
 		var death_fade: float = 1.0 - smoothstep(0.70, 1.0, dying)
 		var fallen_transform := _directional_sprite_transform(death_p, _travel_facing(int(fallen["side"]), bool(fallen.get("returning", false))), death_tilt)
@@ -2655,7 +2648,7 @@ func _draw_arena() -> void:
 		if death_key == "goblin_raider" and goblin_action_strips.has("death"):
 			var death_strip: Texture2D = goblin_action_strips["death"]
 			var death_count: int = death_strip.get_width() / 192
-			var f: int = mini(death_count - 1, int(float(fallen["age"]) / 0.8 * death_count))
+			var f: int = mini(death_count - 1, int(death_age / 0.8 * death_count))
 			arena.draw_texture_rect_region(death_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(f * 192), 0), Vector2(192, 192)), Color(1, 1, 1, death_fade))
 		else:
 			arena.draw_texture_rect_region(death_atlas, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)), Color(1, 1, 1, death_fade))

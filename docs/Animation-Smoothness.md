@@ -1,10 +1,10 @@
 # Vault Wars — Smooth Battle Animation
 
-## Visual animation upgrade (22 November 2026)
+## Visual animation upgrade (27 November 2026)
 
 - Keep fixed-step 20 Hz combat, preserving health, damage, gold and race balance.
 - Snapshot unit positions, interpolate *rendered positions* only; no extra combat updates.
-- Preserve fractional elapsed render time. Mobile redraw targets: battery 24, balanced 30, high 45 FPS.
+- Preserve fractional elapsed render time. Mobile redraw targets: battery 30, balanced 30, high 60 FPS.
 - Continuous walk bounce and gentle silhouette squash, idle breathing, attack wind-up, hit recoil and death fade, on top of authored sprite atlas frames.
 - Reduced motion disables additional bob/tilt. Low-power mode skips dust and halves hit-spark segments.
 - Gallery throttles redraw according to quality setting and avoids rewriting unchanged labels.
@@ -12,3 +12,5 @@
 
 ## Verification
 Godot CI covers animation assets, direction, interpolation, quality profiles, tutorial and combat balance. On real Android, test all three lanes, unit return with gold, stunned units, attacks, death fade, turning/rotating screen, and graphics quality switches. Target FPS is not a guaranteed achieved FPS.
+
+The 0.4.1 event-clock, frame inventory and shared-illustration audit is documented in [Visual consistency](Visual-Consistency-0.4.1.md). Hit poses have a cosmetic 0.40-second presentation window; combat timers remain unchanged.

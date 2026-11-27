@@ -40,6 +40,9 @@ jobs:
           set -euo pipefail
           ./godot --headless --path . --script res://ci/smoke_animation_gallery.gd 2>&1 | tee gallery.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access" gallery.log; then exit 1; fi
+          ./godot --headless --path . --script res://ci/smoke_visual_consistency.gd 2>&1 | tee visual.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|ERROR:" visual.log; then exit 1; fi
+          grep -q "Visual consistency PASSED" visual.log
       - name: Test functional HUD, race icons, purchases and turret animation
         shell: bash
         run: |

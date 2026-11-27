@@ -1,5 +1,13 @@
 # Gold Rush Mobile — Vault Wars
 
+## Consistent art and smoother event playback (0.4.1)
+
+Battle cards and the guide now show the actual deployed unit art. Painted vault
+upgrades, training and faction ability emblems share the epic material style and
+gold frames. Separate visual clocks prevent short hit reactions from skipping
+poses; run selection stays consistent on return, and drawing targets are evenly
+paced 30/60 FPS. [Audit, scope and device-test limits](docs/Visual-Consistency-0.4.1.md).
+
 ## Story campaign and painted defence art (2026-11-27)
 
 Seven playable PL/EN dwarven chapters now follow Thorgar, Borin and Eira through

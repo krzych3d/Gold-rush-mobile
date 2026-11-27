@@ -91,12 +91,12 @@ static func focus() -> StyleBoxFlat:
 
 static func panel(margin: int = 22) -> StyleBoxTexture:
 	var skin := StyleBoxTexture.new()
-	skin.texture = load("res://assets/ui/lobby/panel.svg") as Texture2D
-	skin.texture_margin_left = 30
-	skin.texture_margin_right = 30
-	skin.texture_margin_top = 30
-	skin.texture_margin_bottom = 30
-	skin.set_content_margin_all(margin)
+	skin.texture = load("res://assets/ui/lobby/epic_panel.webp") as Texture2D
+	skin.texture_margin_left = 24
+	skin.texture_margin_right = 24
+	skin.texture_margin_top = 24
+	skin.texture_margin_bottom = 24
+	skin.set_content_margin_all(maxi(margin, 16))
 	return skin
 
 static func backdrop(parent: Control, dim: float = 0.55) -> TextureRect:

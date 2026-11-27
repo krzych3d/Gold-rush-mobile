@@ -164,16 +164,16 @@ func _layout() -> void:
 	var hud_width: float = minf(usable.size.x - 24, 750.0) if landscape else usable.size.x - 24
 	header.position = usable.position + Vector2(12, 10)
 	header.size = Vector2(hud_width, 0)
-	dock.position = Vector2(usable.position.x + 10, usable.end.y - 92)
-	dock.size = Vector2(usable.size.x - 20, 82)
+	dock.position = Vector2(usable.position.x + 10, usable.end.y - 110)
+	dock.size = Vector2(usable.size.x - 20, 100)
 	var map_top: float = usable.position.y + (144.0 if landscape else 156.0)
 	if game.campaign_index >= 0:
 		map_top += 64.0
-	var map_bottom: float = usable.end.y - 104.0
+	var map_bottom: float = usable.end.y - 116.0
 	if landscape:
 		game.battlefield_frame.position = Vector2(usable.position.x + 10, map_top)
 		game.battlefield_frame.size = Vector2(usable.size.x - 20, maxf(100, map_bottom - map_top))
-		var command_bottom: float = usable.end.y - 100
+		var command_bottom: float = usable.end.y - 118
 		command_top = map_top + 6
 		drawer.size = Vector2(minf(710, usable.size.x - 20), maxf(120, command_bottom - command_top))
 		drawer.position.x = usable.end.x - drawer.size.x - 10
@@ -185,7 +185,7 @@ func _layout() -> void:
 		game.battlefield_frame.position = Vector2(usable.position.x + 10, map_top)
 		game.battlefield_frame.size = Vector2(usable.size.x - 20, map_height)
 		command_top = map_top + map_height + 10
-		drawer.size = Vector2(usable.size.x - 20, maxf(100, usable.end.y - 100 - command_top))
+		drawer.size = Vector2(usable.size.x - 20, maxf(100, usable.end.y - 118 - command_top))
 		drawer.position.x = usable.position.x + 10
 		drawer_open = true
 	set_drawer_open(drawer_open, false)

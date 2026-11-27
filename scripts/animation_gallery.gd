@@ -2,6 +2,8 @@ extends Control
 const L10n = preload("res://scripts/localization.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
 const MobileSettings = preload("res://scripts/mobile_settings.gd")
+const Pose = preload("res://scripts/unit_animation.gd")
+const Battlefields = preload("res://scripts/battlefields.gd")
 ## In-game QA viewer for the actual animation atlases used by the battlefield.
 ## No additional image generation, network requests, or paid APIs.
 
@@ -61,6 +63,9 @@ var frame_label: Label
 var atlases: Array[Texture2D] = []
 var goblin_strips: Dictionary = {}
 var special_atlases: Dictionary = {}
+var stage: Texture2D
+var stage_style: StyleBoxTexture
+const UNIT_KEYS := ["dwarf_defender", "dwarf_carrier", "elf_ranger", "arcane_mage", "goblin_raider", "goblin_saboteur", "shadow_wolf", "void_sentinel", "void_stalker", "void_collector", "void_weaver"]
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -197,6 +202,7 @@ func _close() -> void:
 	queue_free()
 
 func _refresh_labels() -> void:
+	stage = Battlefields.texture(["dwarves", "dwarves", "elves", "elves", "goblins", "goblins", "goblins", "void", "void", "void", "void"][selected_unit])
 	unit_label.text = L10n.t(UNIT_NAMES[selected_unit])
 	if selected_action >= ACTION_NAMES.size():
 		var names: Array = SPECIAL_NAMES.get(selected_unit, [])
@@ -215,10 +221,11 @@ func _process(delta: float) -> void:
 
 func _draw_preview() -> void:
 	var center := Vector2(preview.size.x * 0.5, preview.size.y * 0.67)
-	preview.draw_rect(Rect2(Vector2.ZERO, preview.size), Color("15243b"))
-	for j in 5:
-		var off: float = float(j - 2) * 52.0
-		preview.draw_line(center + Vector2(-155, 19 + off * 0.15), center + Vector2(155, 19 + off * 0.15), Color("527185", 0.14), 2)
+	if stage_style == null:
+		stage_style = Epic.panel(0)
+	preview.draw_style_box(stage_style, Rect2(Vector2.ZERO, preview.size))
+	if stage != null:
+		preview.draw_texture_rect(stage, Rect2(Vector2(8, 8), preview.size - Vector2(16, 16)), false, Color(0.50, 0.52, 0.60))
 	preview.draw_circle(center + Vector2(0, 15), 70, Color("060e1c", 0.5))
 	var is_special: bool = selected_action >= ACTION_NAMES.size()
 	var strip: Texture2D = goblin_strips.get(selected_action) if selected_unit == 4 and not is_special else null
@@ -231,6 +238,12 @@ func _draw_preview() -> void:
 	var fps: float = 12.0 if is_special else ACTION_FPS[selected_action]
 	var frame: int = int(floor(elapsed * fps)) % frame_count
 	var row: int = selected_action - ACTION_NAMES.size() if is_special else 0 if strip != null else ACTION_ROWS[selected_action]
+	if not is_special and strip == null and special_atlases.has(selected_unit):
+		var live_row: int = Pose.special_row(UNIT_KEYS[selected_unit], row, row == 1, selected_action == 6)
+		if live_row >= 0:
+			source = special_atlases[selected_unit]
+			row = live_row
+			frame = int(floor(elapsed * 12.0)) % 8
 	var hero_height: float = minf(preview.size.y * 0.64, 245.0)
 	var hero_width: float = hero_height
 	var flip: float = 1.0 if facing_right else -1.0

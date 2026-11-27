@@ -87,7 +87,7 @@ func _run_smoke() -> void:
 		return
 	for quality_mode in ["battery", "balanced", "high"]:
 		game.presentation.effective_quality = quality_mode
-		var expected_fps: float = 24.0 if quality_mode == "battery" else 45.0 if quality_mode == "high" else 30.0
+		var expected_fps: float = 60.0 if quality_mode == "high" else 30.0
 		if not is_equal_approx(game.presentation.battlefield_fps(), expected_fps):
 			push_error("Animation profile mismatch: " + quality_mode)
 			quit(1)

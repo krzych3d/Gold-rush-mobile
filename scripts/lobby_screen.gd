@@ -632,8 +632,9 @@ func _filter_entries() -> void:
 			selected = filtered_entries.size()
 		filtered_entries.append(entry)
 		var icon: Texture2D = _illustration_texture(entry["art"])
-		if entry["id"] in ["spikes", "snare", "turret"]:
-			icon = game._trap_card_texture(int(entry["race"]), ["spikes", "snare", "turret"].find(entry["id"]))
+		var shared_art: Texture2D = Catalog.illustration(game, entry)
+		if shared_art != null:
+			icon = shared_art
 		entry_list.add_item(entry["title"], icon)
 	result_count.text = L10n.t("%d wpisów • statystyki: %s") % [filtered_entries.size(), L10n.t(Catalog.RACE_TITLES[focus_race])]
 	if filtered_entries.is_empty():
@@ -658,8 +659,9 @@ func _select_entry(index: int) -> void:
 	media.add_theme_constant_override("separation", 8)
 	pane.add_child(media)
 	var art := _image(data["art"], 205)
-	if data["id"] in ["spikes", "snare", "turret"]:
-		art.texture = game._trap_card_texture(int(data["race"]), ["spikes", "snare", "turret"].find(data["id"]))
+	var shared_art: Texture2D = Catalog.illustration(game, data)
+	if shared_art != null:
+		art.texture = shared_art
 	art.name = "EntryIllustration"
 	media.add_child(art)
 	live_preview = Preview.new()

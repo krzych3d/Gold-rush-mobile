@@ -1,0 +1,34 @@
+{
+  "created": "2026-11-27",
+  "generator": "built-in image generation",
+  "base_commit": "19630ce6bd4f67b9612d1bccb15c2a32b47ececb",
+  "packaging": "Deterministic Godot Image atlas extraction, proportional fit and WebP encoding. Vault input rows split at y=448 to preserve complete spires; output 3x2 cells512 with 460px maximum silhouette extent and base y=480. Ability cells proportionally fitted to460px with transparent margins in a2x2 grid. Panel resized256x256. Full original prompts and generated originals are preserved in the conversation.",
+  "assets": [
+    {
+      "path": "assets/epic/story/vault_tiers.webp",
+      "bytes": 522814,
+      "sha256": "ddced1bcac1bf69fa166941097fd9545ba1b8992472f2ae705ee9b1ec7800fd8",
+      "prompt_brief": "Three columns / two rows of five progressively fortified Nordic vaults and one training anvil monument; dark carved stone, antique gold, burgundy and cyan, complete isolated isometric silhouettes on transparent background."
+    },
+    {
+      "path": "assets/ui/lobby/epic_panel.webp",
+      "bytes": 11992,
+      "sha256": "5b1abb3c67da487c70b599b97ec8be5974b28d39e811f23c279ecb95bf229afd",
+      "prompt_brief": "Square front-on nine-slice panel: thin embossed gold and iron frame with burgundy corner gems and a calm navy-black center; no baked text."
+    },
+    {
+      "path": "assets/epic/story/abilities.webp",
+      "bytes": 443162,
+      "sha256": "022ec11885c2b0a18520ec0eaf6ef95908812e5400016ea7bb79763d7db594bf",
+      "prompt_brief": "Two columns / two rows of isolated ability emblems: dwarf fortress shield, crossed goblin daggers with green gem, elven crescent moon with coin, and violet Voidborn portal. Matching antique gold and painted materials; no baked text."
+    },
+    {
+      "path": "assets/epic/world/battlefield_clean.jpg",
+      "bytes": 863433,
+      "sha256": "b18d9a71197a734bd7c321a02649faefa0cc5bee26076663e30899e13215fead",
+      "prompt_brief": "Constrained repair of the original standard map: remove pasted rectangular terrain seams and the baked upper-right minimap, retain the forest, waterfalls, castles, three clear lane corridors and bridges at existing game coordinates. No new HUD, units or obstacles.",
+      "reference_commit": "19630ce6bd4f67b9612d1bccb15c2a32b47ececb",
+      "packaging": "1920x846 JPEG quality0.91, same canvas size and asset path as the previous standard map."
+    }
+  ]
+}
