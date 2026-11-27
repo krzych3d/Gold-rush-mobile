@@ -8,6 +8,7 @@ var elapsed := 0.0
 var portrait: TextureRect
 var background: TextureRect
 var portraits: Dictionary = {}
+var speaker_tween: Tween
 
 func _ready() -> void:
 	clip_contents = true
@@ -41,13 +42,19 @@ func _layout() -> void:
 func show_speaker(name: String) -> void:
 	if not is_instance_valid(portrait):
 		return
+	if speaker_tween != null:
+		speaker_tween.kill()
+	portrait.visible = not name.is_empty()
+	if name.is_empty():
+		return # Anonymous voices and kings do not borrow a companion's face.
 	if not portraits.has(name):
 		portraits[name] = load("res://assets/epic/story/%s.jpg" % name)
 	portrait.texture = portraits[name]
 	portrait.modulate.a = 1.0
 	if not reduced_motion and not battery:
 		portrait.modulate.a = 0.65
-		create_tween().tween_property(portrait, "modulate:a", 1.0, 0.35)
+		speaker_tween = create_tween()
+		speaker_tween.tween_property(portrait, "modulate:a", 1.0, 0.35)
 
 func _process(dt: float) -> void:
 	elapsed += minf(dt, 0.1)

@@ -25,6 +25,7 @@ var last_player_gold_risk := -1
 var last_enemy_gold_risk := -1
 var command_top := 0.0
 var usable := Rect2()
+var layout_pending := false
 # Visual-only events; currency and combat state are always committed in game.gd.
 const GOLD_FLIGHT_SECONDS := 0.85
 const VAULT_FLASH_SECONDS := 0.45
@@ -42,6 +43,7 @@ func _ready() -> void:
 	game.arena.custom_minimum_size = Vector2.ZERO
 	game.battlefield_frame.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	_build_header()
+	header.minimum_size_changed.connect(_queue_layout)
 	drawer = ScrollContainer.new()
 	drawer.name = "SlidingArsenal"
 	drawer.z_index = 12
@@ -148,6 +150,15 @@ func _build_header() -> void:
 	game.map_mode_button.hide()
 	game.performance_label.reparent(column)
 
+func _queue_layout() -> void:
+	if not layout_pending:
+		layout_pending = true
+		call_deferred("_relayout")
+
+func _relayout() -> void:
+	layout_pending = false
+	_layout()
+
 func _layout() -> void:
 	if drawer == null or size.x < 1 or size.y < 1:
 		return
@@ -168,7 +179,9 @@ func _layout() -> void:
 	dock.size = Vector2(usable.size.x - 20, 100)
 	var map_top: float = usable.position.y + (144.0 if landscape else 156.0)
 	if game.campaign_index >= 0:
-		map_top += 64.0
+		map_top += 64.0 if landscape else 34.0
+	# Reserve the actual wrapped HUD height, without a large empty portrait gap.
+	map_top = maxf(map_top, header.position.y + header.get_combined_minimum_size().y + 12.0)
 	var map_bottom: float = usable.end.y - 116.0
 	if landscape:
 		game.battlefield_frame.position = Vector2(usable.position.x + 10, map_top)

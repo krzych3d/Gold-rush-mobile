@@ -108,13 +108,23 @@ func _test_actual_ui() -> void:
 	game.account.total_xp = game.account.xp_for_level(20)
 	game.presentation.language = "pl"
 	root.add_child(game)
-	await process_frame
+	game._choose_faction(2) # Cold start before the first container/font layout.
+	for child in game.get_children():
+		if child is Timer: child.stop()
+	for _frame in 5: await process_frame
+	for card in [game.guard_button, game.ability_button, game.invest_button, game.raid_button]:
+		var surface = card.get_node("LocalizedSurface")
+		require(Rect2(Vector2.ZERO, card.size).encloses(surface.caption.get_rect()) and surface.caption.get_line_count() == surface.caption.get_visible_line_count(), "Wrapped caption is invisible or keeps its initial narrow-column height on cold start")
 	for race in 4:
 		game._choose_faction(race)
 		for kind in 3:
 			var art: AtlasTexture = game.controls[kind + 3].get_node("LocalizedSurface").illustration.texture as AtlasTexture
 			var expected: Texture2D = game._character_atlas(game._character_key_for_race(race, kind))
 			require(art != null and art.atlas == expected and art == game._unit_card_texture(race, kind), "Purchase portrait does not match deployed character")
+			var image: Image = expected.get_image()
+			if image.is_compressed(): image.decompress()
+			var opaque: Rect2i = image.get_region(Rect2i(0, 0, 128, 128)).get_used_rect()
+			require(Rect2i(art.region).encloses(opaque) and Rect2i(0, 0, 128, 128).encloses(Rect2i(art.region)), "Purchase crop cuts a weapon, limb or neighbouring animation cell")
 			var entry: Dictionary = game.Catalog.find(game, race, ["runner", "carrier", "saboteur"][kind])
 			require(game.Catalog.illustration(game, entry) == art, "Reference guide displays a different unit")
 		var defender: Texture2D = game.guard_button.get_node("LocalizedSurface").illustration.texture
@@ -136,9 +146,34 @@ func _test_actual_ui() -> void:
 	for dimensions in [Vector2i(540, 960), Vector2i(720, 1280), Vector2i(1280, 720)]:
 		root.size = dimensions
 		game.size = Vector2(dimensions)
-		for _frame in 4: await process_frame
-		for card in game.controls.slice(3, 9):
-			var surface = card.get_node("LocalizedSurface")
-			require(surface.illustration.get_rect().end.y <= surface.caption.position.y + 1 and surface.illustration.size.y <= 126 and surface.cost.get_rect().end.y <= card.size.y - 14, "New art or metal frame covers native card labels")
+		for language in ["pl", "en"]:
+			game._change_language(language)
+			for race in 4:
+				game._choose_faction(race)
+				for _frame in 5: await process_frame
+				for card in game.controls.slice(3, 9):
+					var surface = card.get_node("LocalizedSurface")
+					require(surface.illustration.get_rect().end.y <= surface.caption.position.y - 3 and surface.illustration.size.y >= 100 and surface.illustration.size.y <= 160 and surface.cost.get_rect().end.y <= card.size.y - 14, "Large art is tiny or covers native card labels")
+				for card in game.controls.slice(3, 9) + [game.guard_button, game.ability_button, game.invest_button, game.raid_button]:
+					var surface = card.get_node("LocalizedSurface")
+					var safe := Rect2(Vector2(8, 8), card.size - Vector2(16, 16))
+					require(safe.encloses(surface.illustration.get_rect()) and safe.encloses(surface.caption.get_rect()) and safe.encloses(surface.cost.get_rect()), "Large art, long translated title or price escapes its frame: %s/%d/%s" % [language, race, surface.caption.text])
+					# Shape before querying visible lines: headless getters can otherwise
+					# compare the previous width's cached count with the new line count.
+					require(surface.caption.get_line_count() == surface.caption.get_visible_line_count(), "Translated purchase caption loses a visible line: %s/%d/%s at %s, %d/%d lines, %s" % [language, race, surface.caption.text, dimensions, surface.caption.get_visible_line_count(), surface.caption.get_line_count(), surface.caption.get_rect()])
+	game._choose_faction(0)
+	game.gold[0] = 2500
+	game._refresh()
+	var ability_surface = game.ability_button.get_node("LocalizedSurface")
+	require(game.ability_button.disabled and ability_surface.illustration.modulate != Color.WHITE and ability_surface.caption.modulate == Color.WHITE, "Unavailable purchase is indistinct or makes its caption unreadable")
+	game.guard_button.pressed.emit()
+	require(not game.ability_button.disabled and ability_surface.illustration.modulate == Color.WHITE, "First defender enables Iron Wall but its cached icon stays dark")
+	game.gold[0] = 1
+	game._refresh()
+	var trap_surface = game.controls[6].get_node("LocalizedSurface")
+	require(game.controls[6].disabled and trap_surface.illustration.modulate != Color.WHITE, "Wallet changes do not refresh cached card availability")
+	game.gold[0] = 2500
+	game._refresh()
+	require(not game.controls[6].disabled and trap_surface.illustration.modulate == Color.WHITE, "A replenished wallet leaves a usable purchase dark")
 	game.queue_free()
 	await process_frame

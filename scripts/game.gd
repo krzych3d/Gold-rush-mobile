@@ -441,7 +441,7 @@ func _ready() -> void:
 	for index in 3:
 		var unit_key: String = _character_key(0, index)
 		var unit_button := _epic_card([L10n.t("RUNNER"), L10n.t("CARRIER"), L10n.t("SABOTEUR")][index],
-			COSTS[index], _preview_frame(_character_atlas(unit_key)), 125)
+			COSTS[index], _preview_frame(_character_atlas(unit_key)), LocalizedCard.CARD_HEIGHT)
 		unit_row.add_child(unit_button)
 		controls.append(unit_button)
 		unit_button.pressed.connect(_buy_unit.bind(index))
@@ -452,30 +452,35 @@ func _ready() -> void:
 	gameplay_panel.add_child(trap_row)
 	for index in 3:
 		var trap_button := _epic_card([L10n.t("SPIKES"), L10n.t("SNARE"), L10n.t("TURRET")][index],
-			TRAP_COSTS[index], _trap_card_texture(selected_race, index), 132)
+			TRAP_COSTS[index], _trap_card_texture(selected_race, index), LocalizedCard.CARD_HEIGHT)
 		trap_row.add_child(trap_button)
 		controls.append(trap_button)
 		trap_button.pressed.connect(_buy_trap.bind(index))
 
+	var support_row := HBoxContainer.new()
+	support_row.name = "BattleSupportRow"
+	support_row.add_theme_constant_override("separation", 4)
+	gameplay_panel.add_child(support_row)
 	guard_button = Button.new()
 	guard_button.text = "⚔  HIRE DEFENDER  ·  130 GOLD"
-	guard_button.custom_minimum_size.y = 84
+	guard_button.custom_minimum_size.y = LocalizedCard.BANNER_HEIGHT
 	guard_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(guard_button, true)
 	ornate_ui.button(guard_button, "banner_blue", "banner_gold")
-	gameplay_panel.add_child(guard_button)
+	support_row.add_child(guard_button)
 	guard_button.pressed.connect(_buy_guard)
 	ability_button = Button.new()
-	ability_button.custom_minimum_size.y = 84
+	ability_button.custom_minimum_size.y = LocalizedCard.BANNER_HEIGHT
 	ability_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_style_button(ability_button, false)
 	ornate_ui.button(ability_button, "banner_purple", "banner_gold")
-	gameplay_panel.add_child(ability_button)
+	support_row.add_child(ability_button)
 	ability_button.pressed.connect(_use_race_ability)
 
 	var economy_row := HBoxContainer.new()
 	economy_row.add_theme_constant_override("separation", 2)
-	economy_row.custom_minimum_size.y = 84
+	economy_row.name = "BattleEconomyRow"
+	economy_row.custom_minimum_size.y = LocalizedCard.BANNER_HEIGHT
 	gameplay_panel.add_child(economy_row)
 	invest_button = Button.new()
 	invest_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1856,6 +1861,12 @@ func _refresh() -> void:
 func _refresh_localized_cards() -> void:
 	if not original_png_ui:
 		return
+	# Availability can change with wallet, lane capacity or the first defender
+	# without changing any price. Refresh this cheap tint even on a cache hit.
+	for card in controls.slice(3, 9) + [guard_button, ability_button, invest_button, raid_button]:
+		var surface = card.get_node_or_null("LocalizedSurface")
+		if surface != null:
+			surface.sync_availability(card.disabled)
 	var signature: String = str([
 		selected_race, L10n.language, phase, bank_level, raid_boost, ability_used,
 		recruit_price(0, 0), recruit_price(0, 1), recruit_price(0, 2)
@@ -2315,7 +2326,9 @@ func _unit_card_texture(race: int, kind: int, is_guard: bool = false) -> Texture
 	if not unit_card_cache.has(key):
 		var crop := AtlasTexture.new()
 		crop.atlas = _character_atlas(key)
-		crop.region = Rect2(0, 0, 128, 128)
+		# Precomputed alpha bounds of the first authored pose, with 2px padding.
+		# Only the purchase/guide crop changes; battle animation cells stay 128px.
+		crop.region = preload("res://scripts/card_art_bounds.gd").UNITS.get(key, Rect2(0, 0, 128, 128))
 		crop.filter_clip = true
 		unit_card_cache[key] = crop
 	return unit_card_cache[key]

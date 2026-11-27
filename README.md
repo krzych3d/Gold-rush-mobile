@@ -1,5 +1,13 @@
 # Gold Rush Mobile — Vault Wars
 
+## Larger purchase art and fuller campaign scenes (0.4.2)
+
+The arsenal gives units and traps more illustration space and pairs support
+actions, while long translated names wrap inside their frames. Seven PL/EN
+dwarven chapters now include recaps, character context, clearer scene transitions
+and tactical briefings. Story pages support Previous/Next and show choices after
+their consequences are explained. [Behavior, scope and verification](docs/Mobile-Readability-0.4.2.md).
+
 ## Consistent art and smoother event playback (0.4.1)
 
 Battle cards and the guide now show the actual deployed unit art. Painted vault

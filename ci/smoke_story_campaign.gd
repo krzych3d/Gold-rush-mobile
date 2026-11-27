@@ -31,10 +31,11 @@ func run() -> void:
 	_test_rules()
 	_test_choices()
 	await _test_ui()
+	await _test_reading_flow()
 	for suffix in ["", ".bak", ".pending"]:
 		DirAccess.remove_absolute(save_path + suffix)
 	if failures.is_empty():
-		print("Story campaign PASSED: seven chapters, save migration/rollback, immutable decisions, best stars, debt, persistent phased bosses, escort, collapse, PL/EN pagination, pause and rotation")
+		print("Story campaign PASSED: seven chapters, save migration/rollback, immutable decisions, best stars, debt, persistent phased bosses, escort, collapse, all PL/EN story pages, speaker/context captions, previous navigation, gated choices, saved siege recap, pause and rotation")
 	quit(0 if failures.is_empty() else 1)
 
 func _test_persistence() -> void:
@@ -51,7 +52,7 @@ func _test_persistence() -> void:
 		require(not ids.has(data["id"]), "Duplicate campaign ID")
 		ids[data["id"]] = true
 		require(Story.unlocked(account, i) == (i == 0), "A prerequisite can be bypassed on a new account")
-		for field in ["title", "objective", "intro", "mid", "outro"]:
+		for field in ["title", "objective", "setting", "recap", "briefing", "intro", "mid", "outro"]:
 			require(data[field].size() == 2 and not str(data[field][0]).is_empty() and not str(data[field][1]).is_empty(), "Missing PL/EN campaign text")
 	account.claim_campaign("dwarf_bells", 3, 60.0, 1)
 	var xp: int = account.total_xp
@@ -192,5 +193,67 @@ func _test_ui() -> void:
 			for _frame in 4: await process_frame
 			require(game.battle_shell.header.get_global_rect().end.y <= game.battlefield_frame.get_global_rect().position.y + 1, "Campaign HUD overlaps the map")
 			require(game.gold == saved_gold, "Orientation changes campaign resources")
+		game.queue_free()
+		await process_frame
+
+func _test_reading_flow() -> void:
+	# Read every actual chapter in both languages. Choices must wait for their
+	# context, and paging/rotation may never advance time or alter battle state.
+	for language in ["pl", "en"]:
+		root.size = Vector2i(720, 1280)
+		var game = load("res://main.tscn").instantiate()
+		game.account = Profile.new(save_path)
+		game.presentation.language = language
+		game.presentation.reduced_motion = true
+		root.add_child(game)
+		for child in game.get_children():
+			if child is Timer: child.stop()
+		game._choose_faction(0)
+		for chapter in Story.MISSIONS.size():
+			game.campaign_index = chapter
+			game.campaign_state = Runtime.new(chapter, Story.MISSIONS[chapter])
+			var mission: Dictionary = Story.MISSIONS[chapter]
+			for stage in ["intro", "mid", "result"]:
+				game.campaign_choice_pending = stage == "result" and mission.has("decision")
+				game._present_campaign(stage, true)
+				var panel = game.campaign_overlay
+				for _frame in 3: await process_frame
+				var before_gold: Array = game.gold.duplicate()
+				var before_time: float = game.remaining
+				require(panel.find_child("StorySetting", true, false).text == Story.localized(mission["setting"]), "Dialogue lost its location/time context")
+				if stage == "intro":
+					require(panel.pages_text[0].contains(Story.localized(mission["recap"])), "Previous chapter recap is missing")
+					require(panel.pages_text[-1].contains(Story.localized(mission["briefing"])) and panel.pages_text[-1].contains(Story.localized(mission["objective"])), "Final briefing omits the real objective or rule explanation")
+				for page in panel.pages_text.size():
+					require(panel.text_label.text == panel.pages_text[page] and not panel.speaker_label.text.is_empty(), "Story pages are lost, merged or lack speaker context")
+					if game.campaign_choice_pending:
+						for choice in mission["choices"]:
+							var button: Button = panel.find_child("StoryChoice_" + str(choice["id"]), true, false)
+							require(button.is_visible_in_tree() == (page == panel.pages_text.size() - 1), "Decision appears before its consequences have been read")
+					if page + 1 < panel.pages_text.size(): panel.advance.pressed.emit()
+				if panel.pages_text.size() > 1:
+					panel.previous.pressed.emit()
+					require(panel.page == panel.pages_text.size() - 2 and panel.text_label.text == panel.pages_text[panel.page], "Previous action cannot recover a story page")
+					if game.campaign_choice_pending:
+						require(not panel.choices_box.is_visible_in_tree(), "Previous page leaves a premature decision visible")
+					panel.advance.pressed.emit()
+				for dimensions in [Vector2i(540, 960), Vector2i(1280, 720), Vector2i(720, 1280)]:
+					root.size = dimensions
+					game.size = Vector2(dimensions)
+					for _frame in 4: await process_frame
+					var scroll: ScrollContainer = panel.find_child("DialogueScroll", true, false)
+					var navigation: Control = panel.find_child("StoryNavigation", true, false)
+					require(scroll.size.y >= 70 and Rect2(Vector2.ZERO, Vector2(dimensions)).grow(1).encloses(navigation.get_global_rect()), "Expanded dialogue or navigation clips after rotation " + str(dimensions))
+				game._tick()
+				require(game.remaining == before_time and game.gold == before_gold, "Reading, paging or rotating a scene changes battle state")
+				game._close_campaign_overlay()
+		# The actual saved refugee choice is restated when its consequence starts.
+		game.campaign_index = 5
+		for choice in ["open", "hidden"]:
+			game.account.campaign_choices["dwarf_refugees"] = choice
+			game._present_campaign("intro")
+			var text: String = game.campaign_overlay.pages_text[0]
+			require(text.contains("Otworzyłeś" if language == "pl" else "You opened") if choice == "open" else text.contains("Ukryłeś" if language == "pl" else "You hid"), "Siege recap omits the player's actual saved decision")
+			game._close_campaign_overlay()
 		game.queue_free()
 		await process_frame
