@@ -267,8 +267,13 @@ func _build_home() -> void:
 	footer.alignment = BoxContainer.ALIGNMENT_END
 	footer.add_theme_constant_override("separation", 12)
 	add_child(footer)
-	var start := _button(footer, L10n.t("ROZPOCZNIJ GRĘ"), "StartGame", game._open_race_selection, true)
+	var play_row := HBoxContainer.new()
+	play_row.add_theme_constant_override("separation", 10)
+	footer.add_child(play_row)
+	var start := _button(play_row, L10n.t("ROZPOCZNIJ GRĘ"), "StartGame", game._open_race_selection, true)
 	_primary_style(start)
+	var story := _button(play_row, TutorialLessons.text(["KAMPANIA", "CAMPAIGN"]), "OpenCampaign", game._open_campaign, true)
+	_primary_style(story)
 	var navigation := HBoxContainer.new()
 	navigation.add_theme_constant_override("separation", 10)
 	footer.add_child(navigation)
@@ -627,6 +632,8 @@ func _filter_entries() -> void:
 			selected = filtered_entries.size()
 		filtered_entries.append(entry)
 		var icon: Texture2D = _illustration_texture(entry["art"])
+		if entry["id"] in ["spikes", "snare", "turret"]:
+			icon = game._trap_card_texture(int(entry["race"]), ["spikes", "snare", "turret"].find(entry["id"]))
 		entry_list.add_item(entry["title"], icon)
 	result_count.text = L10n.t("%d wpisów • statystyki: %s") % [filtered_entries.size(), L10n.t(Catalog.RACE_TITLES[focus_race])]
 	if filtered_entries.is_empty():
@@ -651,6 +658,8 @@ func _select_entry(index: int) -> void:
 	media.add_theme_constant_override("separation", 8)
 	pane.add_child(media)
 	var art := _image(data["art"], 205)
+	if data["id"] in ["spikes", "snare", "turret"]:
+		art.texture = game._trap_card_texture(int(data["race"]), ["spikes", "snare", "turret"].find(data["id"]))
 	art.name = "EntryIllustration"
 	media.add_child(art)
 	live_preview = Preview.new()

@@ -1,5 +1,18 @@
 # Gold Rush Mobile — Vault Wars
 
+## Story campaign and painted defence art (2026-11-27)
+
+Seven playable PL/EN dwarven chapters now follow Thorgar, Borin and Eira through
+Legacy of Blood: defence, memory-gold recovery, spending debt, persistent phased
+bosses, refugee escort, siege and a collapsing vault. The illustrated chronicle
+tracks stars, first-clear XP and two canonical decisions with real consequences.
+New portraits, the Mint of Names and Ancestors' Hall paintings, lightweight story
+parallax and a shared painted defence atlas are integrated in gameplay and the
+guide. Ordinary duel rules and tutorial progression remain separate.
+
+[Campaign scope, controls and validation](docs/Campaign-Legacy-of-Blood.md) ·
+[Defence art and mobile budget](docs/Faction-Defense-Art.md).
+
 ## Android FPS and battle trap animation (2026-11-23)
 
 Combat keeps its existing 20 Hz simulation and balance. Repeated HUD updates

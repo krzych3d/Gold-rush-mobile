@@ -18,6 +18,19 @@ const Rules = preload("res://scripts/balance_rules.gd")
 const TutorialCoach = preload("res://scripts/tutorial_coach.gd")
 const WaveLedger = preload("res://scripts/wave_ledger.gd")
 const WaveSummaryPanel = preload("res://scripts/wave_summary_panel.gd")
+const StoryCampaign = preload("res://scripts/story_campaign.gd")
+const CampaignMaps = preload("res://scripts/campaign_maps.gd")
+const CampaignRuntime = preload("res://scripts/campaign_runtime.gd")
+var campaign_state
+var campaign_choice_pending := false
+var campaign_won := false
+var campaign_unsaved_choice := ""
+var campaign_map_art := false
+var campaign_path_speed: Array[float] = [1.0, 1.0, 1.0]
+var campaign_index := -1
+var campaign_delivered := 0
+var campaign_overlay: Control
+const CAMPAIGN_MENU_META := "vault_wars_open_campaign"
 var tutorial_mode := false
 var tutorial_coach
 var tutorial_session: Control
@@ -162,8 +175,8 @@ var terrain_details: Array = []
 var hit_sparks: Array = []
 var trap_bursts: Array = [] # Capped, render-only spike/snare activation events.
 var turret_bolts: Array = []
-const TRAP_ATLAS: Texture2D = preload("res://assets/world/defense_factions.svg")
-const TRAP_CELL := 192
+const TRAP_ATLAS: Texture2D = preload("res://assets/epic/story/defenses.webp")
+const TRAP_CELL := 384
 var trap_card_cache: Dictionary = {}
 var fallen_actors: Array = []
 var deposit_actors: Array = []
@@ -502,6 +515,9 @@ func _ready() -> void:
 	add_child(battle_shell)
 	if not tutorial_mode:
 		_show_main_menu()
+		if get_tree().has_meta(CAMPAIGN_MENU_META):
+			get_tree().remove_meta(CAMPAIGN_MENU_META)
+			call_deferred("_open_campaign")
 
 func _show_main_menu() -> void:
 	if main_menu_overlay != null:
@@ -513,6 +529,141 @@ func _show_main_menu() -> void:
 	main_menu_overlay.mode = "home"
 	main_menu_overlay.z_index = 90
 	add_child(main_menu_overlay)
+
+func _open_campaign() -> void:
+	if phase != "SELECT" or is_instance_valid(campaign_overlay) or tutorial_mode:
+		return
+	_hide_lobby()
+	_present_campaign("menu")
+
+func _present_campaign(mode: String, won: bool = false) -> void:
+	if is_instance_valid(campaign_overlay):
+		return
+	var panel = StoryCampaign.new()
+	panel.game = self
+	panel.mode = mode
+	panel.index = maxi(0, campaign_index)
+	panel.won = won
+	panel.reward = account_reward
+	panel.z_index = 125
+	campaign_overlay = panel
+	add_child(panel)
+
+func _close_campaign_overlay() -> void:
+	if not is_instance_valid(campaign_overlay):
+		return
+	var was_menu: bool = campaign_overlay.mode == "menu"
+	var panel: Control = campaign_overlay
+	campaign_overlay = null
+	remove_child(panel)
+	panel.queue_free()
+	if was_menu:
+		_restore_lobby()
+
+func _start_campaign(index: int) -> void:
+	if phase != "SELECT" or not StoryCampaign.unlocked(account, index):
+		return
+	_close_campaign_overlay()
+	var mission: Dictionary = StoryCampaign.MISSIONS[index]
+	campaign_index = index
+	campaign_delivered = 0
+	campaign_state = CampaignRuntime.new(index, mission, account.campaign_choices)
+	campaign_choice_pending = false
+	campaign_won = false
+	campaign_unsaved_choice = ""
+	_choose_faction(int(mission["race"]))
+	bot_race = int(mission["enemy"])
+	gold = [int(mission["gold"]), 950]
+	campaign_state.prepare(self)
+	# The campaign board is a temporary override, not a saved map preference.
+	var original_art: Texture2D = CampaignMaps.texture(index)
+	campaign_map_art = original_art != null
+	epic_battlefield_texture = original_art if campaign_map_art else Battlefields.texture(str(mission["map"]))
+	if campaign_map_art:
+		for path in 3:
+			campaign_path_speed[path] = 2.0 * WORLD_HALF_LENGTH / CampaignMaps.road_length(index, path)
+	if is_instance_valid(battle_shell):
+		battle_shell._layout()
+	_fit_map()
+	_set_message("Protect your vault!")
+	_present_campaign("intro")
+	_refresh()
+
+func _campaign_hud() -> String:
+	if campaign_index < 0:
+		return ""
+	var data: Dictionary = StoryCampaign.MISSIONS[campaign_index]
+	if campaign_state != null:
+		var status: String = StoryCampaign.copy("Fala %d/%d", "Wave %d/%d") % [wave, int(data["waves"])]
+		match campaign_state.rule():
+			"escort":
+				return status + StoryCampaign.copy(" • Ocaleni %d/%d • eskorta: %d", " • Saved %d/%d • escort lane: %d") % [campaign_state.rescued, int(data["target"]), campaign_state.boss_lane(wave) + 1]
+			"debt":
+				return status + StoryCampaign.copy(" • Pamięć %d/%d • wróg +%d%% PŻ", " • Memory %d/%d • enemy +%d%% HP") % [campaign_delivered, int(data["target"]), roundi((campaign_state.enemy_multiplier() - 1.0) * 100)]
+			"boss", "siege", "collapse":
+				var boss: String = StoryCampaign.copy(" • Boss %.0f/%.0f • linia %d", " • Boss %.0f/%.0f • lane %d") % [campaign_state.boss_health, campaign_state.boss_max, campaign_state.boss_lane(wave) + 1]
+				if int(data["target"]) > 0:
+					boss += StoryCampaign.copy(" • Pamięć %d/%d", " • Memory %d/%d") % [campaign_delivered, int(data["target"])]
+				if campaign_state.danger_lane(wave) >= 0:
+					boss += StoryCampaign.copy(" • Zagrożenie: %d", " • Danger: %d") % [campaign_state.danger_lane(wave) + 1]
+				return status + boss
+	if int(data["target"]) > 0:
+		return StoryCampaign.copy("Pamięć %d/%d • fala %d/%d • szczelina: %d", "Memory %d/%d • wave %d/%d • fissure: %d") % [
+			campaign_delivered, int(data["target"]), wave, int(data["waves"]), StoryCampaign.hazard_lane(campaign_index, wave) + 1]
+	return StoryCampaign.copy("Obrona Vargheim • fala %d/%d", "Defend Vargheim • wave %d/%d") % [wave, int(data["waves"])]
+
+func _finish_campaign(won: bool) -> void:
+	if campaign_index < 0 or phase == "END":
+		return
+	phase = "END"
+	remaining = 0.0
+	campaign_won = won
+	account_reward = {}
+	if won:
+		var mission: Dictionary = StoryCampaign.MISSIONS[campaign_index]
+		campaign_choice_pending = not str(mission.get("decision", "")).is_empty() and not account.campaign_choices.has(str(mission.get("decision", "")))
+		if not campaign_choice_pending:
+			_save_campaign_victory()
+	_present_campaign("result", won)
+
+func _save_campaign_victory(choice: String = "") -> void:
+	campaign_unsaved_choice = choice
+	var mission: Dictionary = StoryCampaign.MISSIONS[campaign_index]
+	var key: String = str(mission.get("decision", ""))
+	var value: String = str(account.campaign_choices.get(key, choice))
+	account_reward = account.claim_campaign(str(mission["id"]), account_finished_waves, account_battle_seconds,
+		campaign_state.stars(self) if campaign_state != null else 1, key, value)
+
+func _choose_campaign_ending(choice: String) -> void:
+	if not campaign_choice_pending or not campaign_won:
+		return
+	var valid := false
+	for option in StoryCampaign.MISSIONS[campaign_index].get("choices", []):
+		if option["id"] == choice:
+			valid = true
+	if not valid:
+		return
+	_save_campaign_victory(choice)
+	if account_reward.get("status", "") != "save_failed":
+		campaign_choice_pending = false
+	_close_campaign_overlay()
+	_present_campaign("result", true)
+
+func _retry_campaign_save() -> void:
+	if not campaign_won:
+		return
+	_save_campaign_victory(campaign_unsaved_choice)
+	_close_campaign_overlay()
+	_present_campaign("result", true)
+
+func _spend_gold(side: int, amount: int) -> void:
+	gold[side] -= amount
+	if side == 0 and campaign_state != null and campaign_index >= 0:
+		campaign_state.record_spending(amount)
+
+func _return_to_campaign() -> void:
+	get_tree().set_meta(CAMPAIGN_MENU_META, true)
+	get_tree().reload_current_scene()
 
 func _open_race_selection() -> void:
 	if main_menu_overlay != null:
@@ -751,7 +902,7 @@ func _choose_faction(index: int) -> void:
 	_refresh()
 
 func _change_race() -> void:
-	if phase != "PREP" or wave != 1:
+	if campaign_index >= 0 or phase != "PREP" or wave != 1:
 		return
 	for _step in RACE_NAMES.size():
 		selected_race = (selected_race + 1) % RACE_NAMES.size()
@@ -792,7 +943,7 @@ func activate_ability(side: int, reserve: int = 0) -> bool:
 		return false
 	if side_race(side) == 0 and guard_count(side) == 0:
 		return false
-	gold[side] -= ABILITY_COST
+	_spend_gold(side, ABILITY_COST)
 	if side == 0:
 		ability_used = true
 	else:
@@ -837,7 +988,7 @@ func purchase_bank(side: int, reserve: int = 0) -> bool:
 	var cost: int = BANK_BASE_COST + side_bank(side) * BANK_STEP_COST
 	if phase != "PREP" or side_bank(side) >= 5 or gold[side] < cost + reserve:
 		return false
-	gold[side] -= cost
+	_spend_gold(side, cost)
 	if side == 0:
 		bank_level += 1
 	else:
@@ -851,7 +1002,7 @@ func purchase_training(side: int, reserve: int = 0) -> bool:
 	var cost: int = Rules.training_cost(side_training(side))
 	if phase != "PREP" or side_training(side) >= 3 or gold[side] < cost + reserve:
 		return false
-	gold[side] -= cost
+	_spend_gold(side, cost)
 	if side == 0:
 		raid_boost += 1
 	else:
@@ -897,7 +1048,7 @@ func purchase_guard(side: int, path: int, reserve: int = 0) -> bool:
 		if not occupied:
 			break
 		slot += 1
-	gold[side] -= GUARD_COST
+	_spend_gold(side, GUARD_COST)
 	guards.append({"side": side, "lane": path, "position": 0.19 + float(slot) * 0.11,
 		"health": GUARD_HP, "max_health": GUARD_HP, "shield": 0.0, "cooldown": 0.0})
 	_check_vaults()
@@ -955,6 +1106,8 @@ func _guard_combat(dt: float) -> void:
 					unit["strike_cooldown"] = 0.45 if bool(unit.get("frenzy", false)) else 0.65
 
 func _record_fallen(data: Dictionary) -> void:
+	if campaign_index >= 0 and campaign_state != null:
+		campaign_state.fallen(data)
 	wave_ledger.record_fallen(int(data["side"]), bool(data.get("guard", false)))
 	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false)), "guard": bool(data.get("guard", false))})
 	if fallen_actors.size() > 30:
@@ -988,7 +1141,7 @@ func purchase_unit(side: int, path: int, kind: int, reserve: int = 0) -> bool:
 	var cost: int = recruit_price(side, kind)
 	if phase != "PREP" or gold[side] < cost + reserve or orders[side].size() >= 6 or lane_count >= 4:
 		return false
-	gold[side] -= cost
+	_spend_gold(side, cost)
 	_check_vaults()
 	orders[side].append({"kind": kind, "lane": path})
 	return true
@@ -1024,7 +1177,7 @@ func purchase_trap(side: int, path: int, kind: int, reserve: int = 0) -> bool:
 	var slot := 0
 	while occupied.has(slot):
 		slot += 1
-	gold[side] -= TRAP_COSTS[kind]
+	_spend_gold(side, TRAP_COSTS[kind])
 	_check_vaults()
 	traps[side].append({"lane": path, "kind": kind, "charges": TRAP_CHARGES[kind],
 		"slot": slot, "cooldown": 0.0, "fire_time": 0.0})
@@ -1135,7 +1288,7 @@ func _start_pressed() -> void:
 		_begin_attack()
 
 func _begin_attack() -> void:
-	if is_instance_valid(tutorial_session):
+	if is_instance_valid(campaign_overlay) or is_instance_valid(tutorial_session):
 		return
 	if tutorial_mode:
 		if _tutorial_allows("attack") and phase == "PREP":
@@ -1169,6 +1322,13 @@ func launch_wave() -> void:
 			previous_raids[side][int(order["lane"])] += 1
 			previous_kinds[side][int(order["kind"])] += 1
 
+	if campaign_index >= 0 and campaign_state != null:
+		campaign_state.begin_wave(self)
+	if campaign_index == 0 and wave >= 2:
+		# The returning royal guard reinforces a different lane each wave.
+		for n in range(wave - 1):
+			_spawn(1, (wave - 1) % 3, 0, -0.12 - float(n) * 0.08)
+
 func raider_stats(kind: int, race: int, with_ability: bool, training: int) -> Dictionary:
 	return Rules.raider_stats(kind, race, with_ability, training)
 
@@ -1178,11 +1338,15 @@ func interest_rate(race: int, level: int) -> float:
 func _spawn(side: int, path: int, kind: int, offset: float) -> void:
 	var stats: Dictionary = raider_stats(kind, side_race(side), side_ability(side), side_training(side))
 	var unit_health: float = stats["health"]
+	if side == 1 and campaign_index >= 0 and campaign_state != null:
+		unit_health *= campaign_state.enemy_multiplier()
 	var unit_speed: float = stats["speed"]
 	var unit_capacity: int = stats["capacity"]
 	units.append({"side": side, "lane": path, "kind": kind, "position": offset, "previous_position": offset, "returning": false, "steal_timer": 0.0, "health": unit_health, "max_health": unit_health, "speed": unit_speed, "capacity": unit_capacity, "carried": 0, "stunned": 0.0, "disarmed": false, "frenzy": side_ability(side) and side_race(side) == 1, "shadow_evasion": side_ability(side) and side_race(side) == 3, "triggered": [], "action": "walk", "action_time": 0.0, "hit_time": 0.0, "attack_time": 0.0})
 
 func _tick() -> void:
+	if is_instance_valid(campaign_overlay) or (campaign_index >= 0 and is_instance_valid(menu_confirmation)):
+		return
 	# A visible report never consumes the next wave's preparation clock.
 	if is_instance_valid(wave_summary_overlay):
 		return
@@ -1222,6 +1386,8 @@ func _tick() -> void:
 		_refresh()
 
 func _simulate(dt: float) -> void:
+	if campaign_index >= 0 and campaign_state != null:
+		campaign_state.tick(self, dt)
 	if phase == "ATTACK" and not account_match_id.is_empty():
 		account_battle_seconds += maxf(0, dt)
 	for side_traps in traps:
@@ -1257,7 +1423,7 @@ func _simulate(dt: float) -> void:
 	# draw armor-piercing fire; otherwise shoot the raider nearest the vault.
 	var turret_targets: Array = [{}, {}, {}, {}, {}, {}]
 	for target in units:
-		if bool(target["returning"]) or float(target["position"]) < 0.35 or float(target["position"]) >= 0.85 or float(target["health"]) <= 0.0:
+		if (bool(target["returning"]) and not bool(target.get("campaign_refugee", false))) or float(target["position"]) < 0.35 or float(target["position"]) >= 0.85 or float(target["health"]) <= 0.0:
 			continue
 		var key: int = (1 - int(target["side"])) * 3 + int(target["lane"])
 		var current: Dictionary = turret_targets[key]
@@ -1277,7 +1443,7 @@ func _simulate(dt: float) -> void:
 			unit["stunned"] -= dt
 			continue
 		var defender: int = 1 - unit["side"]
-		if not unit["returning"] and unit["position"] >= 0.35 and unit["position"] < 0.85:
+		if (not unit["returning"] or bool(unit.get("campaign_refugee", false))) and unit["position"] >= 0.35 and unit["position"] < 0.85:
 			for trap in traps[defender].duplicate():
 				if trap["lane"] != unit["lane"] or trap["charges"] <= 0:
 					continue
@@ -1331,7 +1497,7 @@ func _simulate(dt: float) -> void:
 			continue
 		if not unit["returning"]:
 			if not bool(unit.get("blocked", false)):
-				unit["position"] += unit["speed"] * dt
+				unit["position"] += unit["speed"] * dt * _campaign_speed_factor(int(unit["lane"]))
 			if unit["position"] >= 1.0:
 				var amount: int = mini(unit["capacity"], gold[defender])
 				gold[defender] -= amount
@@ -1346,9 +1512,13 @@ func _simulate(dt: float) -> void:
 				unit["action_time"] = 0.0
 		else:
 			if not bool(unit.get("blocked", false)):
-				unit["position"] -= unit["speed"] * dt
+				unit["position"] -= unit["speed"] * dt * _campaign_speed_factor(int(unit["lane"]))
 			if unit["position"] <= 0.0:
 				wave_ledger.record_delivery(int(unit["side"]), int(unit["carried"]))
+				if campaign_index >= 0 and int(unit["side"]) == 0:
+					campaign_delivered += int(unit["carried"])
+				if campaign_index >= 0 and campaign_state != null:
+					campaign_state.returned(unit)
 				gold[unit["side"]] += unit["carried"]
 				# Gold arrives at its owner before a purely visual flight to the HUD.
 				if int(unit["carried"]) > 0 and is_instance_valid(battle_shell) and not tutorial_mode:
@@ -1364,6 +1534,14 @@ func _check_vaults() -> bool:
 		return false
 	if phase == "END" or phase == "SELECT":
 		return phase == "END"
+	if campaign_index >= 0:
+		if gold[0] <= 0:
+			_finish_campaign(false)
+			return true
+		# The enemy is a supernatural source, not the mission objective.
+		if gold[1] <= 0:
+			gold[1] = 600
+		return false
 	if gold[0] > 0 and gold[1] > 0:
 		return false
 	var rewarded_waves: int = account_finished_waves + (1 if account_wave_active else 0)
@@ -1500,6 +1678,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _navigate_back() -> void:
+	if is_instance_valid(campaign_overlay):
+		if campaign_overlay.mode == "menu":
+			_close_campaign_overlay()
+		elif campaign_overlay.mode == "result" and not campaign_choice_pending:
+			_return_to_campaign()
+		return
 	if is_instance_valid(wave_summary_overlay):
 		_close_wave_summary()
 		return
@@ -1532,6 +1716,8 @@ func _end_wave() -> void:
 		return
 	account_finished_waves += 1
 	account_wave_active = false
+	if campaign_index >= 0 and campaign_state != null:
+		campaign_state.settle(self)
 	for unit in units:
 		if unit["carried"] > 0:
 			gold[1 - unit["side"]] += unit["carried"]
@@ -1555,6 +1741,17 @@ func _end_wave() -> void:
 	if _check_vaults():
 		return
 	last_wave_summary = wave_ledger.finish(gold_before_interest, interest_last, pressure, gold)
+	if campaign_index >= 0:
+		var mission: Dictionary = StoryCampaign.MISSIONS[campaign_index]
+		var target: int = int(mission["target"])
+		var final_wave: bool = wave >= int(mission["waves"])
+		var reached: bool = campaign_state.victory(campaign_delivered, wave) if campaign_state != null else (target > 0 and campaign_delivered >= target) or (target == 0 and final_wave)
+		if reached:
+			_finish_campaign(true)
+			return
+		if final_wave or (campaign_state != null and campaign_state.impossible(wave)):
+			_finish_campaign(false)
+			return
 	wave += 1
 	ability_used = false
 	bot_ability_used = false
@@ -1563,7 +1760,9 @@ func _end_wave() -> void:
 	_set_message("INTEREST +%d GOLD! Protect savings or invest in your army.", [interest_last[0]])
 	if wave >= Rules.PRESSURE_START:
 		_set_message("Odsetki +%d. Presja skarbców po tej fali: -%d dla obu stron.", [interest_last[0], Rules.vault_pressure(wave)])
-	if presentation.wave_summary_auto and not last_wave_summary.is_empty() and not tutorial_mode:
+	if campaign_index >= 0 and wave == 2:
+		_present_campaign("mid")
+	elif presentation.wave_summary_auto and not last_wave_summary.is_empty() and not tutorial_mode:
 		call_deferred("_show_wave_summary")
 
 func _refresh() -> void:
@@ -1669,7 +1868,18 @@ func _refresh_localized_cards() -> void:
 	LocalizedCard.apply(invest_button, ornate_ui.original_texture(_race_art_name("bank")), L10n.t("SKARBIEC %d/5") % bank_level, "MAX" if bank_level >= 5 else "✦ %d" % (BANK_BASE_COST + bank_level * BANK_STEP_COST), true)
 	LocalizedCard.apply(raid_button, ornate_ui.original_texture(_race_art_name("raid")), L10n.t("TRENING %d/3") % raid_boost, "MAX" if raid_boost >= 3 else "✦ %d" % Rules.training_cost(raid_boost), true)
 
+func _battlefield_world_size() -> Vector2:
+	return CampaignMaps.SIZE if campaign_map_art else Vector2(2400.0, 1060.0)
+
+func _campaign_speed_factor(path: int) -> float:
+	var factor: float = campaign_path_speed[path] if campaign_map_art else 1.0
+	if campaign_index >= 0 and campaign_state != null and campaign_state.rule() == "siege" and path == campaign_state.danger_lane(wave):
+		factor *= 0.55
+	return factor * StoryCampaign.speed_factor(campaign_index, wave, path)
+
 func _point(path: int, progress: float, side: int) -> Vector2:
+	if campaign_map_art:
+		return CampaignMaps.point(campaign_index, path, progress, side)
 	var t: float = progress if side == 0 else 1.0 - progress
 	var x: float = lerpf(-WORLD_HALF_LENGTH, WORLD_HALF_LENGTH, t)
 	var lane_y: float = -200.0 + float(path) * 245.0
@@ -1961,7 +2171,8 @@ func _fit_map() -> void:
 		battle_shell.fit_camera()
 		return
 	# Fixed camera: fit the complete painted map, including both castles.
-	camera_zoom = maxf(0.01, minf(arena.size.x / 2400.0, arena.size.y / 1060.0))
+	var world_size: Vector2 = _battlefield_world_size()
+	camera_zoom = maxf(0.01, minf(arena.size.x / world_size.x, arena.size.y / world_size.y))
 	camera_offset = Vector2.ZERO
 	overview_mode = true
 	arena.queue_redraw()
@@ -2079,7 +2290,7 @@ func _directional_sprite_transform(p: Vector2, facing: float, tilt: float = 0.0)
 	return Transform2D(Vector2(c * zoom * direction, sn * zoom * direction), Vector2(-sn * zoom, c * zoom), origin)
 
 static func _trap_sprite_region(race: int, kind: int, frame: int) -> Rect2:
-	return Rect2(Vector2((clampi(kind, 0, 2) * 4 + clampi(frame, 0, 3)) * TRAP_CELL,
+	return Rect2(Vector2(clampi(kind, 0, 2) * TRAP_CELL,
 		clampi(race, 0, 3) * TRAP_CELL), Vector2(TRAP_CELL, TRAP_CELL))
 
 func _trap_card_texture(race: int, kind: int) -> Texture2D:
@@ -2110,8 +2321,10 @@ static func _trap_animation_frame(kind: int, fire_time: float, cooldown: float) 
 
 func _draw_trap_sprite(p: Vector2, race: int, kind: int, frame: int, opacity: float = 1.0) -> void:
 	# Art is already shaded. One atlas quad per object, no runtime SVG or shader.
-	var extent: float = 162.0 if kind == 2 else 138.0
-	var rect := Rect2(p + Vector2(-extent * 0.5, -extent * 0.84), Vector2.ONE * extent)
+	var extent: float = 182.0 if kind == 2 else 146.0
+	# Recoil, deployment and closing use real trigger keyframes, with fixed feet.
+	var stretch: float = 1.0 if presentation.reduced_motion else ([1.0, 0.91, 1.06, 0.98][frame] if kind == 2 else [0.80, 0.92, 1.10, 0.96][frame])
+	var rect := Rect2(p + Vector2(-extent * 0.5, -extent * 0.84 * stretch), Vector2(extent, extent * stretch))
 	arena.draw_texture_rect_region(TRAP_ATLAS, rect, _trap_sprite_region(race, kind, frame), Color(1, 1, 1, opacity), false, true)
 
 static func _trap_impulse(remaining: float) -> float:
@@ -2175,16 +2388,27 @@ func _draw_arena() -> void:
 	arena.draw_rect(Rect2(Vector2.ZERO, arena.size), Color("071421"))
 	# The full-resolution second scenic layer is optional on slow GPUs.
 	if is_instance_valid(battle_shell) and battle_shell.overview and presentation.effective_quality != "battery":
-		arena.draw_texture_rect(BATTLE_SCENERY, Rect2(Vector2.ZERO, arena.size), false, Color(0.23, 0.24, 0.32))
+		var scenery: Texture2D = epic_battlefield_texture if campaign_map_art else BATTLE_SCENERY
+		arena.draw_texture_rect(scenery, Rect2(Vector2.ZERO, arena.size), false, Color(0.23, 0.24, 0.32))
 	# The focused view fills the viewport; overview keeps both vaults in view.
 	arena.draw_set_transform_matrix(_iso_transform())
 	center = Vector2.ZERO
 	# The battlefield is now one high-detail painting. Never draw the old
 	# geometric river, bridges, trees, roads or duplicate castles over it.
-	arena.draw_texture_rect(epic_battlefield_texture, Rect2(Vector2(-1200, -530), Vector2(2400, 1060)), false)
+	var world_size: Vector2 = _battlefield_world_size()
+	arena.draw_texture_rect(epic_battlefield_texture, Rect2(-world_size * 0.5, world_size), false)
+	_draw_campaign_marks()
+	var fissure: int = StoryCampaign.hazard_lane(campaign_index, wave)
+	if fissure >= 0:
+		var points := PackedVector2Array()
+		for step in range(25):
+			points.append(_point(fissure, lerpf(0.10, 0.90, float(step) / 24.0), 0))
+		var pulse: float = 0.8 if presentation.reduced_motion else 0.7 + 0.15 * sin(visual_time * 2.0)
+		arena.draw_polyline(points, Color(0.65, 0.22, 1.0, 0.28 * pulse), 54.0, true)
+		arena.draw_polyline(points, Color(0.82, 0.52, 1.0, pulse), 7.0, true)
 	# Mobile: use a few inexpensive ambient highlights instead of dozens of
 	# per-frame animated primitives across the entire battlefield.
-	for i in presentation.ambient_count():
+	for i in (0 if campaign_map_art else presentation.ambient_count()):
 		var water_y: float = -380.0 + float(i) * 150.0
 		var water_pos := Vector2(sin(water_y * 0.008) * 36.0, water_y)
 		var shimmer: float = 0.14 + 0.10 * sin(visual_time * 1.5 + float(i))
@@ -2303,6 +2527,8 @@ func _draw_arena() -> void:
 		var bob: float = 0.0
 		var squash_y: float = 1.0
 		var art_size: Vector2 = _unit_art_size()
+		if bool(data.get("campaign_boss", false)):
+			art_size *= 1.35
 		var scale_factor: float = art_size.y / 112.0
 		var tilt: float = 0.0
 		var facing: float = _travel_facing(int(actor["side"]), not bool(actor["guard"]) and bool(data.get("returning", false)))
@@ -2377,6 +2603,8 @@ func _draw_arena() -> void:
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, (52.0 if actor["guard"] else 46.0) * scale_factor, art_size.y * 0.88 + 8.0 / camera_zoom)
+		if bool(data.get("campaign_boss", false)) or bool(data.get("campaign_refugee", false)):
+			arena.draw_arc(p + Vector2(0, 4), 40.0, 0, TAU, 24, Color("ffd781") if bool(data.get("campaign_boss", false)) else Color("8bfff1"), 4.0)
 		if actor["guard"] and float(data.get("shield", 0.0)) > 0.0:
 			var shield_width: float = 52.0 * scale_factor * float(data["shield"]) / Rules.IRON_SHIELD
 			var shield_top := p + Vector2(-26.0 * scale_factor, bob - art_size.y * 0.88 - 12.0 / camera_zoom)
@@ -2512,6 +2740,25 @@ func _draw_deposit_effect(p: Vector2, age: float, amount: int) -> void:
 		var spread: float = 8.0 + 32.0 * t
 		var location := p + Vector2(cos(angle) * spread, -64.0 - t * 26.0 + sin(angle) * 10.0)
 		arena.draw_circle(location, 2.8 + minf(float(amount) / 180.0, 2.0), Color("ffd56a", alpha))
+
+func _draw_campaign_marks() -> void:
+	if campaign_index < 0 or campaign_state == null:
+		return
+	var warning: int = campaign_state.danger_lane(wave)
+	var marked: int = campaign_state.boss_lane(wave)
+	var escort: bool = campaign_state.rule() == "escort"
+	for path in 3:
+		if path != warning and (path != marked or (not escort and campaign_state.boss_max <= 0.0)):
+			continue
+		var points := PackedVector2Array()
+		for step in 25:
+			points.append(_point(path, float(step) / 24.0, 0))
+		var color := Color("ffa477", 0.38) if path == warning else Color("92fff0", 0.24) if escort else Color("ffd781", 0.25)
+		arena.draw_polyline(points, color, 10.0 if path != warning else 44.0, true)
+		if path == warning and campaign_state.rule() == "collapse":
+			for step in range(2, 23, 3):
+				var p: Vector2 = points[step]
+				arena.draw_line(p + Vector2(-12, -18), p + Vector2(12, 18), Color("261322", 0.80), 8.0, true)
 
 func _draw_minimap() -> void:
 	# Fixed screen-space overview, independent from the scrolling battlefield.

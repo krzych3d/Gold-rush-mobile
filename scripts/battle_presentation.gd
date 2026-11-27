@@ -4,6 +4,7 @@ const L10n = preload("res://scripts/localization.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
 const MobileLayout = preload("res://scripts/mobile_layout.gd")
 var game
+var campaign_objective: Label
 var legacy_root: Control
 var drawer: ScrollContainer
 var dock: PanelContainer
@@ -126,6 +127,14 @@ func _build_header() -> void:
 	game.main_menu_button.text = L10n.t("MENU")
 	game.main_menu_button.custom_minimum_size = Vector2(138, 58)
 	Epic.button(game.main_menu_button, false, 18)
+	campaign_objective = Label.new()
+	campaign_objective.name = "CampaignLiveObjective"
+	campaign_objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	campaign_objective.add_theme_font_size_override("font_size", 17)
+	campaign_objective.add_theme_color_override("font_color", Color("ffe8a8"))
+	column.add_child(campaign_objective)
+	column.move_child(campaign_objective, navigation.get_index())
+	campaign_objective.hide()
 	game.timer_label.reparent(navigation)
 	game.timer_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	game.timer_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -158,6 +167,8 @@ func _layout() -> void:
 	dock.position = Vector2(usable.position.x + 10, usable.end.y - 92)
 	dock.size = Vector2(usable.size.x - 20, 82)
 	var map_top: float = usable.position.y + (144.0 if landscape else 156.0)
+	if game.campaign_index >= 0:
+		map_top += 64.0
 	var map_bottom: float = usable.end.y - 104.0
 	if landscape:
 		game.battlefield_frame.position = Vector2(usable.position.x + 10, map_top)
@@ -167,7 +178,10 @@ func _layout() -> void:
 		drawer.size = Vector2(minf(710, usable.size.x - 20), maxf(120, command_bottom - command_top))
 		drawer.position.x = usable.end.x - drawer.size.x - 10
 	else:
-		var map_height: float = (usable.size.x - 20) * 1060.0 / 2400.0 + 24.0
+		var legacy_height: float = (usable.size.x - 20) * 1060.0 / 2400.0 + 24.0
+		var world_size: Vector2 = game._battlefield_world_size()
+		var natural_height: float = (usable.size.x - 20) * world_size.y / world_size.x + 24.0
+		var map_height: float = minf(natural_height, maxf(legacy_height, usable.end.y - map_top - 300.0))
 		game.battlefield_frame.position = Vector2(usable.position.x + 10, map_top)
 		game.battlefield_frame.size = Vector2(usable.size.x - 20, map_height)
 		command_top = map_top + map_height + 10
@@ -203,7 +217,8 @@ func fit_camera() -> void:
 	follow_action = false
 	game.overview_mode = true
 	game.expanded_map = landscape
-	game.camera_zoom = maxf(0.01, minf(game.arena.size.x / 2400.0, game.arena.size.y / 1060.0))
+	var world_size: Vector2 = game._battlefield_world_size()
+	game.camera_zoom = maxf(0.01, minf(game.arena.size.x / world_size.x, game.arena.size.y / world_size.y))
 	game.camera_offset = Vector2.ZERO
 	game.arena.queue_redraw()
 
@@ -256,6 +271,11 @@ func sync() -> void:
 		int(maxf(0, ceilf(game.remaining))), int(game.interest_rate(game.selected_race, game.bank_level) * 100)]
 	if game.wave >= game.Rules.PRESSURE_START:
 		timer_caption += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
+	if game.campaign_index >= 0:
+		campaign_objective.show()
+		campaign_objective.text = game._campaign_hud()
+	else:
+		campaign_objective.hide()
 	if game.tutorial_mode:
 		timer_caption = L10n.t("SAMOUCZEK • BEZ LIMITU CZASU")
 	if game.timer_label.text != timer_caption:

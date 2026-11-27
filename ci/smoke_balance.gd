@@ -1,6 +1,9 @@
 extends SceneTree
 const Game = preload("res://scripts/game.gd")
 const Rules = preload("res://scripts/balance_rules.gd")
+const Story = preload("res://scripts/story_campaign.gd")
+const CampaignMaps = preload("res://scripts/campaign_maps.gd")
+const Profile = preload("res://scripts/account_progress.gd")
 var failures: Array[String] = []
 
 func require(ok: bool, label: String) -> void:
@@ -217,6 +220,92 @@ func run() -> void:
 	require(bot_a.orders[1] == bot_b.orders[1] and bot_a.traps[1] == bot_b.traps[1] and bot_a.gold[1] == bot_b.gold[1], "Bot reads unlaunched purchases")
 	bot_a.free()
 	bot_b.free()
+	_test_campaign()
+	_test_campaign_routes()
 	if failures.is_empty():
 		print("Balance regression PASSED: side parity, bounded income, temporary shields, purchase caps, sabotage, evasion, melee, simultaneous theft, pressure and honest bot")
 	quit(0 if failures.is_empty() else 1)
+
+
+func _test_campaign() -> void:
+	var path := "user://campaign_smoke_" + Crypto.new().generate_random_bytes(8).hex_encode() + ".cfg"
+	var profile = Profile.new(path)
+	require(Story.unlocked(profile, 0), "First dwarf chapter must be available at level one")
+	require(not Story.unlocked(profile, 1), "Second chapter unlocked before first victory")
+	require(not Story.unlocked(profile, 99), "Invalid campaign index allowed")
+	require(Story.hazard_lane(1, 1) == 0 and Story.hazard_lane(1, 2) == 1 and Story.hazard_lane(1, 3) == 2, "Fissure does not rotate")
+	require(Story.speed_factor(-1, 1, 0) == 1.0 and Story.speed_factor(0, 1, 0) == 1.0 and Story.speed_factor(1, 1, 0) == 0.55, "Campaign speed rule leaks into ordinary matches")
+	var game = fixture()
+	game.account = profile
+	game.campaign_index = 0
+	game.phase = "ATTACK"
+	game.gold = [1000, 0]
+	require(not game._check_vaults() and game.gold[1] == 600, "Enemy vault exhaustion ends survival chapter prematurely")
+	game.account_battle_seconds = 1.0
+	game.wave = 3
+	game.account_finished_waves = 2
+	game._end_wave()
+	require(game.phase == "END" and profile.campaign_completed.has("dwarf_bells"), "Three-wave victory did not complete chapter")
+	require(Story.unlocked(profile, 1), "Second chapter not unlocked on victory")
+	var old_xp: int = profile.total_xp
+	require(profile.claim_campaign("dwarf_bells", 3, 1.0)["gained"] == 0 and profile.total_xp == old_xp, "Repeated chapter gives additional XP")
+	game.free()
+	profile = Profile.new(path)
+	require(profile.campaign_completed.has("dwarf_bells") and profile.total_xp == old_xp, "Chapter and XP did not persist")
+	game = fixture()
+	game.account = profile
+	game.campaign_index = 1
+	game.phase = "ATTACK"
+	game.wave = 4
+	game.campaign_delivered = 179
+	game._end_wave()
+	require(game.phase == "END" and not profile.campaign_completed.has("dwarf_mountain"), "Missing delivery target counts as victory")
+	game.free()
+	game = fixture()
+	game.account = profile
+	game.campaign_index = 1
+	game.phase = "ATTACK"
+	game.account_battle_seconds = 1.0
+	game.campaign_delivered = 170
+	game._spawn(0, 2, 0, 0.001)
+	game.units[0]["returning"] = true
+	game.units[0]["carried"] = 10
+	game._simulate(0.05)
+	require(game.campaign_delivered == 180, "Delivered loot does not count toward memory objective")
+	game._end_wave()
+	require(game.phase == "END" and profile.campaign_completed.has("dwarf_mountain"), "Delivery victory did not complete chapter")
+	game.free()
+	for suffix in ["", ".bak", ".pending"]:
+		if FileAccess.file_exists(path + suffix):
+			DirAccess.remove_absolute(path + suffix)
+
+
+func _test_campaign_routes() -> void:
+	for mission in 2:
+		var art: Texture2D = CampaignMaps.texture(mission)
+		require(art != null, "Missing imported original campaign art: %d" % mission)
+		if art != null:
+			require(art.get_width() == 1672 and art.get_height() == 941, "Campaign art cropped or resized unexpectedly")
+		for lane in 3:
+			var last: Vector2 = CampaignMaps.point(mission, lane, 0.0, 0)
+			require(CampaignMaps.road_length(mission, lane) > 1800.0, "Campaign route too short")
+			for step in range(1, 101):
+				var t: float = float(step) / 100.0
+				var p: Vector2 = CampaignMaps.point(mission, lane, t, 0)
+				require(p.x > last.x and absf(p.x) < CampaignMaps.SIZE.x * 0.5 and absf(p.y) < CampaignMaps.SIZE.y * 0.5, "Campaign route out of map or non-monotonic")
+				require(p.is_equal_approx(CampaignMaps.point(mission, lane, 1.0 - t, 1)), "Factions do not share the same reversed road")
+				last = p
+			for step in range(21):
+				var t: float = float(step) / 20.0
+				if lane < 2:
+					require(CampaignMaps.point(mission, lane, t, 0).y < CampaignMaps.point(mission, lane + 1, t, 0).y, "Campaign lanes cross")
+	var game = fixture()
+	var old: Vector2 = game._point(1, 0.5, 0)
+	require(game._battlefield_world_size() == Vector2(2400.0, 1060.0), "Normal map dimensions changed")
+	game.campaign_index = 1
+	game.campaign_map_art = true
+	require(game._point(1, 0.5, 0).is_equal_approx(CampaignMaps.point(1, 1, 0.5, 0)), "Game actor path not connected to authored route")
+	require(game._battlefield_world_size() == CampaignMaps.SIZE, "Campaign art loses aspect ratio")
+	game.campaign_map_art = false
+	require(game._point(1, 0.5, 0) == old, "Campaign route leaks into regular match")
+	game.free()

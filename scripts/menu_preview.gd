@@ -130,9 +130,10 @@ func _draw() -> void:
 	elif preview_mode in ["spikes", "snare", "turret"]:
 		var object_pos := Vector2(size.x * 0.28, ground)
 		var side: float = minf(size.y * 0.56, 130.0)
-		# Use the same four drawn states and faction row as the actual battlefield.
+		# Use the same illustrated object and deployment/recoil as the battlefield.
 		if defense_kind >= 0 and object_art != null:
-			draw_texture_rect_region(game.TRAP_ATLAS, Rect2(object_pos - Vector2(side * 0.5, side), Vector2(side, side)),
+			var stretch: float = 1.0 if game.presentation.reduced_motion else [1.0, 0.91, 1.06, 0.98][_defense_frame()]
+			draw_texture_rect_region(game.TRAP_ATLAS, Rect2(object_pos - Vector2(side * 0.5, side * stretch), Vector2(side, side * stretch)),
 				game._trap_sprite_region(race, defense_kind, _defense_frame()), Color.WHITE, false, true)
 		var actor_pos := Vector2(size.x * 0.72, ground)
 		var cycle: float = fmod(elapsed, 4.0)
