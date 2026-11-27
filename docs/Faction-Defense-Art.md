@@ -1,9 +1,19 @@
-# Faction defense sprite atlas
+# Faction defence art
 
-One transparent SVG atlas, imported as a texture by Godot at build time. Four rows (Dwarves, Goblins, Elves, Voidborn), twelve columns (spikes, snare, tower, four authored frames each), 192px cells. No runtime vector rendering, particle shaders, or extra services.
+The shipping defence texture is `assets/epic/story/defenses.webp`: a transparent,
+painted fantasy atlas, 3 columns (spikes, snare, turret), 4 rows (dwarves, goblins,
+elves, Voidborn), 384 px cells. The generated source was packaged to WebP with
+alpha preserved. At 1152 × 1536 it has exactly the same pixel count as the old
+2304 × 768 atlas, about 6.75 MiB of uncompressed RGBA pixels.
 
-Each device has a grounded metal/stone platform, engraved trim, crystals and a faction palette. Spike blades change geometry, snare jaws rotate/close, and the tower charges, flashes and recoils. All textures are original vector drawings, not generated photorealistic PNGs. The atlas is reused by the native purchase cards with localized titles and prices. The last consumed trap charge leaves a fading mechanism as well as the existing impact effect.
+Purchase cards, reference-book illustrations, live demonstrations and the
+battlefield all reuse cached regions of this texture. Activation uses anchored
+height keyframes, deployment/recoil, the existing shot effects and brief impact
+rings. These are transforms of one illustration per object, not 48 newly drawn
+animation poses. Reduced motion holds the static illustration. Existing costs,
+damage, cooldowns, stun and sabotage rules are unchanged.
 
-One atlas quad per live trap. Shared texture crops cached per faction and type. Gameplay stats and costs are untouched. Reduced motion uses a static active frame. No new runtime dependencies.
-
-QA: atlas dimensions, all 48 regions, card texture identity, attack state sequence and existing combat/UI/rotation/localization tests. Physical Android screenshots and FPS still need verification; headless tests cannot certify art quality or actual mobile framerate.
+The earlier vector atlas remains as source history and is not used by gameplay.
+QA covers all 12 regions, cached card identity, actual damage/activation, guide,
+tutorial and mobile layouts. Desktop Godot 4.2.2 rendering was inspected; physical
+Android FPS still requires device testing.

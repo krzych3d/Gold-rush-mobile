@@ -5,8 +5,14 @@ extends RefCounted
 const SIZE := Vector2(2400.0, 1350.0)
 const ASSETS := [
 	"res://assets/epic/world/campaign_vargheim.jpg",
+	"res://assets/epic/world/campaign_breathing_mountain.jpg",
+	"res://assets/epic/story/forge.jpg",
+	"res://assets/epic/story/throne.jpg",
+	"res://assets/epic/world/campaign_vargheim.jpg",
+	"res://assets/epic/story/throne.jpg",
 	"res://assets/epic/world/campaign_breathing_mountain.jpg"
 ]
+const LAYOUTS := [0, 1, 2, 3, 0, 3, 1]
 const X_START := 0.105
 const X_END := 0.905
 # Seven equally spaced horizontal stations. Feet, not sprite centers, follow
@@ -22,6 +28,16 @@ const ROAD_Y := [
 		[0.414, 0.388, 0.389, 0.382, 0.374, 0.375, 0.468],
 		[0.552, 0.551, 0.574, 0.554, 0.540, 0.532, 0.540],
 		[0.650, 0.677, 0.670, 0.655, 0.645, 0.642, 0.635]
+	],
+	[
+		[0.480, 0.478, 0.476, 0.476, 0.477, 0.478, 0.482],
+		[0.596, 0.598, 0.600, 0.600, 0.600, 0.598, 0.596],
+		[0.726, 0.736, 0.742, 0.742, 0.740, 0.736, 0.726]
+	],
+	[
+		[0.500, 0.500, 0.500, 0.500, 0.500, 0.500, 0.500],
+		[0.601, 0.601, 0.601, 0.601, 0.601, 0.601, 0.601],
+		[0.719, 0.719, 0.719, 0.719, 0.719, 0.719, 0.719]
 	]
 ]
 
@@ -33,7 +49,7 @@ static func texture(index: int) -> Texture2D:
 
 static func point(index: int, lane: int, progress: float, side: int) -> Vector2:
 	var t: float = progress if side == 0 else 1.0 - progress
-	var rows: Array = ROAD_Y[clampi(index, 0, ROAD_Y.size() - 1)][clampi(lane, 0, 2)]
+	var rows: Array = ROAD_Y[LAYOUTS[clampi(index, 0, LAYOUTS.size() - 1)]][clampi(lane, 0, 2)]
 	var station: float = clampf(t, 0.0, 1.0) * float(rows.size() - 1)
 	var i: int = mini(int(floor(station)), rows.size() - 2)
 	var fraction: float = station - float(i)

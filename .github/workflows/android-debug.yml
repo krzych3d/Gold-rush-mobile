@@ -117,6 +117,9 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_balance.gd 2>&1 | tee balance.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" balance.log; then exit 1; fi
           grep -q "Balance regression PASSED" balance.log
+          ./godot --headless --path . --script res://ci/smoke_story_campaign.gd 2>&1 | tee story.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" story.log; then exit 1; fi
+          grep -q "Story campaign PASSED" story.log
           ./godot --headless --editor --path . --script res://ci/configure_android.gd 2>&1 | tee configure.log
           echo "Export templates:"
           ls -lh "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/" | head -25
@@ -150,6 +153,7 @@ jobs:
             lobby.log
             presentation.log
             export.log
+            story.log
           retention-days: 3
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4

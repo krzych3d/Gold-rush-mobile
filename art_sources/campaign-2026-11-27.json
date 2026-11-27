@@ -1,0 +1,54 @@
+{
+  "created": "2026-11-27",
+  "generator": "built-in image generation",
+  "prompt_note": "Production prompt briefs retained for reproducibility; output packaging is deterministic Godot Image resize/format conversion. Full original generation is preserved in the conversation.",
+  "packaging": {
+    "portraits": "540 x 720 JPEG quality 0.89",
+    "battlefields_and_book": "1672 x 941 JPEG quality 0.89",
+    "defences": "1152 x 1536 WebP quality 0.94, alpha retained; source was a 1086 x 1448 transparent PNG"
+  },
+  "assets": [
+    {
+      "path": "assets/epic/story/defenses.webp",
+      "sha256": "c19704088ed3084d7bdbbaa62f84f4d19140bd5fa266bb45a808e44dcebf8117",
+      "bytes": 1318186,
+      "prompt_brief": "Production 2D defence atlas for Gold Rush: Vault Wars. Exactly three columns and four rows on transparent background, full isolated objects, consistent elevated three-quarter camera, detailed painted fantasy materials, no text or grid. Columns: spikes, magical snare, armed tower. Rows: dwarves (iron, dark stone, gold runes, brass cannon), goblins (scrap wood, copper, green alchemy, crossbow tower), elves (pale wood, silver, moss, cyan light, tree tower), Voidborn (obsidian, violet crystals, floating obelisk). Generous clear cell margins, readable silhouettes, small foot shadows, no neighbouring-cell overlap."
+    },
+    {
+      "path": "assets/epic/story/thorgar.jpg",
+      "sha256": "e871a361a7b4da1a9a8b19f9451ff68bd92389d513023ff308197dfc986142b2",
+      "bytes": 125568,
+      "prompt_brief": "Production character portrait for Vault Wars: Testament of the Dead Gods. Original dwarf protagonist THORGAR IRONHEART, grieving father and royal guard captain. Vertical 3:4 bust, head entirely inside central65%; weathered face, tired storm-grey eyes, silver-threaded dark beard with iron clasps, eyebrow scar, engraved black iron Nordic-inspired armour, tarnished gold, burgundy cloak, one ancient coin near heart. Dignified restrained grief. Dark royal crypt, cold cyan souls, amber candle rim light, realistic painted fantasy textures, no text, watermark, border or existing franchise character."
+    },
+    {
+      "path": "assets/epic/story/borin.jpg",
+      "sha256": "62e3ed0c89089de314c712d28d3b49e8564c38808d4ac4b35130ddb37467cb7c",
+      "bytes": 131125,
+      "prompt_brief": "Original dwarf BORIN, loyal younger brother and engineer, afraid of his discovery. Vertical 3:4 bust with complete head, warm brown eyes, thick auburn beard with copper rings, brass goggles on brow, worn leather/brass artificer armour and blue iron shoulderplate, compact amber mechanical lantern at chest. Serious empathy, forge dirt, vast rib-like stone columns of a dead god behind him, violet mist. Realistic painted cinematic dark fantasy, gold, cyan and charcoal, readable face, no text, frame or watermark."
+    },
+    {
+      "path": "assets/epic/story/eira.jpg",
+      "sha256": "acd553e7baf61ca57da53de88860e5ad6aa297bde306e2e1f13ae5e00fc9c96e",
+      "bytes": 72097,
+      "prompt_brief": "EIRA, the late daughter of Thorgar, a gentle ghostly memory. Vertical3:4 clothed bust, complete face/hair in central65%, dwarf child about9, broad features, dark chestnut braids with tiny silver bell, burgundy and blue wool tunic, faint cyan translucent silhouette, intelligent sad eyes. Dark ancient coin vault bokeh, soft amber cheeks and a few memory motes. Emotionally restrained realistic painted fantasy, no injury, gore, horror spectacle, text, watermark or border."
+    },
+    {
+      "path": "assets/epic/story/forge.jpg",
+      "sha256": "912cef3ec89eebda8012b110d82bc127b6fe222ed0edb5ffc9887524123012c8",
+      "bytes": 608472,
+      "prompt_brief": "Production landscape16:9 three-lane strategy battlefield, The Price of One Coin. Fixed elevated orthographic three-quarter camera, fortified gates at left/right, exactly three wide uninterrupted parallel stone roads without crossings, clear for moving units. A Nordic coin foundry inside a dead god: ribs, molten-gold gutters between roads, immense mint presses, blank hanging coins, faceless ancestor statues, distant chimney cathedral and black sun. Dark graphite, burgundy, amber gold, cyan soul wisps, cinematic physical materials, no figures, text or HUD; no objects blocking roads."
+    },
+    {
+      "path": "assets/epic/story/throne.jpg",
+      "sha256": "e5ca20e4083ec0586c4116a8cd95312503612e63b85b079deeb20a0891f795d7",
+      "bytes": 530323,
+      "prompt_brief": "Production landscape16:9 fixed elevated three-quarter strategy battlefield, Faceless Feast and Bone Throne. Exactly three clear horizontal parallel uninterrupted stone lanes and left/right fortified vault gates. Ancient dwarven funeral cathedral carved in dark god bones, immense empty mask throne high in back center, faceless statues, balconies and suspended bronze bells, black sun behind broken rose window, candles and memory coins between roads, spectral cyan mist at margins. Charcoal, ivory, burgundy and antique gold, realistic painted fantasy, clear readable roads, no figures, text, UI or obstructing props."
+    },
+    {
+      "path": "assets/epic/story/chronicle.jpg",
+      "sha256": "ac27c01367c05a76c7c0461bb55c4471eee0a404061fab9def1a1955f749ccff",
+      "bytes": 332117,
+      "prompt_brief": "Production landscape16:9 magical chronicle background. An old open dwarven grimoire on a stone altar, two wide dark burgundy almost-black parchment pages with quiet negative space for pale game text. Fine embossed gold borders and flourishes at page margins, faint topographic map on left page, clean right page, central binding, whole book visible almost straight from above and filling90% of image. Engraved metal corners, a small silver bell and nameless coin outside bottom, peripheral cold spectral wisps and candlelight. Realistic tactile fantasy painting, no actual letters, words, buttons or central symbols."
+    }
+  ]
+}

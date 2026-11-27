@@ -128,7 +128,7 @@ func _run() -> void:
 		return
 	# All twelve defense card textures must share the exact battle atlas, with
 	# different faction rows and unique mechanism/animation regions.
-	if game.TRAP_ATLAS.get_size() != Vector2(2304, 768):
+	if game.TRAP_ATLAS.get_size() != Vector2(1152, 1536):
 		_fail("Defense atlas dimensions changed")
 		return
 	for race in 4:

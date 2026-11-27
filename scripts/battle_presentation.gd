@@ -4,6 +4,7 @@ const L10n = preload("res://scripts/localization.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
 const MobileLayout = preload("res://scripts/mobile_layout.gd")
 var game
+var campaign_objective: Label
 var legacy_root: Control
 var drawer: ScrollContainer
 var dock: PanelContainer
@@ -126,6 +127,14 @@ func _build_header() -> void:
 	game.main_menu_button.text = L10n.t("MENU")
 	game.main_menu_button.custom_minimum_size = Vector2(138, 58)
 	Epic.button(game.main_menu_button, false, 18)
+	campaign_objective = Label.new()
+	campaign_objective.name = "CampaignLiveObjective"
+	campaign_objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	campaign_objective.add_theme_font_size_override("font_size", 17)
+	campaign_objective.add_theme_color_override("font_color", Color("ffe8a8"))
+	column.add_child(campaign_objective)
+	column.move_child(campaign_objective, navigation.get_index())
+	campaign_objective.hide()
 	game.timer_label.reparent(navigation)
 	game.timer_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	game.timer_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -158,6 +167,8 @@ func _layout() -> void:
 	dock.position = Vector2(usable.position.x + 10, usable.end.y - 92)
 	dock.size = Vector2(usable.size.x - 20, 82)
 	var map_top: float = usable.position.y + (144.0 if landscape else 156.0)
+	if game.campaign_index >= 0:
+		map_top += 64.0
 	var map_bottom: float = usable.end.y - 104.0
 	if landscape:
 		game.battlefield_frame.position = Vector2(usable.position.x + 10, map_top)
@@ -261,7 +272,10 @@ func sync() -> void:
 	if game.wave >= game.Rules.PRESSURE_START:
 		timer_caption += L10n.t(" • presja %d") % game.Rules.vault_pressure(game.wave)
 	if game.campaign_index >= 0:
-		timer_caption = game._campaign_hud() + "\n" + timer_caption
+		campaign_objective.show()
+		campaign_objective.text = game._campaign_hud()
+	else:
+		campaign_objective.hide()
 	if game.tutorial_mode:
 		timer_caption = L10n.t("SAMOUCZEK • BEZ LIMITU CZASU")
 	if game.timer_label.text != timer_caption:

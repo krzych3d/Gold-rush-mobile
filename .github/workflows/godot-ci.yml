@@ -1,15 +1,6 @@
 name: Godot validation
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '**/*.gd'
-      - '**/*.tscn'
-      - '**/*.tres'
-      - 'assets/**'
-      - 'project.godot'
-      - '.github/workflows/godot-ci.yml'
   pull_request:
     paths:
       - '**/*.gd'
@@ -126,6 +117,16 @@ jobs:
           ./godot --headless --path . --script res://ci/balance_tournament.gd -- --full --report=balance-report.json 2>&1 | tee tournament.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" tournament.log; then exit 1; fi
           grep -q "Balance tournament PASSED" tournament.log
+      - name: Test campaign state, mobile story UI and actual playthroughs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_story_campaign.gd 2>&1 | tee story.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" story.log; then exit 1; fi
+          grep -q "Story campaign PASSED" story.log
+          ./godot --headless --path . --script res://ci/campaign_playthrough.gd -- --report=campaign-playthrough.json 2>&1 | tee playthrough.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" playthrough.log; then exit 1; fi
+          grep -q "Campaign playthrough PASSED" playthrough.log
       - name: Preserve balance report
         if: always()
         uses: actions/upload-artifact@v4
@@ -135,5 +136,8 @@ jobs:
             balance-report.json
             balance.log
             tournament.log
+            story.log
+            playthrough.log
+            campaign-playthrough.json
           retention-days: 7
           if-no-files-found: ignore

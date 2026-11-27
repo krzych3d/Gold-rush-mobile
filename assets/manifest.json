@@ -191,6 +191,41 @@
       "git_blob_sha1": "ff9d9fa796f07f6fc29fe235714efd3ef74b1f79",
       "sha256": "0fa5f789a47e8de7a6659e1a52879b77ecfa2e8560f3b955249d2bc86a3e5fac"
     },
+    "assets/epic/story/borin.jpg": {
+      "bytes": 131125,
+      "git_blob_sha1": "932408641d3c8508a30fdceed6b6ac278b030cad",
+      "sha256": "62e3ed0c89089de314c712d28d3b49e8564c38808d4ac4b35130ddb37467cb7c"
+    },
+    "assets/epic/story/chronicle.jpg": {
+      "bytes": 332117,
+      "git_blob_sha1": "e3f01698470e21079dd43cf25adf3e392d127cc8",
+      "sha256": "ac27c01367c05a76c7c0461bb55c4471eee0a404061fab9def1a1955f749ccff"
+    },
+    "assets/epic/story/defenses.webp": {
+      "bytes": 1318186,
+      "git_blob_sha1": "6eecf709c12782cc2e611ba9a948a866c70afc7b",
+      "sha256": "c19704088ed3084d7bdbbaa62f84f4d19140bd5fa266bb45a808e44dcebf8117"
+    },
+    "assets/epic/story/eira.jpg": {
+      "bytes": 72097,
+      "git_blob_sha1": "c91265052f30153f0a5e0f8eb6c5388888eac530",
+      "sha256": "acd553e7baf61ca57da53de88860e5ad6aa297bde306e2e1f13ae5e00fc9c96e"
+    },
+    "assets/epic/story/forge.jpg": {
+      "bytes": 608472,
+      "git_blob_sha1": "c04ffdc4a45e3820424549e61b99c26fbddd7c6e",
+      "sha256": "912cef3ec89eebda8012b110d82bc127b6fe222ed0edb5ffc9887524123012c8"
+    },
+    "assets/epic/story/thorgar.jpg": {
+      "bytes": 125568,
+      "git_blob_sha1": "af46253e3c25a733dd8663b54d8acf9f5a2eafd9",
+      "sha256": "e871a361a7b4da1a9a8b19f9451ff68bd92389d513023ff308197dfc986142b2"
+    },
+    "assets/epic/story/throne.jpg": {
+      "bytes": 530323,
+      "git_blob_sha1": "b173e179e484190c86a93d46c14b0187bad49778",
+      "sha256": "e5ca20e4083ec0586c4116a8cd95312503612e63b85b079deeb20a0891f795d7"
+    },
     "assets/epic/units/arcane_mage.png": {
       "bytes": 26367,
       "git_blob_sha1": "144244f67258dd1a4f4ff457bc6c8906c146ad62",

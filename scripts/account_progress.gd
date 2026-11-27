@@ -12,6 +12,8 @@ var config_path := "user://account_progress.cfg"
 var total_xp := 0
 var claimed_matches := PackedStringArray()
 var campaign_completed := PackedStringArray()
+var campaign_stars: Dictionary = {}
+var campaign_choices: Dictionary = {}
 var primary_valid := false
 var load_failed := false
 
@@ -90,9 +92,21 @@ func _load_file(path: String) -> bool:
 	for mission_id in completed:
 		if mission_id.is_empty() or mission_id.length() > 100:
 			return false
+	var ratings = config.get_value("account", "campaign_stars", {})
+	var decisions = config.get_value("account", "campaign_choices", {})
+	if not ratings is Dictionary or not decisions is Dictionary or ratings.size() > 256 or decisions.size() > 256:
+		return false
+	for key in ratings:
+		if not key is String or key.length() > 100 or not ratings[key] is int or ratings[key] < 1 or ratings[key] > 3:
+			return false
+	for key in decisions:
+		if not key is String or key.length() > 100 or not decisions[key] is String or decisions[key].length() > 100:
+			return false
 	total_xp = value
 	claimed_matches = history
 	campaign_completed = completed
+	campaign_stars = ratings
+	campaign_choices = decisions
 	return true
 
 func _save() -> bool:
@@ -103,6 +117,8 @@ func _save() -> bool:
 	config.set_value("account", "total_xp", total_xp)
 	config.set_value("account", "claimed_matches", claimed_matches)
 	config.set_value("account", "campaign_completed", campaign_completed)
+	config.set_value("account", "campaign_stars", campaign_stars)
+	config.set_value("account", "campaign_choices", campaign_choices)
 	var temporary: String = config_path + ".pending"
 	if config.save(temporary) != OK:
 		return false
@@ -151,14 +167,28 @@ func claim_match(match_id: String, victory: bool, finished_waves: int, battle_se
 	return result
 
 
-func claim_campaign(mission_id: String, finished_waves: int, battle_seconds: float) -> Dictionary:
+func claim_campaign(mission_id: String, finished_waves: int, battle_seconds: float, rating: int = 1, decision_key: String = "", decision_value: String = "") -> Dictionary:
 	# Completion and XP share the same atomic account save. Replays grant no XP.
-	if campaign_completed.has(mission_id):
-		return {"status": "already_completed", "gained": 0}
 	if mission_id.is_empty() or mission_id.length() > 100 or campaign_completed.size() >= 256:
 		return {"status": "ineligible", "gained": 0}
+	if decision_key.length() > 100 or decision_value.length() > 100 or decision_key.is_empty() != decision_value.is_empty():
+		return {"status": "ineligible", "gained": 0}
+	var old_stars: Dictionary = campaign_stars.duplicate()
+	var old_choices: Dictionary = campaign_choices.duplicate()
+	campaign_stars[mission_id] = maxi(int(campaign_stars.get(mission_id, 1)), clampi(rating, 1, 3))
+	# First decisions are canon; replays cannot rewrite later chapters.
+	if not decision_key.is_empty() and not campaign_choices.has(decision_key):
+		campaign_choices[decision_key] = decision_value
+	if campaign_completed.has(mission_id):
+		if not _save():
+			campaign_stars = old_stars
+			campaign_choices = old_choices
+			return {"status": "save_failed", "gained": 0}
+		return {"status": "already_completed", "gained": 0}
 	campaign_completed.append(mission_id)
 	var reward: Dictionary = claim_match("campaign:" + mission_id, true, finished_waves, battle_seconds)
 	if reward.get("status") != "saved":
 		campaign_completed.remove_at(campaign_completed.size() - 1)
+		campaign_stars = old_stars
+		campaign_choices = old_choices
 	return reward
