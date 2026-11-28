@@ -2,6 +2,7 @@ extends Control
 const L10n = preload("res://scripts/localization.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
 const Pose = preload("res://scripts/unit_animation.gd")
+const Skins = preload("res://scripts/unit_skins.gd")
 ## One lightweight live preview. Uses the same atlases as the battlefield.
 ## Trap diagrams explain mechanics; they never run or purchase actual game units.
 var game
@@ -20,6 +21,8 @@ var preview_mode := "unit"
 var race := 0
 var role := 0
 var character_key := ""
+var skin := "classic"
+var direction_override := 0.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -34,7 +37,8 @@ func configure(owner_game, data: Dictionary) -> void:
 	preview_mode = str(data.get("demo", "unit"))
 	var key: String = game._character_key_for_race(race, role, preview_mode == "defender" or (preview_mode == "ability" and race == 0))
 	character_key = key
-	atlas = game._character_atlas(key)
+	skin = str(data.get("skin", game._card_skin(race)))
+	atlas = game._skin_atlas(key, skin)
 	object_art = null
 	defense_kind = ["spikes", "snare", "turret"].find(preview_mode)
 	if defense_kind >= 0:
@@ -64,13 +68,15 @@ func _process(delta: float) -> void:
 	elapsed += delta
 	redraw_elapsed += delta
 	if redraw_elapsed >= 1.0 / game.presentation.preview_fps():
-		redraw_elapsed = 0.0
+		redraw_elapsed = fmod(redraw_elapsed, 1.0 / game.presentation.preview_fps())
 		_update_pose()
 		queue_redraw()
 
 func _update_pose() -> void:
 	var cycle: float = fmod(elapsed, 7.0)
 	facing = -1.0 if cycle >= 3.5 and action == -1 else 1.0
+	if direction_override != 0.0:
+		facing = direction_override
 	row = action if action >= 0 else 1 if cycle < 2.7 or cycle >= 3.5 and cycle < 6.2 else 5
 	if preview_mode == "race" and action < 0:
 		row = 0 if cycle < 2.0 else 2 if cycle < 3.5 else 1
@@ -106,11 +112,11 @@ func _draw_actor(at: Vector2, scale_factor: float = 1.0, actor_row: int = -1) ->
 	var selected_row: int = row if actor_row < 0 else actor_row
 	var selected_frame: int = frame
 	var live_row: int = Pose.special_row(character_key, selected_row, selected_row == 1, facing < 0.0)
-	if live_row >= 0 and game.special_animation_atlases.has(character_key):
+	if Skins.path(skin, character_key).is_empty() and live_row >= 0 and game.special_animation_atlases.has(character_key):
 		source = game.special_animation_atlases[character_key]
 		selected_row = live_row
 		selected_frame = int(floor(elapsed * 12.0)) % 8
-	draw_texture_rect_region(source, Rect2(Vector2(-side * 0.5, -side), Vector2(side, side)), Rect2(Vector2(selected_frame * 128, selected_row * 128), Vector2(128, 128)))
+	Skins.draw_frame(self, source, Rect2(Vector2(-side * 0.5, -side), Vector2(side, side)), Rect2(Vector2(selected_frame * 128, selected_row * 128), Vector2(128, 128)), skin, character_key, game.presentation, elapsed)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _defense_frame() -> int:

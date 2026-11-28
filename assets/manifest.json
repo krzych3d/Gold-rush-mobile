@@ -191,6 +191,60 @@
       "git_blob_sha1": "ff9d9fa796f07f6fc29fe235714efd3ef74b1f79",
       "sha256": "0fa5f789a47e8de7a6659e1a52879b77ecfa2e8560f3b955249d2bc86a3e5fac"
     },
+    "assets/epic/skins/ancestor_defender.png": {
+      "bytes": 1592908,
+      "git_blob_sha1": "d6dbe13c1f2b118e96b4e385adee36967334b76d",
+      "sha256": "e9ddfcd3efe79ec97779f44ffbabc01f9a8c4ed2098aebf9d09c035f335bd629",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/skins/royal_carrier.png": {
+      "bytes": 1421460,
+      "git_blob_sha1": "900e548dc3691a2344bdc10067abb386cb87d0c4",
+      "sha256": "10bae4b309bec91e4031e064d69cbd8a9dab08676f37cd3f6ac8a5dd0df9d372",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/skins/royal_defender.png": {
+      "bytes": 1426003,
+      "git_blob_sha1": "40fad67acb7befe04ca0ad6a51fbcc259a3e3f55",
+      "sha256": "0ac062160c7768ebfd4c7d664895435f473b048dc834d189f3f8ba908ff02af5",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/skins/royal_runekeeper.png": {
+      "bytes": 1579869,
+      "git_blob_sha1": "98bfd5cbd9d87d85a2688dc9fa78307e6ecb3cb2",
+      "sha256": "2dc03b8a28543b5e8a42672ea8519b07a988060db0b7d7d9c9dab5513ed5f2ad",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/skins/thread_raider.png": {
+      "bytes": 1565537,
+      "git_blob_sha1": "86b72c5115c90a1fead57dee24ccebec6cbe6f83",
+      "sha256": "859aa5fffd34558c5604670d4860162e056690a0e09c3cfd79f4fcb97809c8e0",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "assets/epic/skins/thread_saboteur.png": {
+      "bytes": 1275168,
+      "git_blob_sha1": "b2c2f7c407d2ac16debe8de1f81937b3405ac228",
+      "sha256": "97e635aa900858366b277a662ddc627fc1d084a6d7644aa31b5d546c39704196",
+      "size": [
+        1024,
+        768
+      ]
+    },
     "assets/epic/story/abilities.webp": {
       "bytes": 443162,
       "git_blob_sha1": "77375573cc08195218b7aa3f5b9b8794f43184d3",

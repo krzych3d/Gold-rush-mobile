@@ -117,6 +117,9 @@ jobs:
           ./godot --headless --path . --script res://ci/smoke_balance.gd 2>&1 | tee balance.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" balance.log; then exit 1; fi
           grep -q "Balance regression PASSED" balance.log
+          ./godot --headless --path . --script res://ci/smoke_skins.gd 2>&1 | tee skins.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" skins.log; then exit 1; fi
+          grep -q "Campaign skins PASSED" skins.log
           ./godot --headless --path . --script res://ci/smoke_story_campaign.gd 2>&1 | tee story.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" story.log; then exit 1; fi
           grep -q "Story campaign PASSED" story.log

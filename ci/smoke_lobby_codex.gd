@@ -27,12 +27,11 @@ func _run() -> void:
 	var start: Button = game.main_menu_overlay.find_child("StartGame", true, false)
 	if not _require(start.text == "ROZPOCZNIJ GRĘ", "Missing Polish primary start action"):
 		return
-	# The chronicle adds a fifth action. Verify actual named buttons rather
-	# than merely relaxing the previous exact-count regression.
+	# Check the six real destinations, including campaign and costume collection.
 	var home = game.main_menu_overlay
-	if not _require(home.footer.find_children("*", "Button", true, false).size() == 5, "Home must expose exactly five gameplay/navigation actions"):
+	if not _require(home.footer.find_children("*", "Button", true, false).size() == 6, "Home must expose exactly six gameplay/navigation actions"):
 		return
-	for action in ["StartGame", "OpenCampaign", "OpenTutorial", "OpenCodex", "OpenSettings"]:
+	for action in ["StartGame", "OpenCampaign", "OpenTutorial", "OpenCodex", "OpenSettings", "OpenWardrobe"]:
 		var button := home.find_child(action, true, false) as Button
 		if not _require(is_instance_valid(button) and not button.disabled, "Home action missing or disabled: " + action):
 			return

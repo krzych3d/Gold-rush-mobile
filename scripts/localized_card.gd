@@ -9,6 +9,7 @@ var cost: Label
 var base_size := 19
 var banner := false
 var frame: StyleBoxTexture
+var art_tint := Color.WHITE
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -41,7 +42,8 @@ func _ready() -> void:
 	add_child(cost)
 	resized.connect(_layout)
 
-func configure(source: Texture2D, title: String, price: String, is_banner: bool = false, full_art: bool = false) -> void:
+func configure(source: Texture2D, title: String, price: String, is_banner: bool = false, full_art: bool = false, skin_tint: Color = Color.WHITE) -> void:
+	art_tint = skin_tint
 	banner = is_banner
 	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if banner else TextServer.AUTOWRAP_OFF
 	if full_art:
@@ -72,7 +74,7 @@ func configure(source: Texture2D, title: String, price: String, is_banner: bool 
 func sync_availability(disabled: bool) -> void:
 	# Disabled purchases remain identifiable; native labels keep full contrast.
 	modulate = Color.WHITE
-	var tint := Color(0.72, 0.75, 0.82) if disabled else Color.WHITE
+	var tint: Color = art_tint * (Color(0.72, 0.75, 0.82) if disabled else Color.WHITE)
 	if illustration.modulate != tint:
 		illustration.modulate = tint
 
@@ -122,7 +124,7 @@ func _draw() -> void:
 	if frame != null:
 		draw_style_box(frame, Rect2(Vector2.ZERO, size))
 
-static func apply(button: Button, source: Texture2D, title: String, price: String, banner_mode: bool = false, full_art: bool = false) -> void:
+static func apply(button: Button, source: Texture2D, title: String, price: String, banner_mode: bool = false, full_art: bool = false, skin_tint: Color = Color.WHITE) -> void:
 	for name in ["IllustratedSurface", "DynamicPriceMask", "OriginalDynamicText"]:
 		var baked := button.get_node_or_null(name) as CanvasItem
 		if baked != null:
@@ -132,4 +134,4 @@ static func apply(button: Button, source: Texture2D, title: String, price: Strin
 		surface = load("res://scripts/localized_card.gd").new()
 		surface.name = "LocalizedSurface"
 		button.add_child(surface)
-	surface.configure(source, title, price, banner_mode, full_art)
+	surface.configure(source, title, price, banner_mode, full_art, skin_tint)

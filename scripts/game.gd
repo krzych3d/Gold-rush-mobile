@@ -1,6 +1,9 @@
 extends Control
 const L10n = preload("res://scripts/localization.gd")
 const Pose = preload("res://scripts/unit_animation.gd")
+const Skins = preload("res://scripts/unit_skins.gd")
+const CosmeticLoadout = preload("res://scripts/cosmetic_loadout.gd")
+const WardrobeScreen = preload("res://scripts/wardrobe_screen.gd")
 const LocalizedCard = preload("res://scripts/localized_card.gd")
 
 const AnimationGallery = preload("res://scripts/animation_gallery.gd")
@@ -66,6 +69,9 @@ const TRAP_CHARGES = Rules.TRAP_CHARGES
 
 var presentation = MobileSettings.new()
 var account = AccountProgress.new()
+var wardrobe = CosmeticLoadout.new()
+var wardrobe_overlay: Control
+var skin_atlases: Dictionary = {}
 var account_match_id := ""
 var account_battle_seconds := 0.0
 var account_finished_waves := 0
@@ -148,6 +154,7 @@ var camera_zoom := 1.0
 var overview_mode := true
 var expanded_map := false
 var last_icon_race := -1
+var last_icon_skin := ""
 var last_ornate_lane := -1
 var ornate_ui = OrnateHUD.new()
 var original_png_ui := false
@@ -584,6 +591,9 @@ func _start_campaign(index: int) -> void:
 	campaign_unsaved_choice = ""
 	_choose_faction(int(mission["race"]))
 	bot_race = int(mission["enemy"])
+	_prewarm_skin(bot_race, Skins.campaign_skin(index, 1))
+	if index == 6:
+		_skin_atlas("dwarf_defender", "restless")
 	gold = [int(mission["gold"]), 950]
 	campaign_state.prepare(self)
 	# The campaign board is a temporary override, not a saved map preference.
@@ -744,6 +754,23 @@ func _close_settings() -> void:
 		settings_overlay = null
 	_restore_lobby()
 
+func _open_wardrobe() -> void:
+	if phase != "SELECT" or is_instance_valid(wardrobe_overlay):
+		return
+	_hide_lobby()
+	wardrobe_overlay = WardrobeScreen.new()
+	wardrobe_overlay.name = "Wardrobe"
+	wardrobe_overlay.game = self
+	wardrobe_overlay.race = selected_race
+	wardrobe_overlay.z_index = 97
+	add_child(wardrobe_overlay)
+
+func _close_wardrobe() -> void:
+	if is_instance_valid(wardrobe_overlay):
+		wardrobe_overlay.queue_free()
+	wardrobe_overlay = null
+	_restore_lobby()
+
 func _change_language(code: String) -> void:
 	if code not in L10n.LANGUAGES or code == presentation.language:
 		return
@@ -754,6 +781,8 @@ func _change_language(code: String) -> void:
 	for screen in [main_menu_overlay, selection_layer, codex_overlay, settings_overlay, help_overlay]:
 		if is_instance_valid(screen):
 			screen.rebuild_language()
+	if is_instance_valid(wardrobe_overlay):
+		wardrobe_overlay.rebuild_language()
 	if is_instance_valid(tutorial_session):
 		tutorial_session.rebuild_language()
 	_refresh()
@@ -865,6 +894,7 @@ func _open_animation_gallery() -> void:
 		return
 	_hide_lobby()
 	var studio := AnimationGallery.new()
+	studio.game = self
 	studio.name = "AnimationStudio"
 	studio.z_index = 98
 	studio.tree_exited.connect(_restore_lobby)
@@ -892,6 +922,7 @@ func _choose_faction(index: int) -> void:
 	if not account.race_unlocked(index):
 		return
 	selected_race = index
+	_prewarm_skin(index, _card_skin(index))
 	bot_race = rng.randi_range(0, 3)
 	account_match_id = Crypto.new().generate_random_bytes(16).hex_encode()
 	account_battle_seconds = 0.0
@@ -1086,8 +1117,10 @@ func _guard_combat(dt: float) -> void:
 			if _campaign_rebirth(guard, true):
 				continue
 			# Defenders use the same non-looping defeat animation as raiders.
-			_record_fallen({"side": guard["side"], "lane": guard["lane"], "kind": 0,
-				"position": guard["position"], "returning": false, "guard": true})
+			var fallen_guard: Dictionary = guard.duplicate()
+			fallen_guard["kind"] = 0
+			fallen_guard["guard"] = true
+			_record_fallen(fallen_guard)
 			guards.erase(guard)
 			continue
 		if float(guard.get("campaign_rising", 0.0)) > 0.0:
@@ -1134,7 +1167,7 @@ func _record_fallen(data: Dictionary) -> void:
 	if campaign_index >= 0 and campaign_state != null:
 		campaign_state.fallen(data)
 	wave_ledger.record_fallen(int(data["side"]), bool(data.get("guard", false)))
-	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false)), "guard": bool(data.get("guard", false))})
+	fallen_actors.append({"side": int(data["side"]), "kind": int(data["kind"]), "lane": int(data["lane"]), "position": float(data["position"]), "age": 0.0, "returning": bool(data.get("returning", false)), "guard": bool(data.get("guard", false)), "appearance": _actor_appearance(data, bool(data.get("guard", false)))})
 	if fallen_actors.size() > 30:
 		fallen_actors.pop_front()
 
@@ -1555,7 +1588,7 @@ func _simulate(dt: float) -> void:
 				# Gold arrives at its owner before a purely visual flight to the HUD.
 				if int(unit["carried"]) > 0 and is_instance_valid(battle_shell) and not tutorial_mode:
 					battle_shell.queue_gold_flight(int(unit["side"]), int(unit["lane"]), int(unit["carried"]))
-				deposit_actors.append({"side": int(unit["side"]), "lane": int(unit["lane"]), "kind": int(unit["kind"]), "age": 0.0, "amount": int(unit["carried"])})
+				deposit_actors.append({"side": int(unit["side"]), "lane": int(unit["lane"]), "kind": int(unit["kind"]), "age": 0.0, "amount": int(unit["carried"]), "appearance": _actor_appearance(unit)})
 				units.erase(unit)
 	# Resolve both sides' actions before checking the result, removing the
 	# side-zero advantage when the last coins are stolen on the same tick.
@@ -1710,6 +1743,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _navigate_back() -> void:
+	if is_instance_valid(wardrobe_overlay):
+		_close_wardrobe()
+		return
 	if is_instance_valid(campaign_overlay):
 		if campaign_overlay.mode == "menu":
 			_close_campaign_overlay()
@@ -1887,7 +1923,7 @@ func _refresh_localized_cards() -> void:
 		if surface != null:
 			surface.sync_availability(card.disabled)
 	var signature: String = str([
-		selected_race, L10n.language, phase, bank_level, raid_boost, ability_used,
+		selected_race, _card_skin(selected_race), L10n.language, phase, bank_level, raid_boost, ability_used,
 		recruit_price(0, 0), recruit_price(0, 1), recruit_price(0, 2)
 	])
 	if signature == last_localized_card_signature:
@@ -1900,8 +1936,8 @@ func _refresh_localized_cards() -> void:
 		if index >= 3:
 			LocalizedCard.apply(card, _trap_card_texture(selected_race, index - 3), L10n.t(title), "✦ %d" % TRAP_COSTS[index - 3], false, true)
 		else:
-			LocalizedCard.apply(card, _unit_card_texture(selected_race, index), L10n.t(title), "✦ %d" % recruit_price(0, index), false, true)
-	LocalizedCard.apply(guard_button, _unit_card_texture(selected_race, 0, true), L10n.t("DEFENDER"), "✦ %d" % GUARD_COST, true, true)
+			LocalizedCard.apply(card, _unit_card_texture(selected_race, index), L10n.t(title), "✦ %d" % recruit_price(0, index), false, true, _unit_card_tint(selected_race, index))
+	LocalizedCard.apply(guard_button, _unit_card_texture(selected_race, 0, true), L10n.t("DEFENDER"), "✦ %d" % GUARD_COST, true, true, _unit_card_tint(selected_race, 0, true))
 	LocalizedCard.apply(ability_button, _ability_card_texture(selected_race), L10n.t(ABILITY_NAMES[selected_race]), L10n.t("AKTYWNA") if ability_used else "✦ %d" % ABILITY_COST, true, true)
 	LocalizedCard.apply(invest_button, VAULT_TIER_ART[clampi(bank_level, 0, 4)], L10n.t("SKARBIEC %d/5") % bank_level, "MAX" if bank_level >= 5 else "✦ %d" % (BANK_BASE_COST + bank_level * BANK_STEP_COST), true, true)
 	LocalizedCard.apply(raid_button, TRAINING_ART, L10n.t("TRENING %d/3") % raid_boost, "MAX" if raid_boost >= 3 else "✦ %d" % Rules.training_cost(raid_boost), true, true)
@@ -2153,9 +2189,11 @@ func _update_original_raid_skin(force: bool = false) -> void:
 	controls[9].text = ""
 
 func _refresh_unit_icons() -> void:
-	if last_icon_race == selected_race:
+	var skin: String = _card_skin(selected_race)
+	if last_icon_race == selected_race and last_icon_skin == skin:
 		return
 	last_icon_race = selected_race
+	last_icon_skin = skin
 	if original_png_ui:
 		_update_original_faction_art()
 	for kind in 3:
@@ -2163,7 +2201,8 @@ func _refresh_unit_icons() -> void:
 			return
 		var icon_rect := controls[kind + 3].get_node_or_null("Artwork") as TextureRect
 		if icon_rect != null:
-			icon_rect.texture = _preview_frame(_character_atlas(_character_key(0, kind)))
+			icon_rect.texture = _preview_frame(_skin_atlas(_character_key(0, kind), skin))
+			icon_rect.modulate = _unit_card_tint(selected_race, kind)
 	for kind in 3:
 		if controls.size() > 6 + kind:
 			var trap_icon := controls[6 + kind].get_node_or_null("Artwork") as TextureRect
@@ -2342,15 +2381,59 @@ func _ability_card_texture(race: int) -> Texture2D:
 
 func _unit_card_texture(race: int, kind: int, is_guard: bool = false) -> Texture2D:
 	var key: String = _character_key_for_race(race, kind, is_guard)
-	if not unit_card_cache.has(key):
+	var skin: String = _card_skin(race)
+	var cache_key: String = key + ":" + skin
+	if not unit_card_cache.has(cache_key):
 		var crop := AtlasTexture.new()
-		crop.atlas = _character_atlas(key)
+		crop.atlas = _skin_atlas(key, skin)
 		# Precomputed alpha bounds of the first authored pose, with 2px padding.
 		# Only the purchase/guide crop changes; battle animation cells stay 128px.
 		crop.region = preload("res://scripts/card_art_bounds.gd").UNITS.get(key, Rect2(0, 0, 128, 128))
+		if not Skins.path(skin, key).is_empty():
+			var image: Image = crop.atlas.get_image()
+			if image.is_compressed():
+				image.decompress()
+			var bounds: Rect2i = image.get_region(Rect2i(0, 0, 128, 128)).get_used_rect()
+			crop.region = Rect2(bounds).grow(2.0).intersection(Rect2(0, 0, 128, 128))
 		crop.filter_clip = true
-		unit_card_cache[key] = crop
-	return unit_card_cache[key]
+		unit_card_cache[cache_key] = crop
+	return unit_card_cache[cache_key]
+
+func _card_skin(race: int) -> String:
+	if tutorial_mode:
+		return "classic"
+	if campaign_index >= 0 and race == selected_race:
+		return Skins.campaign_skin(campaign_index, 0)
+	return wardrobe.equipped(race, account)
+
+func _unit_card_tint(race: int, kind: int, is_guard: bool = false) -> Color:
+	return Skins.tint(_card_skin(race), _character_key_for_race(race, kind, is_guard))
+
+func _skin_atlas(key: String, skin: String) -> Texture2D:
+	var path: String = Skins.path(skin, key)
+	if path.is_empty():
+		return _character_atlas(key)
+	if not skin_atlases.has(path):
+		skin_atlases[path] = load(path) as Texture2D
+	return skin_atlases[path]
+
+func _prewarm_skin(race: int, skin: String) -> void:
+	for role in 3:
+		_skin_atlas(_character_key_for_race(race, role), skin)
+	_skin_atlas(_character_key_for_race(race, 0, true), skin)
+
+func _actor_appearance(actor: Dictionary, is_guard: bool = false) -> Dictionary:
+	# Called by presentation only. The actor's race and combat fields stay intact.
+	var side: int = int(actor["side"])
+	var key: String = _character_key(side, int(actor.get("kind", 0)), is_guard)
+	var skin: String = "classic" if tutorial_mode or side != 0 else wardrobe.equipped(side_race(side), account)
+	if campaign_index >= 0:
+		skin = Skins.campaign_skin(campaign_index, side, int(actor.get("campaign_rebirth_wave", -1)) >= 0)
+		if campaign_index == 6 and bool(actor.get("campaign_boss", false)):
+			# The Echo is Thorgar's memory, although its combat rules are Voidborn.
+			key = "dwarf_defender"
+			skin = "restless"
+	return {"key": key, "skin": skin}
 
 func _trap_card_texture(race: int, kind: int) -> Texture2D:
 	var key: int = race * 3 + kind
@@ -2550,8 +2633,11 @@ func _draw_arena() -> void:
 		var data: Dictionary = actor["data"]
 		var friendly: bool = int(actor["side"]) == 0
 		var kind: int = 0 if actor["guard"] else int(data["kind"])
-		var character_key: String = _character_key(int(actor["side"]), kind, bool(actor["guard"]))
-		var atlas: Texture2D = _character_atlas(character_key)
+		var appearance: Dictionary = _actor_appearance(data, bool(actor["guard"]))
+		var character_key: String = appearance["key"]
+		var skin: String = appearance["skin"]
+		var atlas: Texture2D = _skin_atlas(character_key, skin)
+		var custom_sheet: bool = not Skins.path(skin, character_key).is_empty()
 		var render_delta: float = minf(visual_step_elapsed, SIM_STEP)
 		var animation_row: int = Pose.row(data, bool(actor["guard"]), phase == "ATTACK", render_delta)
 		var frame_offset: float = float(int(data["lane"]) * 3 + int(actor["side"]) * 5 + kind)
@@ -2601,7 +2687,7 @@ func _draw_arena() -> void:
 		# visually depicts. All other states keep the upgraded six-row atlas.
 		var special_sheet: Texture2D = null
 		var special_row: int = -1
-		if special_animation_atlases.has(character_key):
+		if not custom_sheet and special_animation_atlases.has(character_key):
 			special_sheet = special_animation_atlases[character_key]
 			special_row = Pose.special_row(character_key, animation_row, moving, int(data.get("carried", 0)) > 0)
 		# Voidborn uses its own six-row atlases, never the mage/wolf specials.
@@ -2610,18 +2696,18 @@ func _draw_arena() -> void:
 			goblin_action = "carry"
 		if special_sheet != null and special_row >= 0:
 			var special_frame: int = Pose.frame(data, animation_row, bool(actor["guard"]), render_delta, frame_offset, 8, 12.0, visual_time)
-			arena.draw_texture_rect_region(special_sheet, _unit_art_rect(art_size, bob),
-				Rect2(Vector2(float(special_frame * 128), float(special_row * 128)), Vector2(128, 128)))
-		elif character_key == "goblin_raider" and goblin_action_strips.has(goblin_action):
+			Skins.draw_frame(arena, special_sheet, _unit_art_rect(art_size, bob),
+				Rect2(Vector2(float(special_frame * 128), float(special_row * 128)), Vector2(128, 128)), skin, character_key, presentation, visual_time)
+		elif not custom_sheet and character_key == "goblin_raider" and goblin_action_strips.has(goblin_action):
 			var strip: Texture2D = goblin_action_strips[goblin_action]
 			var count: int = strip.get_width() / 192
 			var strip_frame: int = Pose.frame(data, animation_row, bool(actor["guard"]), render_delta, frame_offset, count, GOBLIN_ACTION_FPS[animation_row], visual_time)
-			arena.draw_texture_rect_region(strip, _unit_art_rect(art_size, bob), Rect2(Vector2(float(strip_frame * 192), 0.0), Vector2(192, 192)))
-		elif goblin_walk_prototype != null and not special_animation_atlases.has("goblin_raider") and character_key == "goblin_raider" and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
+			Skins.draw_frame(arena, strip, _unit_art_rect(art_size, bob), Rect2(Vector2(float(strip_frame * 192), 0.0), Vector2(192, 192)), skin, character_key, presentation, visual_time)
+		elif not custom_sheet and goblin_walk_prototype != null and not special_animation_atlases.has("goblin_raider") and character_key == "goblin_raider" and (animation_row == 1 or (actor["guard"] and animation_row == 0)):
 			var walk_frame: int = int(floor(float(data.get("action_time", visual_time)) * 11.0 + frame_offset)) % 12 if animation_row == 1 else 0
-			arena.draw_texture_rect_region(goblin_walk_prototype, _unit_art_rect(art_size, bob), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)))
+			Skins.draw_frame(arena, goblin_walk_prototype, _unit_art_rect(art_size, bob), Rect2(Vector2(float(walk_frame * 192), 0.0), Vector2(192, 192)), skin, character_key, presentation, visual_time)
 		else:
-			arena.draw_texture_rect_region(atlas, _unit_art_rect(art_size, bob), Rect2(Vector2(float(animation_frame * 128), float(animation_row * 128)), Vector2(128, 128)))
+			Skins.draw_frame(arena, atlas, _unit_art_rect(art_size, bob), Rect2(Vector2(float(animation_frame * 128), float(animation_row * 128)), Vector2(128, 128)), skin, character_key, presentation, visual_time)
 		arena.draw_set_transform_matrix(_iso_transform())
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
@@ -2640,7 +2726,7 @@ func _draw_arena() -> void:
 		# All seven character sheets now have their own attack visual language.
 		if phase == "ATTACK" and animation_row == 2:
 			arena.draw_set_transform_matrix(_sprite_transform(p).scaled_local(Vector2.ONE * scale_factor))
-			_draw_attack_effect(Vector2.ZERO, character_key, facing, friendly, float(data.get("attack_time", 0.0)))
+			_draw_attack_effect(Vector2.ZERO, character_key, facing, friendly, float(data.get("attack_time", 0.0)), skin)
 		if not actor["guard"] and int(data.get("carried", 0)) > 0:
 			arena.draw_set_transform_matrix(_sprite_transform(p).scaled_local(Vector2.ONE * scale_factor))
 			_draw_carried_gold(Vector2.ZERO, facing, int(data["carried"]))
@@ -2650,20 +2736,22 @@ func _draw_arena() -> void:
 		var dp: Vector2 = _point(int(deposit["lane"]), 0.0, int(deposit["side"]))
 		if not _in_camera(dp, 100.0):
 			continue
-		var deposit_key: String = _character_key(int(deposit["side"]), int(deposit["kind"]))
-		var da: Texture2D = _character_atlas(deposit_key)
+		var deposit_appearance: Dictionary = deposit.get("appearance", _actor_appearance(deposit))
+		var deposit_key: String = deposit_appearance["key"]
+		var deposit_skin: String = deposit_appearance["skin"]
+		var da: Texture2D = _skin_atlas(deposit_key, deposit_skin)
 		# Deposit occurs at the HOME vault, after the actor has turned around.
 		var dtf := _directional_sprite_transform(dp, _travel_facing(int(deposit["side"]), true))
 		arena.draw_set_transform_matrix(dtf)
 		var deposit_age: float = float(deposit["age"]) + minf(visual_step_elapsed, SIM_STEP)
 		var deposit_frame: int = Pose.once(deposit_age, 0.75)
-		if deposit_key == "goblin_raider" and goblin_action_strips.has("deposit"):
+		if Skins.path(deposit_skin, deposit_key).is_empty() and deposit_key == "goblin_raider" and goblin_action_strips.has("deposit"):
 			var deposit_strip: Texture2D = goblin_action_strips["deposit"]
 			var deposit_count: int = deposit_strip.get_width() / 192
 			var df: int = mini(deposit_count - 1, int(deposit_age / 0.75 * deposit_count))
-			arena.draw_texture_rect_region(deposit_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(df * 192), 0), Vector2(192, 192)))
+			Skins.draw_frame(arena, deposit_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(df * 192), 0), Vector2(192, 192)), deposit_skin, deposit_key, presentation, visual_time)
 		else:
-			arena.draw_texture_rect_region(da, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)))
+			Skins.draw_frame(arena, da, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(deposit_frame * 128), 640.0), Vector2(128, 128)), deposit_skin, deposit_key, presentation, visual_time)
 		arena.draw_set_transform_matrix(_iso_transform())
 		arena.draw_set_transform_matrix(_sprite_transform(dp).scaled_local(Vector2.ONE * (_unit_art_size().y / 112.0)))
 		_draw_deposit_effect(Vector2.ZERO, float(deposit["age"]), int(deposit["amount"]))
@@ -2673,8 +2761,10 @@ func _draw_arena() -> void:
 		var death_p: Vector2 = _point(int(fallen["lane"]), float(fallen["position"]), int(fallen["side"]))
 		if not _in_camera(death_p, 100.0):
 			continue
-		var death_key: String = _character_key(int(fallen["side"]), int(fallen["kind"]), bool(fallen.get("guard", false)))
-		var death_atlas: Texture2D = _character_atlas(death_key)
+		var death_appearance: Dictionary = fallen.get("appearance", _actor_appearance(fallen, bool(fallen.get("guard", false))))
+		var death_key: String = death_appearance["key"]
+		var death_skin: String = death_appearance["skin"]
+		var death_atlas: Texture2D = _skin_atlas(death_key, death_skin)
 		var death_age: float = float(fallen["age"]) + minf(visual_step_elapsed, SIM_STEP)
 		var death_frame: int = Pose.once(death_age, 0.8)
 		var dying: float = clampf(death_age / 0.8, 0.0, 1.0)
@@ -2682,13 +2772,13 @@ func _draw_arena() -> void:
 		var death_fade: float = 1.0 - smoothstep(0.70, 1.0, dying)
 		var fallen_transform := _directional_sprite_transform(death_p, _travel_facing(int(fallen["side"]), bool(fallen.get("returning", false))), death_tilt)
 		arena.draw_set_transform_matrix(fallen_transform)
-		if death_key == "goblin_raider" and goblin_action_strips.has("death"):
+		if Skins.path(death_skin, death_key).is_empty() and death_key == "goblin_raider" and goblin_action_strips.has("death"):
 			var death_strip: Texture2D = goblin_action_strips["death"]
 			var death_count: int = death_strip.get_width() / 192
 			var f: int = mini(death_count - 1, int(death_age / 0.8 * death_count))
-			arena.draw_texture_rect_region(death_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(f * 192), 0), Vector2(192, 192)), Color(1, 1, 1, death_fade))
+			Skins.draw_frame(arena, death_strip, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(f * 192), 0), Vector2(192, 192)), death_skin, death_key, presentation, visual_time, death_fade)
 		else:
-			arena.draw_texture_rect_region(death_atlas, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)), Color(1, 1, 1, death_fade))
+			Skins.draw_frame(arena, death_atlas, _unit_art_rect(_unit_art_size()), Rect2(Vector2(float(death_frame * 128), 512.0), Vector2(128, 128)), death_skin, death_key, presentation, visual_time, death_fade)
 		arena.draw_set_transform_matrix(_iso_transform())
 	for spark in hit_sparks:
 		var p: Vector2 = spark["p"]
@@ -2721,7 +2811,7 @@ func _draw_arena() -> void:
 		draw_cost_ms = float(Time.get_ticks_usec() - draw_started) / 1000.0
 	# No minimap: the entire battlefield is always visible.
 
-func _draw_attack_effect(p: Vector2, character_key: String, facing: float, friendly: bool, remaining_attack: float) -> void:
+func _draw_attack_effect(p: Vector2, character_key: String, facing: float, friendly: bool, remaining_attack: float, skin: String = "classic") -> void:
 	# Lightweight world-space effects; sprite anatomy comes from the actual atlas frames.
 	var progress: float = clampf(1.0 - remaining_attack / 0.45, 0.0, 1.0)
 	var energy: float = sin(progress * PI)
@@ -2729,8 +2819,10 @@ func _draw_attack_effect(p: Vector2, character_key: String, facing: float, frien
 		return
 	var tip := p + Vector2(facing * 19.0, -48.0)
 	var faction_color := Color("81dfff", 0.72 * energy) if friendly else Color("ff8b6e", 0.72 * energy)
+	var spectral_color := Color("8affed", 0.75 * energy)
 	if character_key == "arcane_mage" or character_key == "void_weaver":
-		arena.draw_arc(tip, 14.0 + 17.0 * progress, 0.0, TAU, 20, Color("c49bff", 0.7 * energy), 2.6)
+		var spell_color: Color = spectral_color if Skins.spectral(skin) else Color("ffcf79", 0.7 * energy) if skin in ["royal_oath", "mintbound"] else Color("c49bff", 0.7 * energy)
+		arena.draw_arc(tip, 14.0 + 17.0 * progress, 0.0, TAU, 20, spell_color, 2.6)
 		for i in 4:
 			var theta: float = progress * TAU + float(i) * TAU / 4.0
 			arena.draw_circle(tip + Vector2(cos(theta), sin(theta)) * 24.0, 3.0, faction_color)
@@ -2749,7 +2841,7 @@ func _draw_attack_effect(p: Vector2, character_key: String, facing: float, frien
 			var drift: float = float(i) * 1.7 + progress * 3.0
 			arena.draw_circle(tip + Vector2(cos(drift) * 14.0, sin(drift) * 12.0), 3.0 + float(i % 2), Color("9dff80", 0.64 * energy))
 	elif character_key == "dwarf_defender" or character_key == "void_sentinel":
-		arena.draw_arc(tip, 20.0, -1.5 + progress, 0.6 + progress * 2.0, 18, Color("ffd48c", 0.85 * energy), 4.0)
+		arena.draw_arc(tip, 20.0, -1.5 + progress, 0.6 + progress * 2.0, 18, spectral_color if Skins.spectral(skin) else Color("ffd48c", 0.85 * energy), 4.0)
 	elif character_key == "dwarf_carrier" or character_key == "void_collector":
 		arena.draw_arc(tip, 18.0, -0.5 + progress, 1.1 + progress * 1.8, 16, Color("f7c76a", 0.7 * energy), 3.0)
 	else:

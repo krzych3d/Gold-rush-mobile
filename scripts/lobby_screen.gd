@@ -280,6 +280,7 @@ func _build_home() -> void:
 	_quiet_style(_button(navigation, TutorialLessons.text(["Samouczek", "Tutorial"]), "OpenTutorial", game._show_how_to_play), "book")
 	_quiet_style(_button(navigation, L10n.t("Księga gry"), "OpenCodex", game._show_codex.bind("runner")), "book")
 	_quiet_style(_button(navigation, L10n.t("Ustawienia"), "OpenSettings", game._show_settings), "settings")
+	_quiet_style(_button(navigation, TutorialLessons.text(["Stroje", "Costumes"]), "OpenWardrobe", game._open_wardrobe), "book")
 	var tagline := _label(L10n.t("TWÓJ SKARBIEC. TWOJA LEGENDA."), 18, GOLD)
 	tagline.name = "HomeTagline"
 	tagline.anchor_left = 0.08
@@ -454,6 +455,7 @@ func _build_races() -> void:
 	navigation.add_theme_constant_override("separation", 16)
 	footer.add_child(navigation)
 	_quiet_style(_button(navigation, L10n.t("Poznaj tę rasę"), "InspectRace", _inspect_race), "book")
+	_quiet_style(_button(navigation, TutorialLessons.text(["Stroje", "Costumes"]), "RaceWardrobe", game._open_wardrobe), "book")
 	_quiet_style(_button(navigation, L10n.t("Wróć"), "BackFromRace", game._back_from_race_selection))
 	select_race(game.selected_race)
 
@@ -636,6 +638,8 @@ func _filter_entries() -> void:
 		if shared_art != null:
 			icon = shared_art
 		entry_list.add_item(entry["title"], icon)
+		if str(entry["id"]) in ["free_wave", "runner", "carrier", "saboteur", "defender"]:
+			entry_list.set_item_icon_modulate(entry_list.item_count - 1, game._unit_card_tint(int(entry["race"]), int(entry.get("role", 0)), entry["id"] == "defender"))
 	result_count.text = L10n.t("%d wpisów • statystyki: %s") % [filtered_entries.size(), L10n.t(Catalog.RACE_TITLES[focus_race])]
 	if filtered_entries.is_empty():
 		_clear(detail)
@@ -662,6 +666,8 @@ func _select_entry(index: int) -> void:
 	var shared_art: Texture2D = Catalog.illustration(game, data)
 	if shared_art != null:
 		art.texture = shared_art
+	if str(data["id"]) in ["free_wave", "runner", "carrier", "saboteur", "defender"]:
+		art.modulate = game._unit_card_tint(int(data["race"]), int(data.get("role", 0)), data["id"] == "defender")
 	art.name = "EntryIllustration"
 	media.add_child(art)
 	live_preview = Preview.new()

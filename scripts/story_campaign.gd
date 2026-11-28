@@ -353,6 +353,9 @@ func _build_dialogue(stack: VBoxContainer) -> void:
 		text += "\n\n" + copy("Zdobyte EXP: %d", "XP earned: %d") % int(reward.get("gained", 0))
 		var rating: int = int(game.account.campaign_stars.get(str(data["id"]), 0))
 		text += " • " + "★".repeat(rating) + "☆".repeat(3 - rating)
+		var skin_reward: String = game.Skins.reward_for(str(data["id"]))
+		if reward.get("status") == "saved" and not skin_reward.is_empty():
+			text += "\n\n" + copy("NOWY STRÓJ: ", "NEW COSTUME: ") + game.Skins.text(game.Skins.data(skin_reward)["name"]) + "\n" + copy("Znajdziesz go w Księdze strojów w menu głównym.", "Find it in the Book of Costumes in the main menu.")
 		if reward.get("status") == "save_failed":
 			text += "\n" + copy("Nie udało się zapisać postępu. Sprawdź wolne miejsce na urządzeniu.", "Progress could not be saved. Check free device storage.")
 	pages_text = text.split("\n\n", false)
