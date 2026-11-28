@@ -3,6 +3,7 @@ const L10n = preload("res://scripts/localization.gd")
 const Epic = preload("res://scripts/epic_theme.gd")
 const MobileSettings = preload("res://scripts/mobile_settings.gd")
 const Pose = preload("res://scripts/unit_animation.gd")
+const Skins = preload("res://scripts/unit_skins.gd")
 const Battlefields = preload("res://scripts/battlefields.gd")
 ## In-game QA viewer for the actual animation atlases used by the battlefield.
 ## No additional image generation, network requests, or paid APIs.
@@ -51,6 +52,8 @@ const SPECIAL_NAMES := {
 
 
 var selected_unit := 4
+var game
+var selected_faction := 1
 var selected_action := 0
 var facing_right := true
 var elapsed := 0.0
@@ -173,6 +176,7 @@ func _add_button(parent: HBoxContainer, caption: String, handler: Callable) -> v
 	button.pressed.connect(handler)
 
 func _select_faction_preview(faction: int) -> void:
+	selected_faction = faction
 	# Direct entry points for every faction, especially the previously missing Voidborn.
 	selected_unit = [0, 4, 2, 7][clampi(faction, 0, 3)]
 	selected_action = 0
@@ -192,7 +196,13 @@ func _change_action(direction: int) -> void:
 	_refresh_labels()
 
 func _action_count() -> int:
-	return ACTION_NAMES.size() + (6 if special_atlases.has(selected_unit) else 0)
+	return ACTION_NAMES.size() + (6 if special_atlases.has(selected_unit) and Skins.path(_skin(), UNIT_KEYS[selected_unit]).is_empty() else 0)
+
+func _skin() -> String:
+	if game == null:
+		return "classic"
+	var race: int = [0, 0, 2, 0 if selected_faction == 0 else 2, 1, 1, 1, 3, 3, 3, 3][selected_unit]
+	return game._card_skin(race)
 
 func _flip() -> void:
 	facing_right = not facing_right
@@ -202,8 +212,11 @@ func _close() -> void:
 	queue_free()
 
 func _refresh_labels() -> void:
+	selected_action = mini(selected_action, _action_count() - 1)
 	stage = Battlefields.texture(["dwarves", "dwarves", "elves", "elves", "goblins", "goblins", "goblins", "void", "void", "void", "void"][selected_unit])
 	unit_label.text = L10n.t(UNIT_NAMES[selected_unit])
+	if _skin() != "classic":
+		unit_label.text += " • " + Skins.text(Skins.data(_skin())["name"])
 	if selected_action >= ACTION_NAMES.size():
 		var names: Array = SPECIAL_NAMES.get(selected_unit, [])
 		action_label.text = L10n.t(names[selected_action - ACTION_NAMES.size()]) if selected_action - ACTION_NAMES.size() < names.size() else L10n.t("SPECIAL")
@@ -228,8 +241,13 @@ func _draw_preview() -> void:
 		preview.draw_texture_rect(stage, Rect2(Vector2(8, 8), preview.size - Vector2(16, 16)), false, Color(0.50, 0.52, 0.60))
 	preview.draw_circle(center + Vector2(0, 15), 70, Color("060e1c", 0.5))
 	var is_special: bool = selected_action >= ACTION_NAMES.size()
-	var strip: Texture2D = goblin_strips.get(selected_action) if selected_unit == 4 and not is_special else null
+	var skin: String = _skin()
+	var key: String = UNIT_KEYS[selected_unit]
+	var custom_sheet: bool = not Skins.path(skin, key).is_empty()
+	var strip: Texture2D = goblin_strips.get(selected_action) if selected_unit == 4 and not is_special and not custom_sheet else null
 	var source: Texture2D = special_atlases.get(selected_unit) if is_special else strip if strip != null else atlases[selected_unit]
+	if custom_sheet:
+		source = game._skin_atlas(key, skin)
 	if source == null:
 		frame_label.text = L10n.t("MISSING SOURCE TEXTURE")
 		return
@@ -238,7 +256,7 @@ func _draw_preview() -> void:
 	var fps: float = 12.0 if is_special else ACTION_FPS[selected_action]
 	var frame: int = int(floor(elapsed * fps)) % frame_count
 	var row: int = selected_action - ACTION_NAMES.size() if is_special else 0 if strip != null else ACTION_ROWS[selected_action]
-	if not is_special and strip == null and special_atlases.has(selected_unit):
+	if not custom_sheet and not is_special and strip == null and special_atlases.has(selected_unit):
 		var live_row: int = Pose.special_row(UNIT_KEYS[selected_unit], row, row == 1, selected_action == 6)
 		if live_row >= 0:
 			source = special_atlases[selected_unit]
@@ -248,9 +266,9 @@ func _draw_preview() -> void:
 	var hero_width: float = hero_height
 	var flip: float = 1.0 if facing_right else -1.0
 	preview.draw_set_transform(center, 0.0, Vector2(flip, 1.0))
-	preview.draw_texture_rect_region(source,
+	Skins.draw_frame(preview, source,
 		Rect2(Vector2(-hero_width * 0.5, -hero_height), Vector2(hero_width, hero_height)),
-		Rect2(Vector2(float(frame * cell), float(row * cell)), Vector2(cell, cell)))
+		Rect2(Vector2(float(frame * cell), float(row * cell)), Vector2(cell, cell)), skin, key, presentation_settings, elapsed)
 	preview.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	var new_caption: String = L10n.t("FRAME %d/%d • %s • %s") % [
 		frame + 1, frame_count, L10n.t("SPECIAL ATLAS") if is_special else L10n.t("EXTRA STRIP") if strip != null else L10n.t("6-ROW ATLAS"),

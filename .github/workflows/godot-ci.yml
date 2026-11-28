@@ -120,6 +120,13 @@ jobs:
           ./godot --headless --path . --script res://ci/balance_tournament.gd -- --full --report=balance-report.json 2>&1 | tee tournament.log
           if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" tournament.log; then exit 1; fi
           grep -q "Balance tournament PASSED" tournament.log
+      - name: Test costume unlocks, persistence, campaign overrides and animation inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./godot --headless --path . --script res://ci/smoke_skins.gd 2>&1 | tee skins.log
+          if grep -Ei "SCRIPT ERROR|Parse Error|Invalid call|Invalid access|ERROR:" skins.log; then exit 1; fi
+          grep -q "Campaign skins PASSED" skins.log
       - name: Test campaign state, mobile story UI and actual playthroughs
         shell: bash
         run: |
