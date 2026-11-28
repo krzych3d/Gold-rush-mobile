@@ -1,0 +1,69 @@
+{
+  "date": "2026-11-28",
+  "generator": "built-in image_gen",
+  "purpose": "Original Goblin story portraits, City Without Funerals battlefield and actual heist objective item",
+  "assets": [
+    {
+      "path": "assets/epic/story/rikk.jpg",
+      "source": "exec-6fd30dd4-1f01-4a21-84ad-5ac1748c0dfd.png",
+      "source_size": [
+        1086,
+        1448
+      ],
+      "output_size": [
+        540,
+        720
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: finished epic fantasy mobile game story portrait, 3:4 vertical composition. Create Rikk Goldfang, an original adult male goblin master thief, for Gold Rush: Vault Wars. A lean, clever green-skinned goblin with long expressive ears, amber eyes, one clearly visible gold canine in a restrained crooked smile, short dark hair, weathered charcoal leather coat with subtly engraved bronze fittings and a small round old gold coin between his fingers. Adult, cunning, tired and sympathetic rather than monstrous or comic. Head and upper torso, all ears and hair inside frame with safe margins. Background: softly defocused shadowed dwarven funeral city, cool teal stone and very faint threads of warm gold light. AAA fantasy key art, realistic painterly rendering, fine skin and leather detail, restrained warm gold rim lighting and deep blue shadows, emotionally readable face. Match a dark epic fantasy game's painted dwarven hero portraits. Not a UI mockup. No labels, text, logos, borders, watermark or additional characters. Fully painted opaque background.",
+      "bytes": 103475,
+      "sha256": "dff028a3755e7c794670db9bba01d9e3151fcf9df26dd1b4ba4390e801ac95d6"
+    },
+    {
+      "path": "assets/epic/story/nix.jpg",
+      "source": "exec-daff860c-4301-4740-817e-9e87c2f221b9.png",
+      "source_size": [
+        1086,
+        1448
+      ],
+      "output_size": [
+        540,
+        720
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: finished epic fantasy mobile game story portrait, 3:4 vertical composition. Create Nix, an original adult female goblin inventor, for Gold Rush: Vault Wars. A small adult green-skinned woman in her thirties with long expressive ears, hazel eyes, copper-red hair tied back, brass work goggles on her brow, a practical high-collared dark leather engineer's coat, finely detailed tools and a warm amber lantern clasped at chest height. Thoughtful, sharp and visibly worried about a friend, dignified original fantasy goblin anatomy. Subtle old solder scar on one bare hand; no injuries or gore. Head and upper torso with entire ears and hair safely within frame. Background: softly defocused subterranean workshop, dark teal stone, restrained copper tools and a few luminous golden threads. AAA fantasy key art, realistic painterly rendering, detailed skin/leather/brass, warm amber light against deep blue shadows, emotionally readable face. Match a dark epic fantasy game's painted dwarven hero portraits. No text, UI, logos, frame, watermark or other characters. Opaque painted background.",
+      "bytes": 119613,
+      "sha256": "7b5fe277cde2a468d530402020c951c96629a3393746e13d1f6752ff70c799f0"
+    },
+    {
+      "path": "assets/epic/story/funeral_city.jpg",
+      "source": "exec-ed11e7a1-5539-4632-9fe1-d0eea7e6e654.png",
+      "source_size": [
+        1672,
+        941
+      ],
+      "output_size": [
+        1672,
+        941
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: final playable three-lane battlefield background for Gold Rush: Vault Wars, landscape 16:9, fixed three-quarter game camera. Original epic goblin city 'Whispermarket', the City Without Funerals. Dark, tragic, beautifully crafted fantasy city of weathered copper rooftops, carved basalt, gold-thread lattice bridges and silent bronze bells, dawn under an unnaturally starless blue sky. All people have been evacuated; no painted characters or soldiers. Three completely unobstructed broad horizontal stone streets connect a refuge vault on the far left to an ornate treasury gate on the far right. Streets must be clearly separated, straight and traversable across the full width between x=10% and x=91%. Their ground centerlines run at y=48%, y=60%, y=74% of the image. Keep those three battle corridors free of pillars, foreground buildings, rubble piles, water, gaps and stairs. Make the vault/treasury silhouettes small enough to leave all three route entrances readable on each side. Architecture and mist can fill the upper 35% and outer margins. Fine luminous golden fate threads above rooftops, unlit funeral pyres beside rather than on the streets, warm lamps and teal shadows. AAA epic fantasy environment painting, coherent realistic materials and rich atmosphere, like high-quality painted fantasy strategy battlefields. Camera and composition remain suitable for mobile units to walk visibly along those streets. No UI, text, labels, minimap, lane markings, frames, people or watermark. Fully opaque.",
+      "bytes": 628827,
+      "sha256": "542dfce4b7f1716c13c6aa6ce4ec024a51dd33c301732b3fdb899cbb09c587cd"
+    },
+    {
+      "path": "assets/epic/story/memory_stone.png",
+      "source": "exec-b64129ee-2995-4206-9356-3f8fd8a54ca1.png",
+      "source_size": [
+        1199,
+        1312
+      ],
+      "output_size": [
+        256,
+        256
+      ],
+      "prompt": "Use case: stylized-concept. Asset type: final transparent fantasy game inventory/objective icon for Gold Rush: Vault Wars. A single original cursed Memory Stone: a small faceted black obsidian spindle suspended inside an open ancient gold and copper cage shaped from interwoven oath threads, with an eerie restrained cyan glow deep in the stone and a few delicate golden threads bound around its middle. A precious sacred object worth stealing, not a weapon and not a pile of coins. Three-quarter view, coherent AAA dark epic fantasy painterly realism, crisp readable silhouette at mobile icon size, realistic engraved metal, dramatic soft warm rim light. Center the complete object with generous transparent padding on all sides, fully visible with no shadow/background plate. No people, letters, writing, UI, logos, border or watermark. Genuine transparent background.",
+      "bytes": 55610,
+      "sha256": "50cb426342f4bdf126ed256485ed3e2cae85e68cf80e358f33f749f5373bfe09"
+    }
+  ],
+  "packaging": "Godot 4.2.2 Image: proportional downscale of 3:4 portraits to 540x720 JPEG, battlefield JPEG at original 1672x941; artifact fit within 240px on 256px transparent PNG. Original image generator alpha retained.",
+  "layout": "funeral_city uses authored street UVs at y=0.475/0.586/0.690; characters follow road lengths with the existing campaign speed correction."
+}

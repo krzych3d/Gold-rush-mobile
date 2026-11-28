@@ -1,7 +1,8 @@
 extends Control
-## Reuse the original faction illustration, excluding its baked English labels.
-## A native engraved caption stays readable and switches languages instantly.
+## Large, uncropped battle illustrations with separate native labels and prices.
 const Epic = preload("res://scripts/epic_theme.gd")
+const CARD_HEIGHT := 182.0
+const BANNER_HEIGHT := 104.0
 var illustration: TextureRect
 var caption: Label
 var cost: Label
@@ -27,6 +28,9 @@ func _ready() -> void:
 	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	Epic.heading(caption, base_size)
 	add_child(caption)
+	# Godot resolves wrapped minimum height after its width has settled. On a
+	# cold OpenGL start it may initially clamp to a one-pixel-wide paragraph.
+	caption.minimum_size_changed.connect(_layout)
 	cost = Label.new()
 	cost.name = "LocalizedCost"
 	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -39,6 +43,7 @@ func _ready() -> void:
 
 func configure(source: Texture2D, title: String, price: String, is_banner: bool = false, full_art: bool = false) -> void:
 	banner = is_banner
+	caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if banner else TextServer.AUTOWRAP_OFF
 	if full_art:
 		# Ready-to-use battlefield AtlasTexture, no nested atlas or label crop.
 		illustration.texture = source
@@ -59,37 +64,59 @@ func configure(source: Texture2D, title: String, price: String, is_banner: bool 
 	caption.text = title
 	cost.text = price
 	var button := get_parent() as Button
-	if banner:
-		button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 84.0)
-	modulate = Color(0.62, 0.64, 0.72) if button.disabled else Color.WHITE
+	button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, BANNER_HEIGHT if banner else CARD_HEIGHT)
+	sync_availability(button.disabled)
 	_layout()
 	queue_redraw()
 
+func sync_availability(disabled: bool) -> void:
+	# Disabled purchases remain identifiable; native labels keep full contrast.
+	modulate = Color.WHITE
+	var tint := Color(0.72, 0.75, 0.82) if disabled else Color.WHITE
+	if illustration.modulate != tint:
+		illustration.modulate = tint
+
 func _layout() -> void:
-	if illustration == null:
+	if illustration == null or caption == null or cost == null or size.x < 96:
 		return
-	var slot: float = minf(180, size.x * 0.28)
+	var slot: float = minf(124, size.x * 0.38)
+	var text_x: float = slot + 16 if banner else 12
+	var text_width: float = maxf(20, size.x - text_x - 14)
+	var font_size: int = 18 if banner else 17
+	if banner:
+		if Epic.DISPLAY_FONT.get_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > text_width:
+			slot = minf(104, size.x * 0.36)
+			text_x = slot + 16
+			text_width = maxf(20, size.x - text_x - 14)
+			font_size = 16 # Long ability names wrap in full instead of shrinking away.
+	else:
+		while font_size > 13 and Epic.DISPLAY_FONT.get_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > text_width:
+			font_size -= 1
+	if caption.get_theme_font_size("font_size") != font_size:
+		caption.add_theme_font_size_override("font_size", font_size)
 	var price_height: float = maxf(23.0, cost.get_combined_minimum_size().y)
-	var caption_height: float = maxf(26.0, caption.get_combined_minimum_size().y)
-	var price_y: float = size.y - 16.0 - price_height
+	var caption_height := 26.0
+	if banner:
+		caption_height = maxf(caption_height, Epic.DISPLAY_FONT.get_multiline_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, text_width, font_size, -1, TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND | TextServer.BREAK_ADAPTIVE).y)
+		var button := get_parent() as Button
+		var required_height: float = maxf(BANNER_HEIGHT, ceilf(caption_height + price_height + 28.0))
+		if button.custom_minimum_size.y != required_height:
+			button.custom_minimum_size.y = required_height
+	var price_y: float = size.y - 14.0 - price_height
 	var caption_y: float = price_y - caption_height - 2.0
 	if banner:
-		illustration.size = Vector2(maxf(16, slot - 16), minf(62, maxf(20, size.y - 28)))
-		illustration.position = Vector2(16, (size.y - illustration.size.y) * 0.5)
+		illustration.size = Vector2(maxf(20, slot - 4), maxf(20, size.y - 24))
+		illustration.position = Vector2(12, (size.y - illustration.size.y) * 0.5)
+		caption_y = (size.y - caption_height - price_height - 4) * 0.5
+		price_y = caption_y + caption_height + 4
 	else:
-		var available_height: float = maxf(20, caption_y - 12.0)
-		illustration.size = Vector2(minf(190, maxf(20, size.x - 28)), minf(126, available_height))
-		illustration.position = Vector2((size.x - illustration.size.x) * 0.5, 8 + (available_height - illustration.size.y) * 0.5)
-	var text_x: float = slot + 4 if banner else 6
-	var text_width: float = size.x - text_x - 8
-	caption.position = Vector2(text_x, 12 if banner else caption_y)
+		var available_height: float = maxf(20, caption_y - 14.0)
+		illustration.size = Vector2(maxf(20, size.x - 24), minf(160, available_height))
+		illustration.position = Vector2(12, 10 + (available_height - illustration.size.y) * 0.5)
+	caption.position = Vector2(text_x, caption_y)
 	caption.size = Vector2(text_width, caption_height)
 	cost.position = Vector2(text_x, price_y)
 	cost.size = Vector2(text_width, price_height)
-	var font_size: int = 19 if banner else 17
-	while font_size > 11 and Epic.DISPLAY_FONT.get_string_size(caption.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > text_width:
-		font_size -= 1
-	caption.add_theme_font_size_override("font_size", font_size)
 
 func _draw() -> void:
 	if frame != null:

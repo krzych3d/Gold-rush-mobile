@@ -10,9 +10,11 @@ const ASSETS := [
 	"res://assets/epic/story/throne.jpg",
 	"res://assets/epic/world/campaign_vargheim.jpg",
 	"res://assets/epic/story/throne.jpg",
-	"res://assets/epic/world/campaign_breathing_mountain.jpg"
+	"res://assets/epic/world/campaign_breathing_mountain.jpg",
+	"res://assets/epic/story/throne.jpg",
+	"res://assets/epic/story/funeral_city.jpg"
 ]
-const LAYOUTS := [0, 1, 2, 3, 0, 3, 1]
+const LAYOUTS := [0, 1, 2, 3, 0, 3, 1, 3, 4]
 const X_START := 0.105
 const X_END := 0.905
 # Seven equally spaced horizontal stations. Feet, not sprite centers, follow
@@ -38,6 +40,11 @@ const ROAD_Y := [
 		[0.500, 0.500, 0.500, 0.500, 0.500, 0.500, 0.500],
 		[0.601, 0.601, 0.601, 0.601, 0.601, 0.601, 0.601],
 		[0.719, 0.719, 0.719, 0.719, 0.719, 0.719, 0.719]
+	],
+	[
+		[0.475, 0.474, 0.474, 0.474, 0.474, 0.474, 0.475],
+		[0.586, 0.586, 0.586, 0.586, 0.586, 0.586, 0.586],
+		[0.690, 0.690, 0.690, 0.690, 0.690, 0.690, 0.690]
 	]
 ]
 

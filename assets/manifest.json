@@ -221,6 +221,30 @@
       "git_blob_sha1": "c04ffdc4a45e3820424549e61b99c26fbddd7c6e",
       "sha256": "912cef3ec89eebda8012b110d82bc127b6fe222ed0edb5ffc9887524123012c8"
     },
+    "assets/epic/story/funeral_city.jpg": {
+      "bytes": 628827,
+      "git_blob_sha1": "0c35696b6827cfd5758ac804b9fdf40df16282eb",
+      "sha256": "542dfce4b7f1716c13c6aa6ce4ec024a51dd33c301732b3fdb899cbb09c587cd"
+    },
+    "assets/epic/story/memory_stone.png": {
+      "bytes": 55610,
+      "git_blob_sha1": "f1beab8ba8589311167023c5777fd5f36c4b9bd7",
+      "sha256": "50cb426342f4bdf126ed256485ed3e2cae85e68cf80e358f33f749f5373bfe09",
+      "size": [
+        256,
+        256
+      ]
+    },
+    "assets/epic/story/nix.jpg": {
+      "bytes": 119613,
+      "git_blob_sha1": "cb4be3ed69e0e9700815863bcc10268a02fdffc8",
+      "sha256": "7b5fe277cde2a468d530402020c951c96629a3393746e13d1f6752ff70c799f0"
+    },
+    "assets/epic/story/rikk.jpg": {
+      "bytes": 103475,
+      "git_blob_sha1": "a71d13cbdeba43bd5cb28214979654b088a40bd8",
+      "sha256": "dff028a3755e7c794670db9bba01d9e3151fcf9df26dd1b4ba4390e801ac95d6"
+    },
     "assets/epic/story/thorgar.jpg": {
       "bytes": 125568,
       "git_blob_sha1": "af46253e3c25a733dd8663b54d8acf9f5a2eafd9",

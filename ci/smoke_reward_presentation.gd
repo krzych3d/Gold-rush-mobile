@@ -40,12 +40,12 @@ func _run() -> void:
 			game._choose_faction(race)
 			for index in range(3, 9):
 				var surface = game.controls[index].get_node("LocalizedSurface")
-				if not require(surface.illustration.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED and surface.illustration.size.x <= 190.1 and surface.illustration.size.y <= 126.1, "Battle illustration is cropped or grows with a tall phone"):
+				if not require(surface.illustration.stretch_mode == TextureRect.STRETCH_KEEP_ASPECT_CENTERED and surface.illustration.size.x <= game.controls[index].size.x - 23 and surface.illustration.size.y >= 100 and surface.illustration.size.y <= 160.1, "Large battle illustration is tiny, cropped or escapes its card"):
 					return
 				if not require(surface.illustration.get_rect().end.y <= surface.caption.position.y + 1 and not surface.cost.text.is_empty(), "Compact art covers a card caption or price"):
 					return
 			var banner = game.guard_button.get_node("LocalizedSurface")
-			if not require(banner.illustration.get_rect().end.x < banner.caption.position.x and banner.illustration.size.x <= 164.1, "Banner thumbnail overlaps its label"):
+			if not require(banner.illustration.get_rect().end.x < banner.caption.position.x and banner.illustration.size.y >= 80 and game.guard_button.get_parent() == game.ability_button.get_parent(), "Large support icons overlap labels or waste separate full-width rows"):
 				return
 			if not require(banner.illustration.texture == game._unit_card_texture(race, 0, true), "Defender card and battlefield use different characters"):
 				return
@@ -150,5 +150,5 @@ func _run() -> void:
 	for suffix in ["", ".bak", ".pending"]:
 		if FileAccess.file_exists(PATH + suffix):
 			DirAccess.remove_absolute(PATH + suffix)
-	print("Reward presentation PASSED: compact art in four sizes/factions, gold arrivals, level crossing, exact saved XP, no double award, menu handoff, rotation and reduced motion")
+	print("Reward presentation PASSED: large bounded art in four sizes/factions, paired support actions, gold arrivals, level crossing, exact saved XP, no double award, menu handoff, rotation and reduced motion")
 	quit(0)
