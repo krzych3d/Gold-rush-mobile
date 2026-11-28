@@ -5,6 +5,7 @@ const Battlefields = preload("res://scripts/battlefields.gd")
 const CampaignMaps = preload("res://scripts/campaign_maps.gd")
 const MobileLayout = preload("res://scripts/mobile_layout.gd")
 const L10n = preload("res://scripts/localization.gd")
+const Narration = preload("res://scripts/story_narration.gd")
 const FIRST_CHAPTERS = [
 	{"id": "dwarf_bells", "race": 0, "level": 1, "requires": "", "map": "dwarves", "enemy": 0, "waves": 3, "target": 0, "gold": 1250,
 	"title": ["Dzwony dla umarłych", "Bells for the Dead"],
@@ -131,7 +132,7 @@ It is his own voice, coming from the metal. Borin pulls the coin away from his b
 
 At the exit they find four crests and the space where a fifth was carefully chiselled away. One sentence survives below: ‘The first debt remains unpaid.’ Thorgar takes a fragment to the mint. For the first time he wants to read a document he once merely signed."""]}
 ]
-const MISSIONS = FIRST_CHAPTERS + preload("res://scripts/dwarf_chapters.gd").MISSIONS
+const MISSIONS = FIRST_CHAPTERS + preload("res://scripts/dwarf_chapters.gd").MISSIONS + preload("res://scripts/goblin_chapters.gd").MISSIONS
 var game
 var mode := "menu"
 var index := 0
@@ -143,6 +144,20 @@ static func copy(pl: String, en: String) -> String:
 
 static func localized(pair: Array) -> String:
 	return str(pair[0] if L10n.language == "pl" else pair[1])
+
+static func campaign_name(race: int) -> String:
+	return copy("GOBLINY • ZŁODZIEJE PRZEZNACZENIA", "GOBLINS • THIEVES OF FATE") if race == 1 else copy("KRASNOLUDY • DZIEDZICTWO KRWI", "DWARVES • LEGACY OF BLOOD")
+
+static func chapter_number(mission_index: int) -> int:
+	var number := 0
+	for i in range(mission_index + 1):
+		if MISSIONS[i]["race"] == MISSIONS[mission_index]["race"]: number += 1
+	return number
+
+static func index_for_id(id: String) -> int:
+	for i in MISSIONS.size():
+		if str(MISSIONS[i]["id"]) == id: return i
+	return -1
 
 static func unlocked(profile, mission_index: int) -> bool:
 	if mission_index < 0 or mission_index >= MISSIONS.size():
@@ -165,6 +180,8 @@ var speaker_label: Label
 var advance: Button
 var previous: Button
 var choices_box: VBoxContainer
+var context_button: Button
+var context_open := false
 var pages_text := PackedStringArray()
 var page := 0
 
@@ -187,7 +204,7 @@ func _ready() -> void:
 	stack.add_theme_constant_override("separation", 10)
 	margin.add_child(stack)
 	_label(stack, copy("TESTAMENT UMARŁYCH BOGÓW", "TESTAMENT OF THE DEAD GODS"), 23, true)
-	_label(stack, copy("KRASNOLUDY • DZIEDZICTWO KRWI", "DWARVES • LEGACY OF BLOOD"), 17, true)
+	_label(stack, copy("KRONIKI RAS • WYBIERZ OPOWIEŚĆ", "RACIAL CHRONICLES • CHOOSE A STORY") if mode == "menu" else campaign_name(int(MISSIONS[index]["race"])), 17, true)
 	body = BoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 14)
@@ -207,7 +224,7 @@ func _layout(margin: MarginContainer) -> void:
 	margin.offset_bottom = safe.end.y - size.y - 18
 	body.vertical = size.x < 950 or size.x < size.y * 1.3
 	if is_instance_valid(portrait_scene):
-		portrait_scene.custom_minimum_size = Vector2(0, minf(300, size.y * 0.30)) if body.vertical else Vector2(size.x * 0.34, 0)
+		portrait_scene.custom_minimum_size = Vector2(0, minf(300, size.y * 0.25)) if body.vertical else Vector2(size.x * 0.34, 0)
 		portrait_scene.size_flags_vertical = Control.SIZE_FILL if body.vertical else Control.SIZE_EXPAND_FILL
 
 func _scene(parent: Node, chapter: int) -> Control:
@@ -235,9 +252,16 @@ func _build_chronicle(stack: VBoxContainer) -> void:
 	chapters.add_theme_constant_override("separation", 12)
 	scroll.add_child(chapters)
 	var total := 0
+	var completed := 0
+	var previous_race := -1
 	for i in MISSIONS.size():
 		var mission: Dictionary = MISSIONS[i]
+		var race: int = int(mission["race"])
+		if race != previous_race:
+			_label(chapters, campaign_name(race), 20, true)
+			previous_race = race
 		var done: bool = game.account.campaign_completed.has(str(mission["id"]))
+		if done: completed += 1
 		var available: bool = unlocked(game.account, i)
 		var rating: int = int(game.account.campaign_stars.get(str(mission["id"]), 1 if done else 0))
 		total += rating
@@ -260,7 +284,7 @@ func _build_chronicle(stack: VBoxContainer) -> void:
 		var title := VBoxContainer.new()
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(title)
-		_label(title, "%02d • %s" % [i + 1, localized(mission["title"])], 20, true)
+		_label(title, "%02d • %s" % [chapter_number(i), localized(mission["title"])], 20, true)
 		_label(title, "★".repeat(rating) + "☆".repeat(3 - rating), 19, true)
 		if available:
 			_label(title, localized(mission["setting"]), 16)
@@ -269,7 +293,7 @@ func _build_chronicle(stack: VBoxContainer) -> void:
 		button.name = "CampaignMission%d" % i
 		button.disabled = not available
 		button.custom_minimum_size.y = 54
-	_label(pane, copy("Kronika: %d/%d • Gwiazdy: %d/21", "Chronicle: %d/%d • Stars: %d/21") % [game.account.campaign_completed.size(), MISSIONS.size(), total], 17, true)
+	_label(pane, copy("Kronika: %d/%d • Gwiazdy: %d/%d", "Chronicle: %d/%d • Stars: %d/%d") % [completed, MISSIONS.size(), total, MISSIONS.size() * 3], 17, true)
 	# A landscape second page shows the original protagonist artwork.
 	portrait_scene = _scene(body, 0)
 	portrait_scene.visible = size.x >= 950 and size.x >= size.y * 1.3
@@ -333,19 +357,19 @@ func _build_dialogue(stack: VBoxContainer) -> void:
 			text += "\n" + copy("Nie udało się zapisać postępu. Sprawdź wolne miejsce na urządzeniu.", "Progress could not be saved. Check free device storage.")
 	pages_text = text.split("\n\n", false)
 	if mode == "intro":
-		var recap: String = localized(data["recap"])
-		if index == 5:
-			var choice: String = str(game.account.campaign_choices.get("dwarf_refugees", ""))
-			if choice == "open":
-				recap += "\n\n" + copy("Otworzyłeś bramy: uratowani strażnicy przysłali trzech obrońców, lecz twierdza zdążyła wzmocnić króla.", "You opened the gates: rescued guards sent three defenders, but the fortress had time to strengthen the king.")
-			elif choice == "hidden":
-				recap += "\n\n" + copy("Ukryłeś rodziny: Borin przeprowadził je bez ostrzegania twierdzy. Król ma mniej sił, ale brak dodatkowych obrońców.", "You hid the families: Borin moved them without warning the fortress. The king is weaker, but you have no extra defenders.")
-		pages_text.insert(0, copy("ZANIM RUSZYSZ DALEJ\n", "BEFORE YOU CONTINUE\n") + recap)
+		pages_text.insert(0, copy("ZANIM RUSZYSZ DALEJ\n", "BEFORE YOU CONTINUE\n") + _recap_text(data))
 		pages_text.append(copy("ODPRAWA\n", "BRIEFING\n") + localized(data["briefing"]) + "\n\n" + localized(data["objective"]) + "\n\n" + _star_goals(data))
+	var reading_tools := HBoxContainer.new()
+	reading_tools.add_theme_constant_override("separation", 8)
+	column.add_child(reading_tools)
 	page_label = Label.new()
 	page_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	page_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(page_label)
+	page_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	reading_tools.add_child(page_label)
+	context_button = _button(reading_tools, copy("KONTEKST", "CONTEXT"), _toggle_context)
+	context_button.name = "StoryContext"
+	context_button.custom_minimum_size = Vector2(148, 44)
 	var navigation := HBoxContainer.new()
 	navigation.name = "StoryNavigation"
 	navigation.add_theme_constant_override("separation", 12)
@@ -382,28 +406,35 @@ func _star_goals(data: Dictionary) -> String:
 	match str(data.get("rule", "")):
 		"escort": third = copy("Nie strać żadnej grupy.", "Lose no refugee groups.")
 		"debt": third = copy("Wydaj maksymalnie 600 złota.", "Spend at most 600 gold.")
-	if index == 0:
+	if int(data["target"]) == 0 and int(data.get("boss_hp", 0)) == 0:
 		third = copy("Zachowaj co najmniej 1000 złota.", "Keep at least 1000 gold.")
 	return copy("★ Wykonaj cel.\n★★ Zachowaj połowę początkowego złota.\n★★★ ", "★ Complete the objective.\n★★ Keep half your starting gold.\n★★★ ") + third
 
 func _update_page() -> void:
+	var data: Dictionary = MISSIONS[index]
+	if context_open:
+		text_label.text = copy("PUNKT WYJŚCIA\n", "THE STORY SO FAR\n") + _recap_text(data) + copy("\n\nPOSTACIE\n", "\n\nCHARACTERS\n") + Narration.cast_notes(int(data["race"]))
+		speaker_label.text = copy("NARRATOR • PRZYPOMNIENIE HISTORII", "NARRATOR • STORY CONTEXT")
+		portrait_scene.show_speaker("")
+		page_label.text = copy("Kontekst • strona %d / %d", "Context • page %d / %d") % [page + 1, pages_text.size()]
+		previous.disabled = true
+		advance.show()
+		advance.text = copy("WRÓĆ DO DIALOGU", "RETURN TO THE SCENE")
+		context_button.text = copy("WRÓĆ", "RETURN")
+		Epic._fit_button(advance)
+		Epic._fit_button(context_button)
+		if choices_box != null: choices_box.hide()
+		call_deferred("_reset_dialogue_scroll")
+		return
+	context_button.text = copy("KONTEKST", "CONTEXT")
+	Epic._fit_button(context_button)
 	text_label.text = pages_text[page]
 	page_label.text = "%d / %d" % [page + 1, pages_text.size()]
-	var speaker: String = str(MISSIONS[index].get("portrait", "thorgar" if index == 0 else "borin"))
-	var label: String = copy("KRONIKA • ", "CHRONICLE • ") + (copy("PRZED MISJĄ", "BEFORE THE MISSION") if mode == "intro" else copy("MIĘDZY FALAMI", "BETWEEN WAVES") if mode == "mid" else copy("PO BITWIE", "AFTER THE BATTLE"))
-	var first_line: String = text_label.text.get_slice("\n", 0)
-	var colon: int = first_line.find(":")
-	if colon > 0 and colon < 35:
-		var name: String = first_line.left(colon)
-		match name:
-			"Thorgar": label = copy("THORGAR • dowódca straży, ojciec Eiry", "THORGAR • guard commander, Eira's father"); speaker = "thorgar"
-			"Borin": label = copy("BORIN • konstruktor, brat Thorgara", "BORIN • engineer, Thorgar's brother"); speaker = "borin"
-			"Eira": label = copy("EIRA • córka Thorgara, głos z monety", "EIRA • Thorgar's daughter, a voice in the coin"); speaker = "eira"
-			_: label = name.to_upper(); speaker = ""
-	elif mode == "intro" and page == pages_text.size() - 1:
-		label = copy("ODPRAWA • CEL I ZASADY MISJI", "BRIEFING • OBJECTIVE AND MISSION RULES")
-	speaker_label.text = label
-	portrait_scene.show_speaker(speaker)
+	var speaker: Dictionary = Narration.speaker(text_label.text, int(data["race"]))
+	speaker_label.text = str(speaker["caption"])
+	if mode == "intro" and page == pages_text.size() - 1:
+		speaker_label.text = copy("ODPRAWA • CEL I ZASADY MISJI", "BRIEFING • OBJECTIVE AND MISSION RULES")
+	portrait_scene.show_speaker(str(speaker["portrait"]))
 	previous.disabled = page == 0
 	var decision_page: bool = choices_box != null and page == pages_text.size() - 1
 	if choices_box != null:
@@ -420,11 +451,15 @@ func _reset_dialogue_scroll() -> void:
 	scroll.scroll_vertical = 0
 
 func _previous() -> void:
-	if page > 0:
+	if page > 0 and not context_open:
 		page -= 1
 		_update_page()
 
 func _advance() -> void:
+	if context_open:
+		context_open = false
+		_update_page()
+		return
 	if choices_box != null and page == pages_text.size() - 1:
 		return # A required decision can only finish through its actual choice.
 	if page < pages_text.size() - 1:
@@ -434,6 +469,20 @@ func _advance() -> void:
 		game._return_to_campaign()
 	else:
 		game._close_campaign_overlay()
+
+func _toggle_context() -> void:
+	context_open = not context_open
+	_update_page()
+
+func _recap_text(data: Dictionary) -> String:
+	var recap: String = localized(data["recap"])
+	if str(data["id"]) == "dwarf_throne":
+		var choice: String = str(game.account.campaign_choices.get("dwarf_refugees", ""))
+		if choice == "open":
+			recap += "\n\n" + copy("Otworzyłeś bramy: uratowani strażnicy przysłali trzech obrońców, lecz twierdza zdążyła wzmocnić króla.", "You opened the gates: rescued guards sent three defenders, but the fortress had time to strengthen the king.")
+		elif choice == "hidden":
+			recap += "\n\n" + copy("Ukryłeś rodziny: Borin przeprowadził je bez ostrzegania twierdzy. Król ma mniej sił, ale brak dodatkowych obrońców.", "You hid the families: Borin moved them without warning the fortress. The king is weaker, but you have no extra defenders.")
+	return recap
 
 func _label(parent: Node, value: String, font_size: int, heading: bool = false) -> void:
 	var label := Label.new()

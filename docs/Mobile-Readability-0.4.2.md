@@ -29,7 +29,7 @@ The fixed camera still shows the whole battlefield in either orientation.
 
 ## Story context
 
-All seven chapters have expanded PL/EN scenes, a location/time subtitle, a recap
+All seven dwarf chapters have expanded PL/EN scenes, a location/time subtitle, a recap
 and a final tactical briefing. The first recap identifies Thorgar, his brother
 Borin and his deceased daughter Eira, and explains the name-coin custom. Later
 scenes connect actual discoveries, the brothers' complicity and the next mission.
@@ -38,8 +38,9 @@ The story distinguishes the Faceless King's gathered oaths from the dead ruler's
 will bound to the throne. Eira consistently asks to be freed, while the unknown
 voice offers resurrection. The Vargheim catastrophe stays uncertain in the dwarf
 perspective; the fifth crest no longer implies Thorgar is the descendant reserved
-for the Voidborn story. Neither another racial campaign nor the global finale is
-added by this revision.
+for the Voidborn story. The update also adds the first two goblin chapters and an explicit text narrator;
+[their scope and mechanics](Goblin-Prologue.md) are documented separately. The
+remaining racial chapters and global finale are future work.
 
 Reading uses a dark framed panel, speaker/role captions, full paragraphs, page
 numbers, Previous/Next and a scroll region for longer pages. Anonymous voices do
@@ -56,8 +57,8 @@ cover all four factions and both languages, including long ability names, comple
 first-pose silhouettes, larger art, bounded captions/prices and availability cache
 updates. Story checks read every intro, mid-scene and result in PL/EN, exercise
 Previous, choice visibility, three screen sizes and the saved siege recap without
-changing gold or the preparation countdown. The 132 campaign battle records
-match 0.4.1 exactly. Existing guided lessons exercise the
+changing gold or the preparation countdown. The 132 dwarf battle records
+match 0.4.1 exactly; the expanded campaign check covers 177 battles. Existing guided lessons exercise the
 real purchase signals and scrolling after the support-row change.
 
 Actual desktop OpenGL screenshots cover both orientations, the dwarf campaign

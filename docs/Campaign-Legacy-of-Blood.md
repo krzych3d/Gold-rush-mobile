@@ -1,8 +1,9 @@
 # Testament of the Dead Gods — Legacy of Blood
 
 Implemented slice: seven bilingual dwarven chapters, using the shipping three-lane
-simulator and fixed camera. The other racial campaigns, global finale, 40+12 mission
-target, legendary difficulty, new race soundtracks, cosmetic reward system and full
+simulator and fixed camera. Two goblin opening chapters are now documented in Goblin-Prologue.md. The remaining
+racial chapters, global finale, 40+12 mission target, legendary difficulty, new
+race soundtracks, cosmetic reward system and full
 character/cinematic animation are future work.
 
 | Chapter | Actual objective and rule | Battlefield |

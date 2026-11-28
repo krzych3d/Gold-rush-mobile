@@ -1,12 +1,15 @@
 # Gold Rush Mobile — Vault Wars
 
-## Larger purchase art and fuller campaign scenes (0.4.2)
+## Readable battle art, narrator and goblin opening (0.4.2)
 
 The arsenal gives units and traps more illustration space and pairs support
-actions, while long translated names wrap inside their frames. Seven PL/EN
-dwarven chapters now include recaps, character context, clearer scene transitions
-and tactical briefings. Story pages support Previous/Next and show choices after
-their consequences are explained. [Behavior, scope and verification](docs/Mobile-Readability-0.4.2.md).
+controls; long translated ability names remain inside their frames. Seven expanded
+PL/EN dwarf chapters are joined by two playable goblin chapters with Rikk and Nix:
+a genuine artefact extraction and a city where fallen bodies rise weaker. A text
+narrator and Context action explain the story and relationships without skipping
+pages. New hero portraits, a city battlefield and the actual cursed-item icon are
+integrated. [Campaign behavior and scope](docs/Goblin-Prologue.md) ·
+[Mobile readability](docs/Mobile-Readability-0.4.2.md).
 
 ## Consistent art and smoother event playback (0.4.1)
 

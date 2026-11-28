@@ -27,14 +27,20 @@ func play(chapter: int, policy: String, seed_value: int) -> Dictionary:
 	game.rng.seed = seed_value
 	game.campaign_state.prepare(game)
 	while game.phase != "END" and game.wave <= int(data["waves"]):
-		if policy in ["escort_saboteurs", "escort_convoy"]:
+		if policy in ["heist_convoy", "heist_rush"]:
+			var path: int = game.campaign_state.artifact_lane()
+			for _n in 2:
+				game.purchase_unit(0, path, 2 if policy == "heist_convoy" else 0, 300)
+			for _n in 2:
+				game.purchase_unit(0, path, 1, 300)
+		elif policy in ["escort_saboteurs", "escort_convoy"]:
 			# Read the same announced route a player sees in the PREP HUD.
 			var path: int = game.campaign_state.boss_lane(game.wave)
 			for _n in (3 if policy == "escort_saboteurs" else 2):
 				game.purchase_unit(0, path, 2, 300)
 			for _n in 2:
 				game.purchase_unit(0, path, 1 if policy == "escort_convoy" else 0, 300)
-		else:
+		elif policy != "wait":
 			game.prepare_strategy(0, policy)
 		game._bot_prepare()
 		if game.phase == "END": break
@@ -48,6 +54,9 @@ func play(chapter: int, policy: String, seed_value: int) -> Dictionary:
 	var result := {"chapter": chapter + 1, "policy": policy, "seed": seed_value, "won": game.campaign_won, "wave": game.wave,
 		"gold": game.gold[0], "delivered": game.campaign_delivered, "rescued": game.campaign_state.rescued,
 		"boss_hp": game.campaign_state.boss_health, "spent": game.campaign_state.spent}
+	if game.campaign_state.rule() in ["heist", "undying"]:
+		result["artifact"] = game.campaign_state.artifact_state
+		result["rebirths"] = game.campaign_state.rebirths
 	game.free()
 	return result
 
@@ -57,10 +66,14 @@ func run() -> void:
 			var wins := 0
 			var policies: Array = ["save", "rush", "turrets", "guards", "mixed", "adaptive"]
 			if chapter == 4: policies.append_array(["escort_saboteurs", "escort_convoy"])
+			if str(Story.MISSIONS[chapter].get("rule", "")) == "heist": policies.append_array(["heist_convoy", "heist_rush", "wait"])
 			for policy in policies:
 				var result: Dictionary = play(chapter, policy, seed_value)
 				results.append(result)
 				if result["won"]: wins += 1
+				if policy == "wait" and result["won"]:
+					failed = true
+					push_error("The paid-lockpick objective can be completed by idle free waves")
 			print("Chapter %d seed %d: %d/%d strategies succeeded" % [chapter + 1, seed_value, wins, policies.size()])
 			if wins < 2:
 				failed = true
@@ -73,5 +86,5 @@ func run() -> void:
 	file.close()
 	for suffix in ["", ".bak", ".pending"]:
 		DirAccess.remove_absolute("user://campaign-playthrough.cfg" + suffix)
-	if not failed: print("Campaign playthrough PASSED: all seven chapters, three seeds, at least two viable strategies per chapter/seed")
+	if not failed: print("Campaign playthrough PASSED: all nine chapters, three seeds, at least two viable strategies per chapter/seed")
 	quit(1 if failed else 0)

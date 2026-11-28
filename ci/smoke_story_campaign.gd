@@ -16,7 +16,7 @@ func fixture(chapter: int):
 	game.account = Profile.new(save_path)
 	game.campaign_index = chapter
 	game.campaign_state = Runtime.new(chapter, Story.MISSIONS[chapter])
-	game.selected_race = 0
+	game.selected_race = int(Story.MISSIONS[chapter]["race"])
 	game.bot_race = int(Story.MISSIONS[chapter]["enemy"])
 	game.phase = "PREP"
 	game.gold = [1800, 950]
@@ -29,13 +29,15 @@ func _initialize() -> void:
 func run() -> void:
 	_test_persistence()
 	_test_rules()
+	_test_goblin_rules()
 	_test_choices()
 	await _test_ui()
 	await _test_reading_flow()
+	await _test_goblin_entry()
 	for suffix in ["", ".bak", ".pending"]:
 		DirAccess.remove_absolute(save_path + suffix)
 	if failures.is_empty():
-		print("Story campaign PASSED: seven chapters, save migration/rollback, immutable decisions, best stars, debt, persistent phased bosses, escort, collapse, all PL/EN story pages, speaker/context captions, previous navigation, gated choices, saved siege recap, pause and rotation")
+		print("Story campaign PASSED: nine chapters, two faction starts, save migration/rollback, immutable decisions, best stars, actual artifact pickup/loss/return, bounded symmetric rebirth, phased bosses, escort, all PL/EN pages, narrator/context, navigation, pause and rotation")
 	quit(0 if failures.is_empty() else 1)
 
 func _test_persistence() -> void:
@@ -51,7 +53,7 @@ func _test_persistence() -> void:
 		var data: Dictionary = Story.MISSIONS[i]
 		require(not ids.has(data["id"]), "Duplicate campaign ID")
 		ids[data["id"]] = true
-		require(Story.unlocked(account, i) == (i == 0), "A prerequisite can be bypassed on a new account")
+		require(Story.unlocked(account, i) == str(data["requires"]).is_empty(), "A faction start is blocked or a prerequisite can be bypassed")
 		for field in ["title", "objective", "setting", "recap", "briefing", "intro", "mid", "outro"]:
 			require(data[field].size() == 2 and not str(data[field][0]).is_empty() and not str(data[field][1]).is_empty(), "Missing PL/EN campaign text")
 	account.claim_campaign("dwarf_bells", 3, 60.0, 1)
@@ -162,7 +164,7 @@ func _test_ui() -> void:
 		await process_frame
 		game._open_campaign()
 		await process_frame
-		require(game.campaign_overlay.find_children("CampaignMission*", "Button", true, false).size() == 7, "Chronicle lacks seven real chapter actions")
+		require(game.campaign_overlay.find_children("CampaignMission*", "Button", true, false).size() == Story.MISSIONS.size(), "Chronicle lacks real chapter actions")
 		game._start_campaign(0)
 		await process_frame
 		var panel = game.campaign_overlay
@@ -220,6 +222,13 @@ func _test_reading_flow() -> void:
 				for _frame in 3: await process_frame
 				var before_gold: Array = game.gold.duplicate()
 				var before_time: float = game.remaining
+				var before_page: int = panel.page
+				var before_text: String = panel.text_label.text
+				panel.context_button.pressed.emit()
+				require(panel.context_open and panel.page == before_page and panel.text_label.text.contains(Story.localized(mission["recap"])) and panel.speaker_label.text.begins_with("NARRATOR"), "Context loses the current scene or its actual recap")
+				require(not panel.portrait_scene.portrait.visible, "Narrator borrows a character's face")
+				panel.advance.pressed.emit()
+				require(not panel.context_open and panel.page == before_page and panel.text_label.text == before_text, "Returning from context skips a dialogue page")
 				require(panel.find_child("StorySetting", true, false).text == Story.localized(mission["setting"]), "Dialogue lost its location/time context")
 				if stage == "intro":
 					require(panel.pages_text[0].contains(Story.localized(mission["recap"])), "Previous chapter recap is missing")
@@ -257,3 +266,141 @@ func _test_reading_flow() -> void:
 			game._close_campaign_overlay()
 		game.queue_free()
 		await process_frame
+
+func _test_goblin_rules() -> void:
+	var heist: int = Story.index_for_id("goblin_contract")
+	var curse: int = Story.index_for_id("goblin_funeral")
+	require(heist >= 0 and curse > heist and Story.chapter_number(heist) == 1 and Story.chapter_number(curse) == 2, "Goblin chapters are missing or numbered as dwarven continuations")
+	var game = fixture(heist)
+	game.phase = "ATTACK"
+	game.campaign_delivered = 1000
+	game._spawn(0, 0, 0, 0.999)
+	game._simulate(0.05)
+	require(game.campaign_state.artifact_state == "vault" and not game.campaign_state.victory(game.campaign_delivered, 1), "Wrong lane or ordinary gold completes an artefact theft")
+	game.units.clear()
+	game._spawn(0, 1, -1, 0.999)
+	game._simulate(0.05)
+	require(game.campaign_state.artifact_state == "vault" and not game.units[0].get("campaign_artifact", false), "A free wave bypasses the specialist's announced lockpick requirement")
+	game.units.clear()
+	game._spawn(0, 1, 0, 0.999)
+	game._simulate(0.05)
+	var carrier: Dictionary = game.units[0]
+	require(carrier.get("campaign_artifact", false) and game.campaign_state.artifact_state == "carried" and not game.campaign_state.victory(1000, 1), "Reaching the enemy vault is mistaken for delivery")
+	carrier["health"] = 1.0
+	carrier["position"] = 0.7
+	game.guards.append({"side": 1,"lane":1,"position":0.3,"health":120.0,"max_health":120.0,"shield":0.0,"cooldown":0.0})
+	var stolen: int = carrier["carried"]
+	var enemy_gold: int = game.gold[1]
+	game._simulate(0.05)
+	require(game.units.is_empty() and game.campaign_state.artifact_state == "vault" and game.gold[1] == enemy_gold + stolen, "Actual guard kill loses the artifact permanently or duplicates carried gold")
+	game.guards.clear()
+	game._spawn(0, 1, 0, 0.999)
+	game._simulate(0.05)
+	carrier = game.units[0]
+	carrier["position"] = 0.0001
+	carrier["steal_timer"] = 0.0
+	game._simulate(0.05)
+	require(game.units.is_empty() and game.campaign_state.artifact_state == "delivered" and game.campaign_state.victory(0, 1), "Actual carrier return does not finish the artifact objective")
+	game._spawn(0, 1, 0, 0.999)
+	game._simulate(0.05)
+	require(not game.units[0].get("campaign_artifact", false), "Delivered artefact can be stolen twice")
+	game.free()
+	game = fixture(heist)
+	game.phase = "ATTACK"
+	game._spawn(0, 1, 0, 0.999)
+	game._simulate(0.05)
+	game._end_wave()
+	require(game.phase == "PREP" and game.campaign_state.artifact_state == "vault" and not game.campaign_won, "Wave timeout counts an in-transit artefact as delivered")
+	game.free()
+	game = fixture(curse)
+	game.phase = "ATTACK"
+	for side in 2: game._spawn(side, 0, 0, 0.3)
+	var stats: Dictionary = game.raider_stats(0, 1, false, 0)
+	var wallet: Array = game.gold.duplicate()
+	for unit in game.units:
+		unit["health"] = 0.0
+	game.units[0]["carried"] = 20
+	game.units[0]["returning"] = true
+	game._simulate(0.05)
+	require(game.units.size() == 2 and game.campaign_state.rebirths == 2 and game.gold == wallet, "First fall fails on one side or refunds gold before the carrier is removed")
+	for unit in game.units:
+		require(is_equal_approx(float(unit["max_health"]), float(stats["health"]) * 0.60) and is_equal_approx(float(unit["speed"]), float(stats["speed"]) * 0.80) and unit["capacity"] == int(float(stats["capacity"]) * 0.70), "Rebirth does not weaken the actual body, speed and carrying capacity")
+		var position: float = unit["position"]
+		game._simulate(0.5)
+		require(unit["position"] == position, "Returning body moves before its two-second rise")
+	game.units[0]["health"] = 0.0
+	game.units[0]["stunned"] = 0.0
+	game._simulate(0.05)
+	require(game.units.size() == 1 and game.campaign_state.rebirths == 2 and game.gold[1] == wallet[1] + 20, "Second fall revives forever or fails to refund incapacitated carrier loot")
+	game.free()
+	game = fixture(curse)
+	game.purchase_guard(0, 0)
+	game.guards[0]["health"] = 0.0
+	game.phase = "ATTACK"
+	game._simulate(0.05)
+	require(game.guards.size() == 1 and is_equal_approx(float(game.guards[0]["max_health"]), game.GUARD_HP * 0.60), "Goblin defenders do not share the curse")
+	game.wave += 1
+	game.guards[0]["health"] = 0.0
+	game._simulate(0.05)
+	require(game.guards.size() == 1 and is_equal_approx(float(game.guards[0]["max_health"]), game.GUARD_HP * 0.36), "A surviving defender does not weaken again on its next-wave return")
+	game.guards[0]["health"] = 0.0
+	game._simulate(0.05)
+	require(game.guards.is_empty(), "A defender returns twice in one wave")
+	game.free()
+	game = fixture(curse)
+	game.purchase_guard(1, 0)
+	game.phase = "ATTACK"
+	game._spawn(0, 0, 0, 0.81)
+	game.units[0]["health"] = 1.0
+	game._simulate(0.05)
+	require(game.units.size() == 1 and game.campaign_state.rebirths == 1, "A real guard strike bypasses the resurrection rule")
+	game.campaign_index = -1
+	game.units[0]["health"] = 0.0
+	game.units[0]["stunned"] = 0.0
+	game._simulate(0.05)
+	require(game.units.is_empty() and game.campaign_state.rebirths == 1, "Campaign resurrection leaks into ordinary duels")
+	game.free()
+
+func _test_goblin_entry() -> void:
+	var path: String = save_path + "-goblin-menu"
+	var heist: int = Story.index_for_id("goblin_contract")
+	var next: int = Story.index_for_id("goblin_funeral")
+	root.size = Vector2i(720, 1280)
+	var game = load("res://main.tscn").instantiate()
+	game.account = Profile.new(path)
+	game.presentation.language = "pl"
+	root.add_child(game)
+	for child in game.get_children():
+		if child is Timer: child.stop()
+	for _frame in 3: await process_frame
+	var saved_map: String = game.presentation.battlefield
+	game._open_campaign()
+	var start: Button = game.campaign_overlay.find_child("CampaignMission%d" % heist, true, false)
+	var locked: Button = game.campaign_overlay.find_child("CampaignMission%d" % next, true, false)
+	require(not start.disabled and locked.disabled and game.account.level() == 1, "Goblin story cannot begin on a fresh account or skips its prerequisite")
+	start.pressed.emit()
+	require(game.campaign_index == heist and game.selected_race == 1 and game.bot_race == 0 and game.gold[0] == 1400 and game.presentation.battlefield == saved_map, "Real goblin menu action uses the wrong army, resources or saved duel map")
+	var panel = game.campaign_overlay
+	for _page in panel.pages_text.size(): panel.advance.pressed.emit()
+	require(game.campaign_overlay == null and game.phase == "PREP", "Goblin intro cannot reach preparation")
+	game._select_lane(1)
+	game.controls[3].pressed.emit()
+	game._begin_attack()
+	# Open-route fixture: normal purchasing/spawning/pickup/return all run. The
+	# strategic playthrough covers enemy defences; here we isolate save/XP flow.
+	game.guards.clear()
+	game.traps[1].clear()
+	for _step in 1200:
+		game._simulate(0.05)
+		if game.campaign_state.artifact_state == "delivered": break
+	require(game.campaign_state.artifact_state == "delivered", "A normally hired raider cannot make the complete heist journey")
+	game._end_wave()
+	var loaded = Profile.new(path)
+	require(game.campaign_won and game.phase == "END" and loaded.campaign_completed.has("goblin_contract") and loaded.total_xp > 0 and Story.unlocked(loaded, next) and not loaded.campaign_completed.has("dwarf_bells"), "Actual goblin victory is not saved/rewarded or unlocks the wrong chronicle")
+	var xp: int = loaded.total_xp
+	loaded.claim_campaign("goblin_contract", 1, 60.0, 3)
+	require(loaded.total_xp == xp, "Goblin replay grants duplicate XP")
+	game.queue_free()
+	await process_frame
+	for suffix in ["", ".bak", ".pending"]:
+		DirAccess.remove_absolute(path + suffix)

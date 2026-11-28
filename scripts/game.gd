@@ -182,6 +182,7 @@ var trap_card_cache: Dictionary = {}
 var unit_card_cache: Dictionary = {}
 var ability_card_cache: Dictionary = {}
 const ABILITY_ART: Texture2D = preload("res://assets/epic/story/abilities.webp")
+const MEMORY_STONE_ART: Texture2D = preload("res://assets/epic/story/memory_stone.png")
 const TRAINING_ART: Texture2D = preload("res://assets/epic/story/training_monument.tres")
 var fallen_actors: Array = []
 var deposit_actors: Array = []
@@ -606,6 +607,11 @@ func _campaign_hud() -> String:
 	if campaign_state != null:
 		var status: String = StoryCampaign.copy("Fala %d/%d", "Wave %d/%d") % [wave, int(data["waves"])]
 		match campaign_state.rule():
+			"heist":
+				var state: String = StoryCampaign.copy("W KOMORZE", "IN THE CHAMBER") if campaign_state.artifact_state == "vault" else StoryCampaign.copy("W DRODZE", "IN TRANSIT") if campaign_state.artifact_state == "carried" else StoryCampaign.copy("DOSTARCZONY", "DELIVERED")
+				return status + StoryCampaign.copy(" • Kamień %d/1 • alejka %d • %s", " • Stone %d/1 • lane %d • %s") % [1 if campaign_state.artifact_state == "delivered" else 0, campaign_state.artifact_lane() + 1, state]
+			"undying":
+				return status + StoryCampaign.copy(" • Powroty: %d • powracający mają 60%% PŻ", " • Returns: %d • risen bodies have 60%% HP") % campaign_state.rebirths
 			"escort":
 				return status + StoryCampaign.copy(" • Ocaleni %d/%d • eskorta: %d", " • Saved %d/%d • escort lane: %d") % [campaign_state.rescued, int(data["target"]), campaign_state.boss_lane(wave) + 1]
 			"debt":
@@ -1069,15 +1075,23 @@ func _damage_guard(guard: Dictionary, amount: float) -> void:
 	guard["shield"] = float(guard.get("shield", 0.0)) - absorbed
 	guard["health"] = float(guard["health"]) - (amount - absorbed)
 
+func _campaign_rebirth(actor: Dictionary, guard: bool = false) -> bool:
+	return campaign_index >= 0 and campaign_state != null and side_race(int(actor["side"])) == 1 and campaign_state.try_rebirth(actor, wave, guard)
+
 func _guard_combat(dt: float) -> void:
 	for unit in units:
 		unit["blocked"] = false
 	for guard in guards.duplicate():
 		if float(guard["health"]) <= 0.0:
+			if _campaign_rebirth(guard, true):
+				continue
 			# Defenders use the same non-looping defeat animation as raiders.
 			_record_fallen({"side": guard["side"], "lane": guard["lane"], "kind": 0,
 				"position": guard["position"], "returning": false, "guard": true})
 			guards.erase(guard)
+			continue
+		if float(guard.get("campaign_rising", 0.0)) > 0.0:
+			guard["cooldown"] = maxf(0.0, float(guard.get("cooldown", 0.0)) - dt)
 			continue
 		guard["cooldown"] = maxf(0.0, float(guard["cooldown"]) - dt)
 		guard["attack_time"] = maxf(0.0, float(guard.get("attack_time", 0.0)) - dt)
@@ -1085,7 +1099,7 @@ func _guard_combat(dt: float) -> void:
 		var target: Dictionary = {}
 		var nearest := 135.0 / (2.0 * WORLD_HALF_LENGTH)
 		for unit in units:
-			if int(unit["side"]) == int(guard["side"]) or int(unit["lane"]) != int(guard["lane"]) or float(unit["health"]) <= 0.0:
+			if int(unit["side"]) == int(guard["side"]) or int(unit["lane"]) != int(guard["lane"]) or float(unit["health"]) <= 0.0 or float(unit.get("campaign_rising", 0.0)) > 0.0:
 				continue
 			var distance: float = absf(1.0 - float(unit["position"]) - float(guard["position"]))
 			if distance < nearest:
@@ -1098,10 +1112,11 @@ func _guard_combat(dt: float) -> void:
 			hit_sparks.append({"p": _point(int(target["lane"]), clampf(float(target["position"]), 0.0, 1.0), int(target["side"])), "life": 0.5, "friendly": int(guard["side"]) == 0})
 			guard["cooldown"] = 0.9
 			if float(target["health"]) <= 0.0:
-				_record_fallen(target)
-				if int(target["carried"]) > 0:
-					gold[int(guard["side"])] += int(target["carried"])
-				units.erase(target)
+				if not _campaign_rebirth(target):
+					_record_fallen(target)
+					if int(target["carried"]) > 0:
+						gold[int(guard["side"])] += int(target["carried"])
+					units.erase(target)
 		for unit in units:
 			if int(unit["side"]) == int(guard["side"]) or int(unit["lane"]) != int(guard["lane"]):
 				continue
@@ -1436,7 +1451,7 @@ func _simulate(dt: float) -> void:
 	# draw armor-piercing fire; otherwise shoot the raider nearest the vault.
 	var turret_targets: Array = [{}, {}, {}, {}, {}, {}]
 	for target in units:
-		if (bool(target["returning"]) and not bool(target.get("campaign_refugee", false))) or float(target["position"]) < 0.35 or float(target["position"]) >= 0.85 or float(target["health"]) <= 0.0:
+		if (bool(target["returning"]) and not bool(target.get("campaign_refugee", false))) or float(target["position"]) < 0.35 or float(target["position"]) >= 0.85 or float(target["health"]) <= 0.0 or float(target.get("campaign_rising", 0.0)) > 0.0:
 			continue
 		var key: int = (1 - int(target["side"])) * 3 + int(target["lane"])
 		var current: Dictionary = turret_targets[key]
@@ -1503,6 +1518,8 @@ func _simulate(dt: float) -> void:
 						traps[defender].erase(trap)
 					break
 		if unit["health"] <= 0:
+			if _campaign_rebirth(unit):
+				continue
 			_record_fallen(unit)
 			if unit["carried"] > 0:
 				gold[defender] += unit["carried"]
@@ -1521,6 +1538,8 @@ func _simulate(dt: float) -> void:
 				unit["steal_timer"] = 0.65
 				unit["action_time"] = 0.0
 				unit["returning"] = true
+				if campaign_index >= 0 and campaign_state != null:
+					campaign_state.take_artifact(unit)
 				# Reset pose phase exactly on direction reversal; return uses mirrored frames.
 				unit["action_time"] = 0.0
 		else:
@@ -2607,6 +2626,11 @@ func _draw_arena() -> void:
 		if actor["guard"]:
 			arena.draw_arc(p + Vector2(0, 6), 22.0, 0.0, TAU, 24, Color("e6c47b", 0.55) if friendly else Color("ee6678", 0.55), 2.5)
 		_draw_health_bar(p + Vector2(0, bob), float(data["health"]), float(data["max_health"]), friendly, (52.0 if actor["guard"] else 46.0) * scale_factor, art_size.y * 0.88 + 8.0 / camera_zoom)
+		if float(data.get("campaign_rising", 0.0)) > 0.0:
+			arena.draw_arc(p + Vector2(0, 6), 36.0, 0, TAU, 24, Color("89efdc", 0.85), 3.0 / camera_zoom)
+		if bool(data.get("campaign_artifact", false)):
+			var badge := Vector2(28, 28) / camera_zoom
+			arena.draw_texture_rect(MEMORY_STONE_ART, Rect2(p + Vector2(-badge.x * 0.5, -art_size.y * 0.88 - badge.y - 8.0 / camera_zoom), badge), false)
 		if bool(data.get("campaign_boss", false)) or bool(data.get("campaign_refugee", false)):
 			arena.draw_arc(p + Vector2(0, 4), 40.0, 0, TAU, 24, Color("ffd781") if bool(data.get("campaign_boss", false)) else Color("8bfff1"), 4.0)
 		if actor["guard"] and float(data.get("shield", 0.0)) > 0.0:
@@ -2751,16 +2775,21 @@ func _draw_campaign_marks() -> void:
 	if campaign_index < 0 or campaign_state == null:
 		return
 	var warning: int = campaign_state.danger_lane(wave)
-	var marked: int = campaign_state.boss_lane(wave)
+	var heist: bool = campaign_state.rule() == "heist"
+	var marked: int = campaign_state.artifact_lane() if heist else campaign_state.boss_lane(wave)
 	var escort: bool = campaign_state.rule() == "escort"
 	for path in 3:
-		if path != warning and (path != marked or (not escort and campaign_state.boss_max <= 0.0)):
+		if path != warning and (path != marked or (not escort and not heist and campaign_state.boss_max <= 0.0)):
 			continue
 		var points := PackedVector2Array()
 		for step in 25:
 			points.append(_point(path, float(step) / 24.0, 0))
-		var color := Color("ffa477", 0.38) if path == warning else Color("92fff0", 0.24) if escort else Color("ffd781", 0.25)
+		var color := Color("ffa477", 0.38) if path == warning else Color("92fff0", 0.24) if escort or heist else Color("ffd781", 0.25)
 		arena.draw_polyline(points, color, 10.0 if path != warning else 44.0, true)
+		if heist and campaign_state.artifact_state == "vault":
+			var marker: Vector2 = _point(path, 0.96, 0)
+			var item_size := Vector2(36, 36) / camera_zoom
+			arena.draw_texture_rect(MEMORY_STONE_ART, Rect2(marker - item_size * Vector2(0.5, 1.0), item_size), false)
 		if path == warning and campaign_state.rule() == "collapse":
 			for step in range(2, 23, 3):
 				var p: Vector2 = points[step]
